@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>telegrip VR</title>
+    <meta name="description" content="telegrip VR bridge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="vendor/aframe.min.js"></script>
+    <script src="vr_app.js?v=hgm-brand-2" defer></script>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main id="launchPanel" class="launch-panel">
+      <div class="brand-logo">HGM</div>
+      <div class="title">telegrip VR</div>
+      <div id="serverUrl" class="server-url">loading...</div>
+      <button id="startVrButton" class="start-button" type="button">Start VR</button>
+      <div id="statusText" class="status-text">Preparing...</div>
+    </main>
+
+    <a-scene
+      vr-mode-ui="enabled: false"
+      webxr="referenceSpaceType: local-floor; optionalFeatures: local-floor, bounded-floor"
+      renderer="antialias: true; colorManagement: true"
+      background="color: #05070A">
+      <a-entity webxr-passthrough="referenceSpaceType: local-floor"></a-entity>
+      <a-entity id="cameraRig" position="0 1.55 -2.0"></a-entity>
+
+      <a-entity id="leftHand" oculus-touch-controls="hand: left"></a-entity>
+      <a-entity id="rightHand" oculus-touch-controls="hand: right"></a-entity>
+
+      <a-entity light="type: ambient; intensity: 1.0"></a-entity>
+    </a-scene>
+  </body>
+</html>

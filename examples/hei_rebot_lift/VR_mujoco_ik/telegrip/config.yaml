@@ -1,0 +1,37 @@
+network:
+  host_ip: 0.0.0.0
+  https_port: 8443
+  websocket_port: 8442
+ssl:
+  certfile: cert.pem
+  keyfile: key.pem
+vr:
+  enabled: true
+  zmq_publish_endpoint: tcp://*:5567
+  zmq_topic: vr_data
+  controller_axes:
+    enabled: true
+vr_images:
+  enabled: False
+  opacity: 0.3
+  endpoint: tcp://192.168.31.7:6556
+  color_order: rgb
+  socket_type: pull
+  topic: ''
+  width: 640
+  height: 480
+  fps: 30
+  jpeg_quality: 95
+  cameras:
+    - id: front
+      enabled: true
+      name: Front
+      image_key: front
+    - id: left_wrist
+      enabled: true
+      name: Left Wrist
+      image_key: left_wrist
+    - id: right_wrist
+      enabled: true
+      name: Right Wrist
+      image_key: right_wrist

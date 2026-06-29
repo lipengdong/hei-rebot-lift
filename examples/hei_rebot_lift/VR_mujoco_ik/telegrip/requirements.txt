@@ -1,0 +1,6 @@
+# Telegrip 子模块的 pip 依赖。完整部署优先使用 ../environment.yml。
+numpy
+websockets
+pyzmq
+pyyaml>=6.0
+opencv-python-headless

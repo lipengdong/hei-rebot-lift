@@ -1,0 +1,5 @@
+# MuJoCo IK 子模块的 pip 依赖仅保留轻量运行库。
+# 正逆解核心依赖 pinocchio/casadi/eigenpy/coal-python 请使用 ../environment.yml 通过 conda-forge 安装。
+mujoco==3.5.0
+pyzmq
+pynput

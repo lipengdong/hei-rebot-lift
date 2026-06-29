@@ -1,0 +1,21 @@
+name: hei-rebot-vr
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  # Pinocchio / CasADi / eigenpy / coal-python 是正逆解链路的核心依赖。
+  # 这一组尽量用 conda-forge 装，避免 pip 二进制包和系统 libstdc++/LD_LIBRARY_PATH 打架。
+  - numpy=2.2.6
+  - pinocchio=3.9.0
+  - casadi=3.7.0
+  - eigenpy
+  - coal-python
+  - openssl
+  - pip
+  - pip:
+      - mujoco==3.5.0
+      - pyzmq
+      - pynput
+      - websockets
+      - pyyaml>=6.0
+      - opencv-python-headless

@@ -1,0 +1,92 @@
+<mujoco model="reBot-DevArm_fixend">
+  <compiler angle="radian" meshdir="../meshes" autolimits="true" eulerseq="xyz"/>
+
+  <option timestep="0.002" gravity="0 0 -9.81"/>
+
+  <default>
+    <joint damping="0.5" armature="0.01" limited="true"/>
+    <geom type="mesh" material="arm_gray" contype="1" conaffinity="1" friction="0.8 0.1 0.1"/>
+  </default>
+
+  <asset>
+    <material name="arm_gray" rgba="0.62745 0.62745 0.62745 1"/>
+
+    <mesh name="base_link_mesh" file="base_link.STL"/>
+    <mesh name="link1_mesh" file="link1.STL"/>
+    <mesh name="link2_mesh" file="link2.STL"/>
+    <mesh name="link3_mesh" file="link3.STL"/>
+    <mesh name="link4_mesh" file="link4.STL"/>
+    <mesh name="link5_mesh" file="link5.STL"/>
+    <mesh name="link6_mesh" file="link6.STL"/>
+    <mesh name="end_link_mesh" file="end_link.STL"/>
+  </asset>
+
+  <worldbody>
+    <light name="key" pos="0 -1 1.2" dir="0 1 -1" diffuse="0.8 0.8 0.8"/>
+    <light name="fill" pos="-0.8 0.6 0.8" dir="1 -1 -0.6" diffuse="0.35 0.35 0.35"/>
+    <camera name="front" pos="0.55 -0.9 0.45" xyaxes="1 0 0 0 0.45 0.89"/>
+
+    <body name="base_link" pos="0 0 0">
+      <inertial pos="-0.000007849 -0.0000011531 0.029841" mass="0.8366"
+                fullinertia="0.00133040 0.00213119 0.00275877 0.00000001 0 0"/>
+      <geom name="base_link_geom" mesh="base_link_mesh"/>
+
+      <body name="link1" pos="-0.00008416 0 0.08465" euler="0 0 0">
+        <joint name="joint1" type="hinge" axis="0 0 1" range="-2.8 2.8"/>
+        <inertial pos="0.000113614552951627 -0.000616319527051323 0.0236476372671394" mass="0.1613"
+                  fullinertia="0.00025207 0.00015464 0.00023416 0 -0.00002832 0"/>
+        <geom name="link1_geom" mesh="link1_mesh"/>
+
+        <body name="link2" pos="0.020084 0.031625 0.05555" euler="-1.5708 0 0">
+          <joint name="joint2" type="hinge" axis="0 0 -1" range="-3.14 0"/>
+          <inertial pos="-0.13225622308888 -0.0030617036386309 -0.0308306967030205" mass="1.3266"
+                    fullinertia="0.00073374 0.01255987 0.01281387 -0.00000043 0.00000851 0.00000128"/>
+          <geom name="link2_geom" mesh="link2_mesh"/>
+
+          <body name="link3" pos="-0.264 0 0" euler="0 0 0">
+            <joint name="joint3" type="hinge" axis="0 0 1" range="-3.14 0"/>
+            <inertial pos="0.121040035791843 -0.0536211076627949 -0.0310137854608077" mass="0.8353"
+                      fullinertia="0.00046807 0.00632695 0.00648221 -0.00003456 -0.00004260 0.00000006"/>
+            <geom name="link3_geom" mesh="link3_mesh"/>
+
+            <body name="link4" pos="0.2426 -0.054 -0.001625" euler="0 0 0">
+              <joint name="joint4" type="hinge" axis="0 0 1" range="-1.87 1.57"/>
+              <inertial pos="0.0608200956293136 -0.0511711906613122 -0.030299458623927" mass="0.52"
+                        fullinertia="0.00045986 0.00075258 0.00066742 0.00024219 -0.00000672 -0.00000535"/>
+              <geom name="link4_geom" mesh="link4_mesh"/>
+
+              <body name="link5" pos="0.078308 -0.0375 -0.03" euler="-1.5708 0 0">
+                <joint name="joint5" type="hinge" axis="0 0 1" range="-1.57 1.57"/>
+                <inertial pos="-0.00502802058982517 0.00000173866206692364 0.0386233236326755" mass="0.383"
+                          fullinertia="0.00019772 0.00021737 0.00017191 -0.00000062 -0.00002426 0.00000002"/>
+                <geom name="link5_geom" mesh="link5_mesh"/>
+
+                <body name="link6" pos="0.028008 0 0.04" euler="0 1.5708 0">
+                  <joint name="joint6" type="hinge" axis="0 0 1" range="-3.14 3.14"/>
+                  <inertial pos="0.00000376418727127126 -0.000100908819946677 0.0253308606425965" mass="0.3663"
+                            fullinertia="0.00015554 0.00015554 0.00013966 0 0 0"/>
+                  <geom name="link6_geom" mesh="link6_mesh"/>
+
+                  <body name="end_link" pos="0 0 0.15539" quat="0.0000327579306468 0.707108079101 -0.0000327580509736 0.707105481752">
+                    <inertial pos="-0.0737654295815033 -0.0000095080995865868 0.00000704327840286845" mass="0.45"
+                              fullinertia="0.00037354 0.00015830 0.00045353 -0.00000011 0.00000050 0.00000348"/>
+                    <geom name="end_link_geom" mesh="end_link_mesh"/>
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <motor name="joint1_motor" joint="joint1" gear="1" ctrlrange="-27 27"/>
+    <motor name="joint2_motor" joint="joint2" gear="1" ctrlrange="-27 27"/>
+    <motor name="joint3_motor" joint="joint3" gear="1" ctrlrange="-27 27"/>
+    <motor name="joint4_motor" joint="joint4" gear="1" ctrlrange="-7 7"/>
+    <motor name="joint5_motor" joint="joint5" gear="1" ctrlrange="-7 7"/>
+    <motor name="joint6_motor" joint="joint6" gear="1" ctrlrange="-7 7"/>
+  </actuator>
+</mujoco>

@@ -1,0 +1,93 @@
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  background: #05070a;
+  color: #eef4ff;
+}
+
+.launch-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 24px;
+  box-sizing: border-box;
+  background:
+    radial-gradient(circle at 50% 35%, rgba(49, 119, 181, 0.24), transparent 34%),
+    #05070a;
+  text-align: center;
+}
+
+.title {
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.brand-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 92px;
+  min-height: 48px;
+  padding: 0 18px;
+  border-radius: 6px;
+  background: #eef4ff;
+  color: #05070a;
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.server-url {
+  max-width: min(92vw, 560px);
+  padding: 8px 12px;
+  border: 1px solid rgba(238, 244, 255, 0.22);
+  border-radius: 6px;
+  color: #b8c7d9;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.start-button {
+  min-width: 160px;
+  min-height: 52px;
+  padding: 0 24px;
+  border: 0;
+  border-radius: 6px;
+  background: #2f8f68;
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.start-button:hover {
+  background: #36a878;
+}
+
+.start-button:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
+.status-text {
+  min-height: 22px;
+  color: #b8c7d9;
+  font-size: 14px;
+}
+
+a-scene {
+  position: fixed;
+  inset: 0;
+}
