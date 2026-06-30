@@ -118,6 +118,7 @@ We will continue improving HEI ReBot Lift across hardware materials, software in
 | SmolVLA / VLA | ✅ Initial support | Supports SmolVLA training and real-robot rollout entry points | [Examples](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README.md) |
 | Open hardware materials | 🚧 In progress | `hardware/`, `media/`, `docs/`, and `community/` project structure is prepared | [Hardware](hardware/README.md) |
 | Community and reproduction | 🚧 Ongoing | WeChat group, email contact, and GitHub project entry are available | [Community](community/README.md) |
+| Other mainstream VLA deployment reproduction | ⏳ Coming soon | Plan to reproduce and test more mainstream VLA policies for training, inference, and real-robot deployment on HEI ReBot Lift | Not completed |
 
 ## 🦾 Hardware
 

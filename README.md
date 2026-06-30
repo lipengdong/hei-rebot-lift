@@ -115,6 +115,7 @@ cd software/lerobot-hei-rebot-lift
 | SmolVLA / VLA | ✅ 初步跑通 | 支持 SmolVLA 训练和真实机器人推理入口 | [Examples](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README.md) |
 | 硬件开源资料 | 🚧 整理中 | 已建立 `hardware/`、`media/`、`docs/`、`community/` 项目结构 | [Hardware](hardware/README.md) |
 | 社区与复现 | 🚧 持续进行 | 已提供微信交流群、邮箱和 GitHub 项目入口 | [Community](community/README.md) |
+| 其他主流 VLA 部署复现 | ⏳ 即将进行 | 计划继续复现和测试更多主流 VLA 策略在 HEI ReBot Lift 上的训练、推理和实机部署流程 | 未完成 |
 
 ## 🦾 硬件组成
 
