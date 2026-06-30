@@ -100,6 +100,25 @@ cd software/lerobot-hei-rebot-lift
   <img src="media/7.jpg" alt="HEI ReBot Lift robot" width="72%">
 </p>
 
+## 🗺️ Roadmap & Latest Status
+
+We will continue improving HEI ReBot Lift across hardware materials, software interfaces, data collection workflows, and mainstream embodied AI policy integrations. The table below summarizes the current status and links to the related documentation.
+
+| Module | Status | Current Progress | Related DOC |
+| --- | --- | --- | --- |
+| Robot body | ✅ First version completed | Dual arms, lift platform, and four-wheel O-type omnidirectional base are integrated and tested as a complete system | [Hardware](hardware/README.md) |
+| Damiao motor driver | ✅ First version completed | `damiao_u2can` is implemented for dual arms, grippers, chassis, and lift motor control | [Damiao U2CAN](software/lerobot-hei-rebot-lift/src/lerobot/motors/damiao_u2can/) |
+| Lift platform | ✅ First version completed | Supports upper-limit homing on startup and `height.pos` position-target control | [Robot Driver](software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/README.md) |
+| Omnidirectional base | ✅ First version completed | Supports `x.vel`, `y.vel`, and `theta.vel` commands with basic acceleration smoothing | [Robot Driver](software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/README.md) |
+| Three-camera vision | ✅ First version completed | Supports `front`, `left_wrist`, and `right_wrist` OpenCV cameras with MJPG by default | [Robot Driver](software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/README.md) |
+| VR + MuJoCo IK | ✅ First version completed | Telegrip + MuJoCo + Pinocchio/CasADi is connected to the real-robot control pipeline | [VR MuJoCo IK](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/README.md) |
+| LeRobot integration | ✅ First version completed | `hei_rebot_lift` robot/client/host is implemented with teleoperate, record, replay, evaluate, and rollout scripts | [Examples](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README.md) |
+| Data collection | ✅ First version completed | Supports LeRobotDataset recording, resume recording, visualization, and bad-episode cleanup | [Record Guide](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README.md) |
+| ACT training and rollout | ✅ Verified | Supports ACT training and real-robot rollout | [Examples](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README.md) |
+| SmolVLA / VLA | ✅ Initial support | Supports SmolVLA training and real-robot rollout entry points | [Examples](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README.md) |
+| Open hardware materials | 🚧 In progress | `hardware/`, `media/`, `docs/`, and `community/` project structure is prepared | [Hardware](hardware/README.md) |
+| Community and reproduction | 🚧 Ongoing | WeChat group, email contact, and GitHub project entry are available | [Community](community/README.md) |
+
 ## 🦾 Hardware
 
 ```text
@@ -255,6 +274,15 @@ software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README.md
 software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/README.md
 software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/README.md
 ```
+
+## 🙏 References & Acknowledgments
+
+The development of HEI ReBot Lift benefits from several excellent open-source projects and community efforts. In particular, we would like to thank:
+
+- **LeRobot**: for providing a unified robot interface, the LeRobotDataset format, training utilities, and policy implementations such as ACT and SmolVLA, which form a strong foundation for real-robot data collection, training, and deployment.
+- **reBot / reBot-DevArm**: for open robotic arm hardware, model resources, and practical references for embodied AI open-source projects. It also inspired the way this project organizes hardware materials, deployment documentation, and reproducible workflows.
+
+This project customizes and extends ideas from these open-source ecosystems, aiming to further lower the barrier to learning, reproducing, collecting data with, and deploying policies on a dual-arm lifting mobile robot.
 
 ## 📄 License
 

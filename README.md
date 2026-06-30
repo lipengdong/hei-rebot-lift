@@ -97,6 +97,25 @@ cd software/lerobot-hei-rebot-lift
   <img src="media/7.jpg" alt="HEI ReBot Lift robot" width="72%">
 </p>
 
+## 🗺️ 路线图与最新进展
+
+我们会持续完善 HEI ReBot Lift 的硬件资料、软件接口、数据采集流程和主流具身智能算法适配。下面是当前项目进展和对应文档入口。
+
+| 模块 | 状态 | 当前进展 | 相关 DOC |
+| --- | --- | --- | --- |
+| 机械本体 | ✅ 已完成首版 | 双臂 + 升降平台 + 四轮 O 型全向底盘整体方案已跑通 | [Hardware](hardware/README.md) |
+| 达妙电机驱动 | ✅ 已完成首版 | 已封装 `damiao_u2can`，支持双臂、夹爪、底盘和升降电机控制 | [Damiao U2CAN](software/lerobot-hei-rebot-lift/src/lerobot/motors/damiao_u2can/) |
+| 升降平台 | ✅ 已完成首版 | 支持启动上限位 homing，并使用 `height.pos` 位置目标控制 | [Robot Driver](software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/README.md) |
+| 全向底盘 | ✅ 已完成首版 | 支持 `x.vel`、`y.vel`、`theta.vel` 控制，并加入基础加减速平滑 | [Robot Driver](software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/README.md) |
+| 三相机视觉 | ✅ 已完成首版 | 支持 `front`、`left_wrist`、`right_wrist` 三路 OpenCV 相机，默认 MJPG | [Robot Driver](software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/README.md) |
+| VR + MuJoCo IK | ✅ 已完成首版 | Telegrip + MuJoCo + Pinocchio/CasADi 已接入真实机器人控制链路 | [VR MuJoCo IK](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/README.md) |
+| LeRobot 集成 | ✅ 已完成首版 | 已实现 `hei_rebot_lift` robot/client/host，支持 teleoperate、record、replay、evaluate、rollout | [Examples](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README.md) |
+| 数据采集 | ✅ 已完成首版 | 支持 LeRobotDataset 录制、继续录制、可视化和坏 episode 清理 | [Record Guide](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README.md) |
+| ACT 训练与推理 | ✅ 已跑通 | 支持 ACT 训练和真实机器人 rollout | [Examples](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README.md) |
+| SmolVLA / VLA | ✅ 初步跑通 | 支持 SmolVLA 训练和真实机器人推理入口 | [Examples](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README.md) |
+| 硬件开源资料 | 🚧 整理中 | 已建立 `hardware/`、`media/`、`docs/`、`community/` 项目结构 | [Hardware](hardware/README.md) |
+| 社区与复现 | 🚧 持续进行 | 已提供微信交流群、邮箱和 GitHub 项目入口 | [Community](community/README.md) |
+
 ## 🦾 硬件组成
 
 ```text
@@ -252,6 +271,15 @@ software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README.md
 software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/README.md
 software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/README.md
 ```
+
+## 🙏 References & Acknowledgments
+
+HEI ReBot Lift 的开发受益于多个优秀开源项目和社区工作的支持，特别感谢：
+
+- **LeRobot**：提供了统一的机器人接口、LeRobotDataset 数据格式、训练工具链以及 ACT/SmolVLA 等策略实现，为真实机器人数据采集、训练和部署提供了完整基础。
+- **reBot / reBot-DevArm**：提供了开放机械臂硬件、模型资料和具身智能开源实践参考，也启发了本项目在硬件资料、部署文档和复现流程上的整理方式。
+
+本项目基于上述开源生态进行定制和扩展，目标是进一步降低双臂升降轮式机器人在学习、复现、数据采集和真实机器人策略部署中的门槛。
 
 ## 📄 许可证
 
