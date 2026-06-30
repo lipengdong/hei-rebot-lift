@@ -11,9 +11,9 @@
 
 ## 🚀 Overview
 
-HEI ReBot Lift is a dual-arm lifting mobile robot project built on top of LeRobot. The repository is organized as a complete open robot project with hardware materials, media assets, documentation, and runnable software.
+HEI ReBot Lift is a dual-arm lifting mobile robot project for embodied AI learning, reproduction, and real-robot validation. Its goal is to lower the barrier to building a real robot learning system.
 
-The robot combines dual arms, a lead-screw lift platform, a four-wheel O-type omnidirectional chassis, and three cameras. The software stack covers VR teleoperation, MuJoCo/Pinocchio inverse kinematics, LeRobot dataset recording, ACT/VLA training, and real-robot policy rollout.
+We focus on truly reproducible open source: not only code, but also hardware materials, wiring, deployment steps, the VR teleoperation pipeline, dataset recording, ACT/VLA training, and real-robot rollout workflows. The robot combines dual arms, a lead-screw lift platform, a four-wheel O-type omnidirectional chassis, and three cameras. The software is built on LeRobot and covers MuJoCo/Pinocchio inverse kinematics, LeRobotDataset, imitation learning, and VLA policy deployment.
 
 <p align="center">
   <b>🚀 Dual-Arm Mobile Manipulation</b> · <b>📖 Open Hardware + Software Stack</b> · <b>🤖 LeRobot Ready</b>
@@ -43,7 +43,7 @@ The robot combines dual arms, a lead-screw lift platform, a four-wheel O-type om
   <tbody>
     <tr><td align="center">🦾</td><td align="center">Dual-arm manipulation</td><td align="center">Damiao dual arms and grippers for teleoperation, recording, and policy rollout</td></tr>
     <tr><td align="center">⬆️</td><td align="center">Lift platform</td><td align="center">Automatic homing on startup, with the upper limit defined as <code>height.pos = 0</code></td></tr>
-    <tr><td align="center">🛞</td><td align="center">Omnidirectional base</td><td align="center">Four-wheel O-type omnidirectional chassis with <code>x/y/theta</code> velocity control</td></tr>
+    <tr><td align="center">⭕</td><td align="center">Omnidirectional base</td><td align="center">Four-wheel O-type omnidirectional chassis with <code>x/y/theta</code> velocity control</td></tr>
     <tr><td align="center">🎮</td><td align="center">VR teleoperation</td><td align="center">Telegrip captures VR controller data; MuJoCo + Pinocchio/CasADi compute IK</td></tr>
     <tr><td align="center">📷</td><td align="center">Three-camera data</td><td align="center"><code>front</code>, <code>left_wrist</code>, and <code>right_wrist</code> visual inputs</td></tr>
     <tr><td align="center">🧠</td><td align="center">Imitation learning / VLA</td><td align="center">Supports LeRobotDataset, ACT, SmolVLA, and real-robot rollout</td></tr>
