@@ -54,6 +54,19 @@ We focus on **truly reproducible open source**: not only code, but also **hardwa
 
 </div>
 
+## 🤝 Get Your Own Robot / Join the Community
+
+If you want to reproduce your own **HEI ReBot Lift**, you can follow the hardware materials, BOM, wiring notes, and software deployment documents gradually organized in this project to source parts and build the robot yourself. We also welcome builders and researchers interested in dual-arm mobile manipulation, VR teleoperation, LeRobot data collection, ACT/VLA training, and real-robot deployment to exchange ideas with us.
+
+If you want to get your own robot faster, or would like to collaborate on hardware reproduction, teaching labs, data collection, algorithm validation, or application deployment, feel free to contact us.
+
+<p align="center">
+  <b>WeChat community / collaboration:</b> <code>hgm159951</code> &nbsp;&nbsp;|&nbsp;&nbsp;
+  <b>Email:</b> <a href="mailto:xd2025101@163.com">xd2025101@163.com</a>
+</p>
+
+Reproductions, discussions, issues, improvements, and real-robot test feedback are all welcome.
+
 ## 📁 Project Layout
 
 ```text
