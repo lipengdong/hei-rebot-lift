@@ -30,18 +30,29 @@ The robot combines dual arms, a lead-screw lift platform, a four-wheel O-type om
 
 ## ✨ Features
 
-| Icon | Capability | Description |
-| --- | --- | --- |
-| 🦾 | Dual-arm manipulation | Damiao dual arms and grippers for teleoperation, recording, and policy rollout |
-| ⬆️ | Lift platform | Automatic homing on startup, with the upper limit defined as `height.pos = 0` |
-| 🛞 | Omnidirectional base | Four-wheel O-type omnidirectional chassis with `x/y/theta` velocity control |
-| 🎮 | VR teleoperation | Telegrip captures VR controller data; MuJoCo + Pinocchio/CasADi compute IK |
-| 📷 | Three-camera data | `front`, `left_wrist`, and `right_wrist` visual inputs |
-| 🧠 | Imitation learning / VLA | Supports LeRobotDataset, ACT, SmolVLA, and real-robot rollout |
+<div align="center">
 
-<p align="center">
-  <img src="media/hei-robot-lift-play.gif" alt="HEI ReBot Lift demo" width="82%">
-</p>
+<table>
+  <thead>
+    <tr>
+      <th align="center">Icon</th>
+      <th align="center">Capability</th>
+      <th align="center">Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td align="center">🦾</td><td align="center">Dual-arm manipulation</td><td align="center">Damiao dual arms and grippers for teleoperation, recording, and policy rollout</td></tr>
+    <tr><td align="center">⬆️</td><td align="center">Lift platform</td><td align="center">Automatic homing on startup, with the upper limit defined as <code>height.pos = 0</code></td></tr>
+    <tr><td align="center">🛞</td><td align="center">Omnidirectional base</td><td align="center">Four-wheel O-type omnidirectional chassis with <code>x/y/theta</code> velocity control</td></tr>
+    <tr><td align="center">🎮</td><td align="center">VR teleoperation</td><td align="center">Telegrip captures VR controller data; MuJoCo + Pinocchio/CasADi compute IK</td></tr>
+    <tr><td align="center">📷</td><td align="center">Three-camera data</td><td align="center"><code>front</code>, <code>left_wrist</code>, and <code>right_wrist</code> visual inputs</td></tr>
+    <tr><td align="center">🧠</td><td align="center">Imitation learning / VLA</td><td align="center">Supports LeRobotDataset, ACT, SmolVLA, and real-robot rollout</td></tr>
+  </tbody>
+</table>
+
+<img src="media/hei-robot-lift-play.gif" alt="HEI ReBot Lift demo" width="60%">
+
+</div>
 
 ## 📁 Project Layout
 
