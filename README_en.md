@@ -9,68 +9,72 @@
   <a href="README_en.md"><img src="https://img.shields.io/badge/English-README-2f6fd3?style=for-the-badge" alt="English README"></a>
 </p>
 
-## 项目简介
-HEI ReBot Lift 是一个基于 LeRobot 的双臂升降轮式机器人项目，整体包含硬件资料、展示素材、部署文档和可运行的软件工程。机器人硬件由双臂、升降平台、四轮 O 型全向底盘和三路相机组成；软件链路覆盖 VR 遥操作、MuJoCo/Pinocchio 逆解、LeRobot 数据录制、ACT/VLA 训练和真实机器人推理。
+## Overview
+
+HEI ReBot Lift is a dual-arm lifting mobile robot project built on top of LeRobot. The repository is organized as a complete open robot project with hardware materials, media assets, documentation, and runnable software.
+
+The robot combines dual arms, a lead-screw lift platform, a four-wheel O-type omnidirectional chassis, and three cameras. The software stack covers VR teleoperation, MuJoCo/Pinocchio inverse kinematics, LeRobot dataset recording, ACT/VLA training, and real-robot policy rollout.
 
 <p align="center">
   <img src="media/hei-robot-lift-play.gif" alt="HEI ReBot Lift demo" width="82%">
 </p>
 
-## 项目结构
+## Project Layout
 
 ```text
 hei-rebot-lift/
 ├── README.md
+├── README_en.md
 ├── LICENSE
-├── community/                    # 社区资料、后续协作记录
-├── hardware/                     # 硬件 BOM、接线、端口绑定、机械资料
-├── media/                        # 图片、视频、README 展示素材
-├── docs/                         # 项目部署和使用文档
+├── community/                    # Community notes and collaboration records
+├── hardware/                     # BOM, wiring, device binding, mechanical materials
+├── media/                        # Images, videos, and README assets
+├── docs/                         # Deployment and usage documentation
 └── software/
-    └── lerobot-hei-rebot-lift/   # 基于 LeRobot 的完整可运行代码
+    └── lerobot-hei-rebot-lift/   # Runnable LeRobot-based software project
 ```
 
-程序主体在：
+The runnable software lives in:
 
 ```text
 software/lerobot-hei-rebot-lift/
 ```
 
-后续所有运行命令默认先进入这个目录：
+All commands below assume you first enter this directory:
 
 ```bash
 cd software/lerobot-hei-rebot-lift
 ```
 
-## 项目展示
+## Showcase
 
 <p align="center">
   <img src="media/7.jpg" alt="HEI ReBot Lift robot" width="72%">
 </p>
 
-## 硬件组成
+## Hardware
 
 ```text
-双臂：左右各 7 个达妙电机，关节 1-3 使用 DM4340，关节 4-6 和夹爪使用 DM4310
-底盘：四轮 O 型全向移动底盘
-升降：丝杆升降平台，启动后上限位 homing，把上限位作为 height.pos = 0
-相机：front、left_wrist、right_wrist 三路 OpenCV 相机
-通信：机器人端 host 和电脑端 client 通过 ZMQ 通信
-遥操作：VR 头显 + 手柄，Telegrip 获取 VR 数据，MuJoCo + Pinocchio/CasADi 做 IK
+Dual arms: left and right arms with 7 Damiao motors each. Joints 1-3 use DM4340, joints 4-6 and gripper use DM4310
+Chassis: four-wheel O-type omnidirectional mobile base
+Lift: lead-screw lift platform. On startup, the upper limit is homed as height.pos = 0
+Cameras: three OpenCV cameras: front, left_wrist, right_wrist
+Communication: ZMQ between robot-side host and computer-side client
+Teleoperation: VR headset and controllers. Telegrip captures VR data; MuJoCo + Pinocchio/CasADi compute IK
 ```
 
-## 软件目录
+## Software Modules
 
 ```text
-software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/        机器人驱动
-software/lerobot-hei-rebot-lift/src/lerobot/motors/damiao_u2can/          达妙 U2CAN 通信
-software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/                  录制、回放、评估、推理脚本
-software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/     VR + MuJoCo + Pinocchio IK
+software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/        Robot driver
+software/lerobot-hei-rebot-lift/src/lerobot/motors/damiao_u2can/          Damiao U2CAN communication
+software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/                  Record, replay, evaluate, and rollout scripts
+software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/     VR + MuJoCo + Pinocchio IK stack
 ```
 
-## 快速部署
+## Quick Setup
 
-创建 LeRobot 环境：
+Create the LeRobot environment:
 
 ```bash
 cd software/lerobot-hei-rebot-lift
@@ -79,33 +83,33 @@ conda activate lerobot5
 pip install -e .
 ```
 
-创建 VR/MuJoCo IK 环境：
+Create the VR/MuJoCo IK environment:
 
 ```bash
 cd software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik
 conda env create -f environment.yml
 ```
 
-验证 Pinocchio + CasADi：
+Verify Pinocchio + CasADi:
 
 ```bash
 conda activate hei-rebot-vr
 env -u LD_LIBRARY_PATH python -c "import pinocchio as pin; from pinocchio import casadi as cpin; print(pin.__version__); print('casadi binding ok')"
 ```
 
-## 设备映射
+## Device Mapping
 
-默认使用 udev 绑定后的稳定端口：
+Stable udev device names are used by default:
 
 ```text
-/dev/hei_right_arm   右臂 U2CAN
-/dev/hei_left_arm    左臂 U2CAN
-/dev/hei_chassis     底盘 U2CAN
-/dev/hei_lift        升降电机 U2CAN
-/dev/hei_lift_io     升降限位开关串口
+/dev/hei_right_arm   Right arm U2CAN
+/dev/hei_left_arm    Left arm U2CAN
+/dev/hei_chassis     Chassis U2CAN
+/dev/hei_lift        Lift motor U2CAN
+/dev/hei_lift_io     Lift limit-switch serial port
 ```
 
-默认相机：
+Default cameras:
 
 ```text
 front       /dev/video0
@@ -113,89 +117,89 @@ left_wrist  /dev/video2
 right_wrist /dev/video4
 ```
 
-查找相机：
+Find connected cameras:
 
 ```bash
 cd software/lerobot-hei-rebot-lift
 PYTHONPATH=src conda run --no-capture-output -n lerobot5 lerobot-find-cameras
 ```
 
-## 启动流程
+## Startup Flow
 
-机器人端启动 host：
+Start the robot-side host:
 
 ```bash
 cd software/lerobot-hei-rebot-lift
 PYTHONPATH=src conda run --no-capture-output -n lerobot5 hei-rebot-lift-host
 ```
 
-电脑端启动 Telegrip：
+Start Telegrip on the computer:
 
 ```bash
 cd software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik
 ./run_telegrip.sh
 ```
 
-VR 头显访问：
+Open this URL in the VR headset browser:
 
 ```text
-https://电脑IP:8443
+https://COMPUTER_IP:8443
 ```
 
-电脑端启动 MuJoCo IK：
+Start MuJoCo IK on the computer:
 
 ```bash
 cd software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik
 ./run_mujoco_ik.sh
 ```
 
-遥操作测试：
+Test teleoperation:
 
 ```bash
 cd software/lerobot-hei-rebot-lift
-PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/teleoperate.py   --remote-ip 192.168.31.127
+PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/teleoperate.py --remote-ip 192.168.31.127
 ```
 
-## 录制数据
+## Record Data
 
 ```bash
 cd software/lerobot-hei-rebot-lift
 PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/record.py   --repo-id HGM/hei_rebot_lift_task1   --remote-ip 192.168.31.127   --num-episodes 5   --episode-time-sec 120   --reset-time-sec 30   --task-description "Pick up the yellow block from the floor and put it on the table in front"
 ```
 
-默认只保存本地，不上传 Hugging Face Hub。需要上传时显式加 `--push-to-hub`。
+By default, data is saved locally and is not pushed to the Hugging Face Hub. Add `--push-to-hub` when uploading is needed.
 
-## 训练 ACT
+## Train ACT
 
 ```bash
 cd software/lerobot-hei-rebot-lift
 PYTHONPATH=src conda run --no-capture-output -n lerobot5 lerobot-train   --dataset.repo_id=HGM/hei_rebot_lift_task1   --policy.type=act   --policy.device=cuda   --policy.push_to_hub=false   --output_dir=outputs/train/act_hei_rebot_lift_task1   --job_name=act_hei_rebot_lift_task1   --batch_size=8   --steps=10000   --save_freq=10000   --log_freq=200   --num_workers=4   --wandb.enable=false
 ```
 
-## 训练 SmolVLA
+## Train SmolVLA
 
 ```bash
 cd software/lerobot-hei-rebot-lift
 PYTHONPATH=src conda run --no-capture-output -n lerobot5 lerobot-train   --dataset.repo_id=HGM/hei_rebot_lift_task1   --policy.type=smolvla   --policy.device=cuda   --policy.push_to_hub=false   --output_dir=outputs/train/smolvla_hei_rebot_lift_task1   --job_name=smolvla_hei_rebot_lift_task1   --batch_size=1   --steps=1000   --save_freq=1000   --log_freq=50   --num_workers=2   --wandb.enable=false
 ```
 
-## 实机推理
+## Real-Robot Rollout
 
-ACT 推理：
+ACT rollout:
 
 ```bash
 cd software/lerobot-hei-rebot-lift
 PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/rollout.py   --model-id outputs/train/act_hei_rebot_lift_task1/checkpoints/010000/pretrained_model   --task "Pick up the yellow block from the floor and put it on the table in front"   --duration-sec 30   --inference sync
 ```
 
-SmolVLA 推理：
+SmolVLA rollout:
 
 ```bash
 cd software/lerobot-hei-rebot-lift
 PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/rollout.py   --model-id outputs/train/smolvla_hei_rebot_lift_task1/checkpoints/001000/pretrained_model   --task "Pick up the yellow block from the floor and put it on the table in front"   --duration-sec 60   --fps 10   --inference rtc
 ```
 
-## 更多文档
+## More Documentation
 
 ```text
 software/lerobot-hei-rebot-lift/README.md
@@ -204,6 +208,6 @@ software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/README.md
 software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/README.md
 ```
 
-## 许可证
+## License
 
-本项目基于 Hugging Face LeRobot 改造，保留 LeRobot 的数据集、训练、策略和机器人接口体系。请同时遵守 LeRobot 原始许可证要求。
+This project is built on top of Hugging Face LeRobot and keeps the LeRobot dataset, training, policy, and robot-interface ecosystem. Please also follow the original LeRobot license requirements.
