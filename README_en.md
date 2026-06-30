@@ -11,9 +11,9 @@
 
 ## 🚀 Overview
 
-HEI ReBot Lift is a dual-arm lifting mobile robot project for embodied AI learning, reproduction, and real-robot validation. Its goal is to lower the barrier to building a real robot learning system.
+**HEI ReBot Lift** is a dual-arm lifting mobile robot project for **embodied AI learning, reproduction, and real-robot validation**. Its goal is to **lower the barrier to building a real robot learning system**.
 
-We focus on truly reproducible open source: not only code, but also hardware materials, wiring, deployment steps, the VR teleoperation pipeline, dataset recording, ACT/VLA training, and real-robot rollout workflows. The robot combines dual arms, a lead-screw lift platform, a four-wheel O-type omnidirectional chassis, and three cameras. The software is built on LeRobot and covers MuJoCo/Pinocchio inverse kinematics, LeRobotDataset, imitation learning, and VLA policy deployment.
+We focus on **truly reproducible open source**: not only code, but also **hardware materials, wiring, deployment steps, the VR teleoperation pipeline, dataset recording, ACT/VLA training, and real-robot rollout workflows**. The robot combines **dual arms, a lead-screw lift platform, a four-wheel O-type omnidirectional chassis, and three cameras**. The software is built on **LeRobot** and covers **MuJoCo/Pinocchio inverse kinematics, LeRobotDataset, imitation learning, and VLA policy deployment**.
 
 <p align="center">
   <b>🚀 Dual-Arm Mobile Manipulation</b> · <b>📖 Open Hardware + Software Stack</b> · <b>🤖 LeRobot Ready</b>
