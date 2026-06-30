@@ -60,7 +60,7 @@
 
 <p align="center">
   <b>微信社区 / 合作咨询：</b><code>hgm159951</code> &nbsp;&nbsp;|&nbsp;&nbsp;
-  <b>邮箱：</b><a href="mailto:xd2025101@163.com">xd2025101@163.com</a>
+  <b>邮箱：</b><a href="mailto:hgm159951@163.com">hgm159951@163.com</a>
 </p>
 
 欢迎复现、交流、提 issue，也欢迎把你的改进方案和实机测试结果反馈回来。
