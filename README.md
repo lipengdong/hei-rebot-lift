@@ -1,8 +1,16 @@
 # HEI ReBot Lift
 
+<p align="center">
+  <img src="media/Repository-Header-Image.jpg" alt="HEI ReBot Lift" width="100%">
+</p>
+
 HEI ReBot Lift 是一个基于 LeRobot 的双臂升降轮式机器人项目，整体包含硬件资料、展示素材、部署文档和可运行的软件工程。
 
 机器人硬件由达妙双臂、丝杆升降平台、四轮 O 型全向底盘和三路相机组成；软件链路覆盖 VR 遥操作、MuJoCo/Pinocchio 逆解、LeRobot 数据录制、ACT/SmolVLA 训练和真实机器人推理。
+
+<p align="center">
+  <img src="media/hei-robot-lift-play.gif" alt="HEI ReBot Lift demo" width="82%">
+</p>
 
 ## 项目结构
 
@@ -29,6 +37,13 @@ software/lerobot-hei-rebot-lift/
 ```bash
 cd software/lerobot-hei-rebot-lift
 ```
+
+## 项目展示
+
+<p align="center">
+  <img src="media/Repository-Header-Image-1.jpg" alt="HEI ReBot Lift overview" width="48%">
+  <img src="media/7.jpg" alt="HEI ReBot Lift robot" width="48%">
+</p>
 
 ## 硬件组成
 
