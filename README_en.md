@@ -9,17 +9,41 @@
   <a href="README_en.md"><img src="https://img.shields.io/badge/English-README-2f6fd3?style=for-the-badge" alt="English README"></a>
 </p>
 
-## Overview
+## 🚀 Overview
 
 HEI ReBot Lift is a dual-arm lifting mobile robot project built on top of LeRobot. The repository is organized as a complete open robot project with hardware materials, media assets, documentation, and runnable software.
 
 The robot combines dual arms, a lead-screw lift platform, a four-wheel O-type omnidirectional chassis, and three cameras. The software stack covers VR teleoperation, MuJoCo/Pinocchio inverse kinematics, LeRobot dataset recording, ACT/VLA training, and real-robot policy rollout.
 
 <p align="center">
+  <b>🚀 Dual-Arm Mobile Manipulation</b> · <b>📖 Open Hardware + Software Stack</b> · <b>🤖 LeRobot Ready</b>
+</p>
+
+<p align="center">
+  <a href="#-quick-setup">🚀 Quick Setup</a> ·
+  <a href="#-hardware">🦾 Hardware</a> ·
+  <a href="#-startup-flow">🎮 VR Teleoperation</a> ·
+  <a href="#-record-data">📷 Record Data</a> ·
+  <a href="#-train-act">🧠 Train ACT</a> ·
+  <a href="#-train-smolvla">✨ Train VLA</a>
+</p>
+
+## ✨ Features
+
+| Icon | Capability | Description |
+| --- | --- | --- |
+| 🦾 | Dual-arm manipulation | Damiao dual arms and grippers for teleoperation, recording, and policy rollout |
+| ⬆️ | Lift platform | Automatic homing on startup, with the upper limit defined as `height.pos = 0` |
+| 🛞 | Omnidirectional base | Four-wheel O-type omnidirectional chassis with `x/y/theta` velocity control |
+| 🎮 | VR teleoperation | Telegrip captures VR controller data; MuJoCo + Pinocchio/CasADi compute IK |
+| 📷 | Three-camera data | `front`, `left_wrist`, and `right_wrist` visual inputs |
+| 🧠 | Imitation learning / VLA | Supports LeRobotDataset, ACT, SmolVLA, and real-robot rollout |
+
+<p align="center">
   <img src="media/hei-robot-lift-play.gif" alt="HEI ReBot Lift demo" width="82%">
 </p>
 
-## Project Layout
+## 📁 Project Layout
 
 ```text
 hei-rebot-lift/
@@ -46,13 +70,13 @@ All commands below assume you first enter this directory:
 cd software/lerobot-hei-rebot-lift
 ```
 
-## Showcase
+## 🖼️ Showcase
 
 <p align="center">
   <img src="media/7.jpg" alt="HEI ReBot Lift robot" width="72%">
 </p>
 
-## Hardware
+## 🦾 Hardware
 
 ```text
 Dual arms: left and right arms with 7 Damiao motors each. Joints 1-3 use DM4340, joints 4-6 and gripper use DM4310
@@ -63,7 +87,7 @@ Communication: ZMQ between robot-side host and computer-side client
 Teleoperation: VR headset and controllers. Telegrip captures VR data; MuJoCo + Pinocchio/CasADi compute IK
 ```
 
-## Software Modules
+## 🧩 Software Modules
 
 ```text
 software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/        Robot driver
@@ -72,7 +96,7 @@ software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/                  Record
 software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/     VR + MuJoCo + Pinocchio IK stack
 ```
 
-## Quick Setup
+## ⚡ Quick Setup
 
 Create the LeRobot environment:
 
@@ -97,7 +121,7 @@ conda activate hei-rebot-vr
 env -u LD_LIBRARY_PATH python -c "import pinocchio as pin; from pinocchio import casadi as cpin; print(pin.__version__); print('casadi binding ok')"
 ```
 
-## Device Mapping
+## 🔌 Device Mapping
 
 Stable udev device names are used by default:
 
@@ -124,7 +148,7 @@ cd software/lerobot-hei-rebot-lift
 PYTHONPATH=src conda run --no-capture-output -n lerobot5 lerobot-find-cameras
 ```
 
-## Startup Flow
+## 🎮 Startup Flow
 
 Start the robot-side host:
 
@@ -160,7 +184,7 @@ cd software/lerobot-hei-rebot-lift
 PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/teleoperate.py --remote-ip 192.168.31.127
 ```
 
-## Record Data
+## 📷 Record Data
 
 ```bash
 cd software/lerobot-hei-rebot-lift
@@ -169,21 +193,21 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_
 
 By default, data is saved locally and is not pushed to the Hugging Face Hub. Add `--push-to-hub` when uploading is needed.
 
-## Train ACT
+## 🧠 Train ACT
 
 ```bash
 cd software/lerobot-hei-rebot-lift
 PYTHONPATH=src conda run --no-capture-output -n lerobot5 lerobot-train   --dataset.repo_id=HGM/hei_rebot_lift_task1   --policy.type=act   --policy.device=cuda   --policy.push_to_hub=false   --output_dir=outputs/train/act_hei_rebot_lift_task1   --job_name=act_hei_rebot_lift_task1   --batch_size=8   --steps=10000   --save_freq=10000   --log_freq=200   --num_workers=4   --wandb.enable=false
 ```
 
-## Train SmolVLA
+## ✨ Train SmolVLA
 
 ```bash
 cd software/lerobot-hei-rebot-lift
 PYTHONPATH=src conda run --no-capture-output -n lerobot5 lerobot-train   --dataset.repo_id=HGM/hei_rebot_lift_task1   --policy.type=smolvla   --policy.device=cuda   --policy.push_to_hub=false   --output_dir=outputs/train/smolvla_hei_rebot_lift_task1   --job_name=smolvla_hei_rebot_lift_task1   --batch_size=1   --steps=1000   --save_freq=1000   --log_freq=50   --num_workers=2   --wandb.enable=false
 ```
 
-## Real-Robot Rollout
+## 🤖 Real-Robot Rollout
 
 ACT rollout:
 
@@ -199,7 +223,7 @@ cd software/lerobot-hei-rebot-lift
 PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/rollout.py   --model-id outputs/train/smolvla_hei_rebot_lift_task1/checkpoints/001000/pretrained_model   --task "Pick up the yellow block from the floor and put it on the table in front"   --duration-sec 60   --fps 10   --inference rtc
 ```
 
-## More Documentation
+## 📖 More Documentation
 
 ```text
 software/lerobot-hei-rebot-lift/README.md
@@ -208,6 +232,6 @@ software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/README.md
 software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/README.md
 ```
 
-## License
+## 📄 License
 
 This project is built on top of Hugging Face LeRobot and keeps the LeRobot dataset, training, policy, and robot-interface ecosystem. Please also follow the original LeRobot license requirements.
