@@ -1,4 +1,4 @@
-# HEI ReBot Lift
+<h1 align="center">HEI ReBot Lift</h1>
 
 <p align="center">
   <img src="media/Repository-Header-Image.jpg" alt="HEI ReBot Lift" width="100%">
