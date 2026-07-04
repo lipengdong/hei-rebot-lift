@@ -1,18 +1,22 @@
 # Telegrip
 
-这是 HEI ReBot Lift VR 遥操作链路里的 WebXR/HTTPS/WebSocket/ZMQ 子模块。
+This is the WebXR/HTTPS/WebSocket/ZMQ submodule in the HEI ReBot Lift VR teleoperation pipeline.
 
-统一部署、依赖安装、VR 头显访问地址和端口说明请看上一级文档：
+For unified deployment, dependency installation, VR headset URL, and port descriptions, see the parent document:
 
 ```text
 ../README.md
 ```
 
-常用启动方式：
+Common startup command:
 
 ```bash
 cd ..
 bash run_telegrip.sh
 ```
 
-主要配置仍在本目录的 `config.yaml`。如果要在 VR 里显示机器人三路相机，把 `vr_images.enabled` 改成 `true`，并把 `vr_images.endpoint` 改成机器人真实 IP。
+The main configuration file is still `config.yaml` in this directory. To display the robot's three camera streams in VR, set `vr_images.enabled` to `true` and update `vr_images.endpoint` to the robot's real IP address.
+
+## Chinese Version
+
+- [README_zh.md](README_zh.md)

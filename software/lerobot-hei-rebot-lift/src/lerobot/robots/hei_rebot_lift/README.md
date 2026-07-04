@@ -1,44 +1,44 @@
 # HEI ReBot Lift Robot Driver
 
-这个目录是 HEI ReBot Lift 的 LeRobot 机器人驱动层，负责把达妙双臂、升降平台、四轮 O 型全向底盘和三路相机封装成 LeRobot 的 `Robot` / `RobotClient` 接口。
+This directory is the LeRobot robot driver layer for HEI ReBot Lift. It wraps the Damiao dual arms, lift platform, four-wheel O-type omnidirectional chassis, and three cameras into LeRobot `Robot` / `RobotClient` interfaces.
 
-上层使用脚本在：
+Upper-level scripts are in:
 
 ```text
 examples/hei_rebot_lift/
 ```
 
-## 硬件组成
+## Hardware
 
-- 双臂：左右各 7 个达妙电机，1-3 关节为 `DM4340`，4-6 关节和夹爪为 `DM4310`。
-- 底盘：四轮 O 型全向移动底盘，动作接口为 `x.vel`、`y.vel`、`theta.vel`。
-- 升降：丝杆升降平台，启动时回上限位归零，动作接口为目标高度 `height.pos`。
-- 相机：三路 OpenCV 相机，默认 `front`、`left_wrist`、`right_wrist`。
-- 通信：机器人端 host 通过 ZMQ 和电脑端 client 交互。
+- Dual arms: left and right arms with 7 Damiao motors each. Joints 1-3 use `DM4340`; joints 4-6 and gripper use `DM4310`.
+- Chassis: four-wheel O-type omnidirectional base with `x.vel`, `y.vel`, and `theta.vel` action interfaces.
+- Lift: lead-screw lift platform. It homes to the upper limit on startup and uses target height `height.pos`.
+- Cameras: three OpenCV cameras: `front`, `left_wrist`, and `right_wrist`.
+- Communication: robot-side host exchanges data with the computer-side client through ZMQ.
 
-## 文件职责
-
-```text
-config_hei_rebot_lift.py   # 端口、电机参数、限位、底盘比例、升降参数、相机配置
-hei_rebot_lift.py          # 实机驱动：达妙电机、底盘运动学、升降归零/位置控制、相机读帧
-hei_rebot_lift_host.py     # 机器人端服务：接收动作、发送观测、看门狗保护
-hei_rebot_lift_client.py   # 电脑端客户端：发送 action、接收 observation
-__init__.py                # 对外导出类
-```
-
-## 默认端口映射
-
-默认使用 udev 绑定后的稳定名字，不直接依赖易变化的 `/dev/ttyACM*`：
+## Files
 
 ```text
-/dev/hei_right_arm   右臂 U2CAN
-/dev/hei_left_arm    左臂 U2CAN
-/dev/hei_chassis     底盘 U2CAN
-/dev/hei_lift        升降电机 U2CAN
-/dev/hei_lift_io     升降限位开关串口
+config_hei_rebot_lift.py   # Ports, motor parameters, limits, chassis scaling, lift parameters, camera config
+hei_rebot_lift.py          # Real hardware driver: Damiao motors, chassis kinematics, lift homing/position control, camera frames
+hei_rebot_lift_host.py     # Robot-side service: receives actions, sends observations, watchdog protection
+hei_rebot_lift_client.py   # Computer-side client: sends actions and receives observations
+__init__.py                # Public exports
 ```
 
-这些默认值在 `HeiRebotLiftConfig` 中：
+## Default Device Mapping
+
+Stable udev device names are used by default instead of unstable `/dev/ttyACM*` names:
+
+```text
+/dev/hei_right_arm   Right arm U2CAN
+/dev/hei_left_arm    Left arm U2CAN
+/dev/hei_chassis     Chassis U2CAN
+/dev/hei_lift        Lift motor U2CAN
+/dev/hei_lift_io     Lift limit-switch serial port
+```
+
+Default values in `HeiRebotLiftConfig`:
 
 ```python
 right_arm_port = "/dev/hei_right_arm"
@@ -48,9 +48,9 @@ lift_motor_port = "/dev/hei_lift"
 lift_io_port = "/dev/hei_lift_io"
 ```
 
-## 相机配置
+## Camera Configuration
 
-默认三路相机：
+Default cameras:
 
 ```text
 front       /dev/video0
@@ -58,30 +58,30 @@ left_wrist  /dev/video2
 right_wrist /dev/video4
 ```
 
-配置位于 `hei_rebot_lift_cameras_config()`。所有相机默认使用：
+Configured in `hei_rebot_lift_cameras_config()`. All cameras default to:
 
 ```text
 640x480 @ 30 FPS
 fourcc="MJPG"
 ```
 
-`MJPG` 能显著降低 USB 带宽占用。多 USB 相机同时工作时，不建议使用默认 `YUYV`。
+`MJPG` significantly reduces USB bandwidth usage. `YUYV` is not recommended when multiple USB cameras run at the same time.
 
-查看相机：
+Find cameras:
 
 ```bash
 PYTHONPATH=src conda run --no-capture-output -n lerobot5 lerobot-find-cameras
 ```
 
-查看某路相机支持的格式：
+List supported formats:
 
 ```bash
 v4l2-ctl --device=/dev/video2 --list-formats-ext
 ```
 
-## 动作和观测字段
+## Action and Observation Keys
 
-动作字段：
+Action keys:
 
 ```text
 right_joint_1.pos ... right_joint_6.pos
@@ -94,7 +94,7 @@ theta.vel
 height.pos
 ```
 
-观测字段包含对应关节位置、底盘/升降状态和三路图像：
+Observation keys include joint positions, chassis/lift states, and three camera images:
 
 ```text
 front
@@ -102,43 +102,43 @@ left_wrist
 right_wrist
 ```
 
-## 升降逻辑
+## Lift Logic
 
-升降平台启动时默认执行 homing：
+The lift performs homing on startup by default:
 
-1. 向上运动直到上限位触发。
-2. 将当前高度设为 `0.0 mm`。
-3. 后续 `height.pos` 使用位置目标控制。
+1. Move upward until the upper limit switch is triggered.
+2. Set the current height to `0.0 mm`.
+3. Use `height.pos` as the target position afterward.
 
-默认范围：
+Default range:
 
 ```text
 lift_min_height_mm = -800.0
 lift_max_height_mm = 0.0
 ```
 
-也就是上限位为 `0`，向下为负值。
+The upper limit is `0`, and downward positions are negative.
 
-## 机器人端 host
+## Robot-Side Host
 
-机器人端启动：
+Start on the robot side:
 
 ```bash
 PYTHONPATH=src conda run --no-capture-output -n lerobot5 hei-rebot-lift-host
 ```
 
-默认 ZMQ 端口：
+Default ZMQ ports:
 
 ```text
-6555  client -> host 动作命令
-6556  host -> client 观测和图像
+6555  client -> host action commands
+6556  host -> client observations and images
 ```
 
-host 内置看门狗：如果超过 `watchdog_timeout_ms` 没有收到动作，会自动停止底盘和升降，避免断联后继续运动。
+The host includes a watchdog: if no action is received within `watchdog_timeout_ms`, it automatically stops the chassis and lift to avoid motion after disconnection.
 
-## 常调参数
+## Common Tuning Parameters
 
-底盘方向和速度：
+Chassis direction and speed:
 
 ```python
 chassis_x_sign
@@ -149,7 +149,7 @@ chassis_yaw_speed_scale
 chassis_max_wheel_accel_rad_s2
 ```
 
-升降速度和平滑：
+Lift speed and smoothing:
 
 ```python
 lift_max_speed_rad_s
@@ -157,23 +157,27 @@ lift_max_accel_rad_s2
 lift_position_kp_rad_s_per_mm
 ```
 
-夹爪力度：
+Gripper force:
 
 ```python
 gripper_force_velocity
 gripper_current
 ```
 
-机械臂软件限位：
+Arm software limits:
 
 ```python
 right_arm_min_rad / right_arm_max_rad
 left_arm_min_rad / left_arm_max_rad
 ```
 
-## 相关目录
+## Related Directories
 
 ```text
-src/lerobot/motors/damiao_u2can/   达妙 U2CAN 底层通信
-examples/hei_rebot_lift/           录制、回放、评估、推理和 VR 控制脚本
+src/lerobot/motors/damiao_u2can/   Damiao U2CAN low-level communication
+examples/hei_rebot_lift/           Recording, replay, evaluation, rollout, and VR control scripts
 ```
+
+## Chinese Version
+
+- [README_zh.md](README_zh.md)

@@ -1,32 +1,36 @@
 # HEI ReBot Lift Community
 
-欢迎加入 HEI ReBot Lift 社区，一起交流双臂移动操作、VR 遥操作、LeRobot 数据采集、ACT/VLA 训练、真实机器人部署和硬件复现经验。
+Welcome to the HEI ReBot Lift community. This space is for discussing dual-arm mobile manipulation, VR teleoperation, LeRobot data collection, ACT/VLA training, real-robot deployment, and hardware reproduction.
 
-## 加入微信交流群
+## Join the WeChat Group
 
 <p align="center">
-  <img src="jiaoliuqun.jpg" alt="HEI ReBot Lift 微信交流群二维码" width="320">
+  <img src="jiaoliuqun.jpg" alt="HEI ReBot Lift WeChat group QR code" width="320">
 </p>
 
-如果二维码过期，可以添加微信号并备注 `HEI ReBot Lift`：
+If the QR code expires, add the WeChat account below and mention `HEI ReBot Lift`:
 
 ```text
 hgm159951
 ```
 
-## 联系我们
+## Contact
 
 ```text
-微信社区 / 合作咨询：hgm159951
-邮箱：hgm159951@163.com
+WeChat community / collaboration: hgm159951
+Email: hgm159951@163.com
 ```
 
-也欢迎通过 GitHub Issue 反馈问题、记录复现过程、提交改进建议或分享实机测试结果。
+GitHub Issues are also welcome for bug reports, reproduction notes, improvement suggestions, and real-robot test feedback.
 
-## 适合交流的内容
+## Topics
 
-- HEI ReBot Lift 复现、装配和调试
-- 达妙电机、U2CAN、升降平台、全向底盘和相机配置
-- VR 遥操作、MuJoCo/Pinocchio IK 和数据采集
-- LeRobotDataset、ACT、SmolVLA/VLA 训练和实机推理
-- 教学实验、算法验证、应用落地和合作开发
+- HEI ReBot Lift reproduction, assembly, and debugging
+- Damiao motors, U2CAN, lift platform, omnidirectional base, and camera setup
+- VR teleoperation, MuJoCo/Pinocchio IK, and data collection
+- LeRobotDataset, ACT, SmolVLA/VLA training, and real-robot rollout
+- Teaching labs, algorithm validation, application deployment, and collaboration
+
+## Chinese Version
+
+- [README_zh.md](README_zh.md)

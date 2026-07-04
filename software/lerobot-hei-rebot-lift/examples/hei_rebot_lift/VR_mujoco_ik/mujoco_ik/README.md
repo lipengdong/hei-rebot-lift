@@ -1,18 +1,22 @@
 # MuJoCo IK
 
-这是 HEI ReBot Lift VR 遥操作链路里的 MuJoCo + Pinocchio IK 子模块。
+This is the MuJoCo + Pinocchio IK submodule in the HEI ReBot Lift VR teleoperation pipeline.
 
-统一部署、依赖安装和启动流程请看上一级文档：
+For unified deployment, dependency installation, and startup flow, see the parent document:
 
 ```text
 ../README.md
 ```
 
-常用启动方式：
+Common startup command:
 
 ```bash
 cd ..
 bash run_mujoco_ik.sh
 ```
 
-注意：`pinocchio`、`casadi`、`eigenpy`、`coal-python` 请使用上级 `environment.yml` 里的 conda-forge 版本安装，不要在这里单独 `pip install pin`。
+Note: install `pinocchio`, `casadi`, `eigenpy`, and `coal-python` from the conda-forge versions defined in the parent `environment.yml`. Do not install `pin` separately with pip in this folder.
+
+## Chinese Version
+
+- [README_zh.md](README_zh.md)
