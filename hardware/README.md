@@ -1,37 +1,70 @@
 # HEI ReBot Lift Hardware
 
-HEI ReBot Lift 的硬件部分包含 **达妙双臂、丝杆升降平台、四轮 O 型全向底盘、三路相机、U2CAN 驱动板、电源系统和限位开关**。本目录用于整理可复现硬件资料，包括 BOM、接线、端口绑定、装配说明和安全注意事项。
+HEI ReBot Lift 的硬件资料用于帮助复现 **双臂 + 升降平台 + 四轮 O 型全向底盘** 的真实机器人平台。本目录当前包含 3D 打印件、金属/钣金加工件和外购件 BOM。
 
-机械臂部分参考了 Seeed reBot-DevArm 的开源思路：不仅记录电机和结构，也尽量整理到可采购、可装配、可标定、可调试的程度。reBot-DevArm 项目强调开放硬件蓝图、BOM、软件与算法生态，并提供 Damiao/Robostride 版本作为具身智能机械臂参考；HEI ReBot Lift 在此基础上扩展为 **双臂 + 升降 + 全向底盘** 的移动操作平台。
+机械臂部分参考了 [Seeed reBot-DevArm](https://github.com/Seeed-Projects/reBot-DevArm) 的开源思路：不仅记录代码，也尽量把硬件资料整理到可采购、可加工、可装配、可标定、可调试的程度。HEI ReBot Lift 在此基础上扩展为 **双臂移动操作平台**，并接入 LeRobot 数据采集、ACT/VLA 训练和真实机器人推理流程。
 
-## 📁 计划目录
+## 📁 当前目录
 
 ```text
 hardware/
 ├── README.md
-├── BOM.md                         # 总 BOM，含采购链接、数量、备注
-├── wiring.md                      # 接线说明：U2CAN、电源、限位、相机
-├── power.md                       # 电源方案、电压电流、保险、急停
-├── udev_rules/
-│   └── 99-hei-rebot-lift.rules    # 稳定端口名绑定规则
-├── mechanical/
-│   ├── arm/                       # 双臂结构资料
-│   ├── lift/                      # 升降平台结构资料
-│   ├── chassis/                   # 四轮 O 型全向底盘资料
-│   └── camera_mounts/             # 相机支架资料
-├── electronics/
-│   ├── damiao_u2can.md            # 达妙 U2CAN 驱动板说明
-│   ├── limit_switch.md            # 升降限位开关说明
-│   └── camera_usb.md              # USB 相机与带宽说明
-└── calibration/
-    ├── arm_zero.md                # 机械臂零位标定
-    ├── lift_homing.md             # 升降 homing 标定
-    └── chassis_direction.md       # 底盘方向和轮速标定
+├── 3D_Printed_Parts/              # STL 3D 打印件
+├── Metal_Parts/                   # STEP 金属/钣金加工件
+└── Purchased_Parts/
+    ├── Purchased_Parts.xls        # 原始采购件表
+    └── Purchased_Parts.md         # Markdown 采购件 BOM
 ```
 
-## 🦾 机械臂硬件
+## 🧾 外购件 BOM
 
-HEI ReBot Lift 使用双臂结构，左右两侧各 6 个关节 + 1 个夹爪电机。机械臂设计思路和硬件资料整理方式参考 reBot-DevArm，目标是让学习者可以根据开源资料完成采购、装配、标定和二次开发。
+- Markdown 表格：[Purchased_Parts/Purchased_Parts.md](Purchased_Parts/Purchased_Parts.md)
+- 原始表格：[Purchased_Parts/Purchased_Parts.xls](Purchased_Parts/Purchased_Parts.xls)
+
+采购件表包含相机、线材、IO/RS485 模块、急停、USB Hub、显示器、接口模块、轴承、全向轮、电池、电源相关件等。价格和链接只作为复现参考，实际采购前请重新核对规格。
+
+## 🖨️ 3D 打印件
+
+| 文件 | 类型 | 说明 |
+| --- | --- | --- |
+| [part_danpan_dm_zhijia_dayin.STL](3D_Printed_Parts/part_danpan_dm_zhijia_dayin.STL) | STL | 3D 打印件: `part_danpan_dm_zhijia_dayin` |
+| [part_dianchi_ke_1.STL](3D_Printed_Parts/part_dianchi_ke_1.STL) | STL | 3D 打印件: `part_dianchi_ke_1` |
+| [part_dianchi_ke_2.STL](3D_Printed_Parts/part_dianchi_ke_2.STL) | STL | 3D 打印件: `part_dianchi_ke_2` |
+| [part_dianchi_ke_3.STL](3D_Printed_Parts/part_dianchi_ke_3.STL) | STL | 3D 打印件: `part_dianchi_ke_3` |
+| [part_dipan_3-1.STL](3D_Printed_Parts/part_dipan_3-1.STL) | STL | 3D 打印件: `part_dipan_3-1` |
+| [part_dipan_3.STL](3D_Printed_Parts/part_dipan_3.STL) | STL | 3D 打印件: `part_dipan_3` |
+| [part_shengjiang_10.STL](3D_Printed_Parts/part_shengjiang_10.STL) | STL | 3D 打印件: `part_shengjiang_10` |
+| [part_shengjiang_11.STL](3D_Printed_Parts/part_shengjiang_11.STL) | STL | 3D 打印件: `part_shengjiang_11` |
+| [part_shengjiang_12.STL](3D_Printed_Parts/part_shengjiang_12.STL) | STL | 3D 打印件: `part_shengjiang_12` |
+| [part_shengjiang_6.STL](3D_Printed_Parts/part_shengjiang_6.STL) | STL | 3D 打印件: `part_shengjiang_6` |
+| [part_shengjiang_7.STL](3D_Printed_Parts/part_shengjiang_7.STL) | STL | 3D 打印件: `part_shengjiang_7` |
+| [part_shengjiang_8.STL](3D_Printed_Parts/part_shengjiang_8.STL) | STL | 3D 打印件: `part_shengjiang_8` |
+| [part_shengjiang_9.STL](3D_Printed_Parts/part_shengjiang_9.STL) | STL | 3D 打印件: `part_shengjiang_9` |
+| [part_shengjiang_pingtai_1.STL](3D_Printed_Parts/part_shengjiang_pingtai_1.STL) | STL | 3D 打印件: `part_shengjiang_pingtai_1` |
+| [part_shengjiang_pingtai_2.STL](3D_Printed_Parts/part_shengjiang_pingtai_2.STL) | STL | 3D 打印件: `part_shengjiang_pingtai_2` |
+| [part_waike_7.STL](3D_Printed_Parts/part_waike_7.STL) | STL | 3D 打印件: `part_waike_7` |
+| [part_xiangji_1.STL](3D_Printed_Parts/part_xiangji_1.STL) | STL | 3D 打印件: `part_xiangji_1` |
+| [part_xiangji_2.STL](3D_Printed_Parts/part_xiangji_2.STL) | STL | 3D 打印件: `part_xiangji_2` |
+
+## 🧱 金属 / 钣金加工件
+
+| 文件 | 类型 | 说明 |
+| --- | --- | --- |
+| [DM_4340P_banjin_falan.STEP](Metal_Parts/DM_4340P_banjin_falan.STEP) | STEP | 金属/钣金加工件: `DM_4340P_banjin_falan` |
+| [part_danpan_dm_zhijia.STEP](Metal_Parts/part_danpan_dm_zhijia.STEP) | STEP | 金属/钣金加工件: `part_danpan_dm_zhijia` |
+| [part_dipan_1.STEP](Metal_Parts/part_dipan_1.STEP) | STEP | 金属/钣金加工件: `part_dipan_1` |
+| [part_shengjiang_falan.STEP](Metal_Parts/part_shengjiang_falan.STEP) | STEP | 金属/钣金加工件: `part_shengjiang_falan` |
+| [part_shengjiang_falan_zhijia.STEP](Metal_Parts/part_shengjiang_falan_zhijia.STEP) | STEP | 金属/钣金加工件: `part_shengjiang_falan_zhijia` |
+| [part_waike_2.STEP](Metal_Parts/part_waike_2.STEP) | STEP | 金属/钣金加工件: `part_waike_2` |
+| [part_waike_3.STEP](Metal_Parts/part_waike_3.STEP) | STEP | 金属/钣金加工件: `part_waike_3` |
+| [part_waike_5.STEP](Metal_Parts/part_waike_5.STEP) | STEP | 金属/钣金加工件: `part_waike_5` |
+| [part_yaobu_1.STEP](Metal_Parts/part_yaobu_1.STEP) | STEP | 金属/钣金加工件: `part_yaobu_1` |
+| [part_yaobu_2.STEP](Metal_Parts/part_yaobu_2.STEP) | STEP | 金属/钣金加工件: `part_yaobu_2` |
+| [part_yaobu_3.STEP](Metal_Parts/part_yaobu_3.STEP) | STEP | 金属/钣金加工件: `part_yaobu_3` |
+
+## 🦾 机械臂硬件参考
+
+HEI ReBot Lift 使用双臂结构，左右两侧各 6 个关节 + 1 个夹爪电机。机械臂部分的资料整理方式参考 reBot-DevArm，后续建议继续补充关节结构、零位标定、电机 ID、软件限位和夹爪指尖资料。
 
 | 项目 | 当前配置 | 说明 |
 | --- | --- | --- |
@@ -43,51 +76,17 @@ HEI ReBot Lift 使用双臂结构，左右两侧各 6 个关节 + 1 个夹爪电
 | 通信 | U2CAN | 左右臂分别使用独立驱动板/端口 |
 | 控制方式 | 位置控制为主 | 上层 LeRobot action 使用 `*.pos` |
 
-### 机械臂端口
-
-```text
-/dev/hei_right_arm   右臂 U2CAN
-/dev/hei_left_arm    左臂 U2CAN
-```
-
-### 机械臂动作字段
-
-```text
-right_joint_1.pos ... right_joint_6.pos
-right_gripper.pos
-left_joint_1.pos ... left_joint_6.pos
-left_gripper.pos
-```
-
-### 需要继续补充的机械臂资料
-
-- 左右臂 BOM：电机、结构件、螺丝、轴承、线材、连接件
-- 机械臂 STEP/STL/装配图
-- 电机 CAN ID 表
-- 关节方向、零位姿态和软件限位
-- 夹爪指尖材料和夹取力调节说明
-- 机械臂零位标定流程
-- 机械臂常见故障和排查方法
-
 ## ⬆️ 升降平台
 
-升降平台用于扩展双臂工作高度。当前软件侧已经支持启动后自动回上限位，并将上限位定义为 `height.pos = 0`。
+升降平台用于扩展双臂工作高度。当前软件侧支持启动后自动回上限位，并将上限位定义为 `height.pos = 0`。
 
 | 项目 | 当前配置 | 说明 |
 | --- | --- | --- |
-| 机构 | 丝杆升降平台 | 具体结构资料待整理 |
+| 机构 | 丝杆升降平台 | 结构件见 3D 打印件和金属加工件 |
 | 电机通信 | U2CAN | 默认端口 `/dev/hei_lift` |
 | 限位输入 | 串口/IO | 默认端口 `/dev/hei_lift_io` |
 | 位置范围 | -800 mm 到 0 mm | 上限位为 0，向下为负值 |
 | 控制方式 | 位置目标 | 上层 action 使用 `height.pos` |
-
-### 待补充资料
-
-- 升降平台 BOM
-- 丝杆、导轨、滑块和安装结构图
-- 上限位开关接线图
-- homing 安全注意事项
-- 电机参数、速度和加速度建议
 
 ## 🛞 四轮 O 型全向底盘
 
@@ -99,14 +98,6 @@ left_gripper.pos
 | 通信 | U2CAN | 默认端口 `/dev/hei_chassis` |
 | 控制接口 | 速度控制 | `x.vel`、`y.vel`、`theta.vel` |
 | 平滑方式 | 加减速限制 | 降低机器人晃动 |
-
-### 待补充资料
-
-- 底盘 BOM
-- 轮子安装方向和轮距参数
-- 电机 ID 与轮子位置映射
-- 底盘运动学参数
-- 地面测试和方向标定方法
 
 ## 📷 三路相机
 
@@ -120,14 +111,6 @@ right_wrist /dev/video4
 
 建议使用 `MJPG` 格式，降低 USB 带宽占用，提高多相机同时采集稳定性。
 
-### 待补充资料
-
-- 相机型号和采购链接
-- 前视相机安装位置
-- 左右腕部相机支架
-- USB Hub/带宽建议
-- 相机标定和视角示例图
-
 ## 🔌 端口绑定
 
 项目默认使用稳定设备名，避免 `/dev/ttyACM*` 或 `/dev/video*` 顺序变化导致程序启动失败。
@@ -140,21 +123,6 @@ right_wrist /dev/video4
 /dev/hei_lift_io     升降限位开关串口
 ```
 
-待补充：`udev_rules/99-hei-rebot-lift.rules`。
-
-## ⚡ 电源与安全
-
-硬件复现时建议优先整理并确认电源系统，尤其是双臂、底盘和升降平台同时运动时的峰值电流。
-
-### 建议补充
-
-- 总电源电压和额定电流
-- 各驱动板供电分配
-- 急停按钮接线
-- 保险丝或断路器规格
-- 地线和屏蔽线处理
-- 上电、下电、homing 前检查清单
-
 ## ✅ 启动前硬件检查清单
 
 - [ ] 左右臂机械零位正确
@@ -164,6 +132,14 @@ right_wrist /dev/video4
 - [ ] 三路相机能稳定输出 MJPG 图像
 - [ ] 电源电压、电流和急停正常
 - [ ] 机器人周围留有安全空间
+
+## 🧩 待继续整理
+
+- 总装配图和装配步骤
+- 电气接线图和电源分配图
+- U2CAN、电机 ID、限位开关和相机端口绑定规则
+- 机械臂零位、升降 homing、底盘方向和相机标定流程
+- 更完整的 BOM 分类和替代件说明
 
 ## 🙏 References
 
