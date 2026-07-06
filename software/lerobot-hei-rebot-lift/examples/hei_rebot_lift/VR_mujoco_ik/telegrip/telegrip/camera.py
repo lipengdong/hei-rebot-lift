@@ -38,8 +38,10 @@ class _CameraSlot:
     def __init__(self, config: ZmqObservationCameraRuntimeConfig):
         self.config = config
         self.latest_jpeg: Optional[bytes] = None
+        self.latest_frame: Optional[np.ndarray] = None
         self.latest_frame_shape: Optional[tuple[int, int]] = None
         self.frame_version = 0
+        self.last_update_s = 0.0
         self.clients = 0
         self.last_error: Optional[str] = None
         self.jpeg_quality = max(60, min(100, int(config.jpeg_quality)))
@@ -85,8 +87,10 @@ class ZmqObservationCameraHub:
             socket.setsockopt_string(zmq.SUBSCRIBE, self._transport.topic)
         else:
             socket = context.socket(zmq.PULL)
-        socket.setsockopt(zmq.CONFLATE, 1)
-        socket.setsockopt(zmq.RCVHWM, 1)
+        # Do not use CONFLATE on the PULL side for large image observations;
+        # some ZMQ builds behave poorly and can leave the consumer stuck on stale frames.
+        # RCVHWM plus explicit draining below keeps the newest observation without backlog.
+        socket.setsockopt(zmq.RCVHWM, 2)
         socket.setsockopt(zmq.RCVTIMEO, 200)
         socket.connect(self._transport.endpoint)
         return socket
@@ -103,6 +107,11 @@ class ZmqObservationCameraHub:
 
                 try:
                     message = socket.recv_string()
+                    while True:
+                        try:
+                            message = socket.recv_string(zmq.NOBLOCK)
+                        except zmq.Again:
+                            break
                 except zmq.Again:
                     continue
                 except Exception as exc:
@@ -224,8 +233,10 @@ class ZmqObservationCameraHub:
             slot = self._slots[camera_id]
             slot.last_error = None
             slot.latest_jpeg = encoded.tobytes()
+            slot.latest_frame = frame.copy()
             slot.latest_frame_shape = (frame.shape[1], frame.shape[0])
             slot.frame_version += 1
+            slot.last_update_s = time.time()
             self._stream_condition.notify_all()
 
     def _set_all_errors(self, message: str) -> None:
@@ -258,6 +269,8 @@ class ZmqObservationCameraHub:
                 "height": latest_shape[1] if latest_shape else slot.config.height,
                 "fps": slot.config.fps,
                 "jpeg_quality": slot.jpeg_quality,
+                "frame_version": slot.frame_version,
+                "last_update_age_s": round(time.time() - slot.last_update_s, 3) if slot.last_update_s else None,
                 "device_exists": True,
                 "devices": self.list_devices(camera_id),
                 "last_error": slot.last_error,
@@ -314,6 +327,38 @@ class ZmqObservationCameraHub:
             return self._error_jpeg(error)
         return frame_bytes
 
+    def get_latest_frame_array(
+        self, camera_id: str, last_version: Optional[int] = None, timeout: float = 1.0
+    ) -> tuple[Optional[np.ndarray], int]:
+        deadline = time.time() + timeout
+        with self._lock:
+            slot = self._slots[camera_id]
+            while not self._stop_event.is_set():
+                has_new_frame = slot.latest_frame is not None and (
+                    last_version is None or slot.frame_version != last_version
+                )
+                if has_new_frame:
+                    return slot.latest_frame.copy(), slot.frame_version
+
+                remaining = deadline - time.time()
+                if remaining <= 0:
+                    break
+                self._stream_condition.wait(timeout=remaining)
+
+            if slot.latest_frame is not None:
+                return slot.latest_frame.copy(), slot.frame_version
+        return None, last_version or 0
+
+    def get_error_frame_array(self, camera_id: str) -> np.ndarray:
+        error = self._slots[camera_id].last_error or "ZMQ camera frame not available"
+        if cv2 is None:
+            return np.zeros((480, 640, 3), dtype=np.uint8)
+        frame_bytes = self._error_jpeg(error)
+        frame = cv2.imdecode(np.frombuffer(frame_bytes, dtype=np.uint8), cv2.IMREAD_COLOR)
+        if frame is None:
+            frame = np.zeros((480, 640, 3), dtype=np.uint8)
+        return frame
+
     def _error_frame(self, text: str) -> bytes:
         return b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + self._error_jpeg(text) + b"\r\n"
 
@@ -351,3 +396,11 @@ class ZmqObservationCameraManager:
 
     def get_jpeg_frame(self) -> bytes:
         return self._hub.get_jpeg_frame(self.camera_id)
+
+    def get_latest_frame_array(
+        self, last_version: Optional[int] = None, timeout: float = 1.0
+    ) -> tuple[Optional[np.ndarray], int]:
+        return self._hub.get_latest_frame_array(self.camera_id, last_version, timeout)
+
+    def get_error_frame_array(self) -> np.ndarray:
+        return self._hub.get_error_frame_array(self.camera_id)

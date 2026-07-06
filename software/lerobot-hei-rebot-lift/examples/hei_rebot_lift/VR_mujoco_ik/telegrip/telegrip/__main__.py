@@ -13,6 +13,7 @@ from urllib.parse import parse_qs, urlparse
 from .camera import ZmqObservationCameraHub, ZmqObservationCameraRuntimeConfig
 from .config import TelegripConfig, get_config_data
 from .inputs.vr_ws_server import VRWebSocketServer
+from .webrtc import WebRTCCameraServer
 
 
 def build_vr_image_runtime(config_data: dict):
@@ -79,6 +80,8 @@ async def main() -> None:
 
     config_data = get_config_data()
     image_managers, image_hubs = build_vr_image_runtime(config_data)
+    webrtc_server = WebRTCCameraServer(image_managers)
+    event_loop = asyncio.get_running_loop()
     vr_server = None
 
     class RequestHandler(SimpleHTTPRequestHandler):
@@ -90,7 +93,7 @@ async def main() -> None:
 
         def end_headers(self):
             self.send_header("Access-Control-Allow-Origin", "*")
-            self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS")
+            self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
             self.send_header("Access-Control-Allow-Headers", "Content-Type")
             super().end_headers()
 
@@ -129,6 +132,17 @@ async def main() -> None:
                 camera_id = parse_qs(parsed_path.query).get("camera", ["front"])[0]
                 manager = image_managers.get(camera_id) or next(iter(image_managers.values()))
                 self._send_json(manager.get_status())
+                return
+
+            if parsed_path.path == "/api/webrtc/status":
+                self._send_json(
+                    {
+                        "available": bool(image_managers) and webrtc_server.available,
+                        "message": None
+                        if webrtc_server.available
+                        else "Install aiortc and av to enable WebRTC camera streaming.",
+                    }
+                )
                 return
 
             if parsed_path.path == "/api/camera/stream.mjpg":
@@ -175,6 +189,30 @@ async def main() -> None:
 
             super().do_GET()
 
+        def do_POST(self):
+            parsed_path = urlparse(self.path)
+
+            if parsed_path.path == "/api/webrtc/offer":
+                try:
+                    content_length = int(self.headers.get("Content-Length", "0"))
+                    post_data = self.rfile.read(content_length).decode("utf-8")
+                    data = json.loads(post_data)
+                    camera_id = str(data.get("camera_id", "front"))
+                    future = asyncio.run_coroutine_threadsafe(
+                        webrtc_server.handle_offer(data, camera_id),
+                        event_loop,
+                    )
+                    response = future.result(timeout=15)
+                    self._send_json(response)
+                except json.JSONDecodeError:
+                    self._send_json({"success": False, "error": "Invalid JSON format"}, status=400)
+                except Exception as exc:
+                    logger.exception("Failed to negotiate WebRTC session")
+                    self._send_json({"success": False, "error": str(exc)}, status=500)
+                return
+
+            self._send_json({"success": False, "error": "Endpoint not found"}, status=404)
+
     cert_path, key_path = config.get_absolute_ssl_paths()
     ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     ssl_context.load_cert_chain(certfile=cert_path, keyfile=key_path)
@@ -200,6 +238,7 @@ async def main() -> None:
     finally:
         if vr_server is not None:
             await vr_server.stop()
+        await webrtc_server.stop()
         http_server.shutdown()
         http_server.server_close()
         for hub in image_hubs:

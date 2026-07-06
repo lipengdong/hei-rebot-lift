@@ -37,10 +37,12 @@ class HeiRebotLiftConfig(RobotConfig):
 
     disable_torque_on_disconnect: bool = True
 
-    arm_velocity_limit_rad_s: float = 8.0
-    arm_kp_apr: float = 100.0
-    arm_acc: float = 20.0
-    arm_dec: float = -50.0
+    # Arm joints 1-3 keep the original stronger settings. Joints 4-6 use softer
+    # settings because wrist-root load can excite oscillation or motor protection.
+    arm_velocity_limit_rad_s: tuple[float, ...] = (8.0, 8.0, 8.0, 1.8, 2.5, 2.5)
+    arm_kp_apr: tuple[float, ...] = (100.0, 100.0, 100.0, 45.0, 50.0, 50.0)
+    arm_acc: tuple[float, ...] = (20.0, 20.0, 20.0, 6.0, 8.0, 8.0)
+    arm_dec: tuple[float, ...] = (-40.0, -40.0, -30.0, -6.0, -8.0, -8.0)
     gripper_force_velocity: float = 1000.0
     gripper_current: float = 500.0
 

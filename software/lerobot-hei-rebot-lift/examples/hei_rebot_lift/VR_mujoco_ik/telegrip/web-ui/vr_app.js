@@ -103,6 +103,28 @@ function createBrandHud() {
   state.brandHud = group;
 }
 
+function wait(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function waitForIceGatheringComplete(pc) {
+  if (pc.iceGatheringState === 'complete') return;
+
+  await new Promise(resolve => {
+    const checkState = () => {
+      if (pc.iceGatheringState === 'complete') {
+        pc.removeEventListener('icegatheringstatechange', checkState);
+        resolve();
+      }
+    };
+    pc.addEventListener('icegatheringstatechange', checkState);
+    window.setTimeout(() => {
+      pc.removeEventListener('icegatheringstatechange', checkState);
+      resolve();
+    }, 2000);
+  });
+}
+
 function cameraId(cameraConfig) {
   return cameraConfig.id || cameraConfig.image_key || 'front';
 }
@@ -120,6 +142,7 @@ function createHiddenImageState(cameraConfig) {
   img.id = `${id}-camera-stream`;
   img.alt = `${id} ZMQ camera stream`;
   img.crossOrigin = 'anonymous';
+  img.decoding = 'async';
   img.style.cssText = 'position:fixed;right:0;bottom:0;width:2px;height:2px;opacity:0.01;pointer-events:none;';
 
   const canvas = document.createElement('canvas');
@@ -128,17 +151,139 @@ function createHiddenImageState(cameraConfig) {
   canvas.height = cameraConfig.height || 480;
   canvas.style.cssText = img.style.cssText;
 
+  const video = document.createElement('video');
+  video.id = `${id}-camera-video`;
+  video.autoplay = true;
+  video.muted = true;
+  video.playsInline = true;
+  video.setAttribute('autoplay', '');
+  video.setAttribute('muted', '');
+  video.setAttribute('playsinline', '');
+  video.setAttribute('webkit-playsinline', '');
+  video.style.cssText = img.style.cssText;
+
   document.body.appendChild(img);
   document.body.appendChild(canvas);
+  document.body.appendChild(video);
 
   state.image.states.set(id, {
     id,
     config: cameraConfig,
     img,
+    video,
     canvas,
     ctx: canvas.getContext('2d'),
-    texture: null
+    texture: null,
+    textureKind: null,
+    material: null,
+    transportMode: 'initializing',
+    peerConnection: null,
+    loading: false,
+    lastFrameRequestMs: -Infinity,
+    frameSeq: 0,
+    drawnFrameSeq: 0,
+    frameIntervalMs: 1000 / Math.max(1, Math.min(20, Number(cameraConfig.fps || 15)))
   });
+}
+
+function disposeCameraTexture(cameraState) {
+  if (!cameraState?.texture) return;
+  try {
+    cameraState.texture.dispose();
+  } catch (error) {
+    console.warn('Failed to dispose camera texture:', error);
+  }
+  cameraState.texture = null;
+  cameraState.textureKind = null;
+  cameraState.material = null;
+}
+
+function setPanelTexture(id, texture, kind) {
+  const cameraState = state.image.states.get(id);
+  const panel = state.image.panels.get(id);
+  if (!cameraState || !panel) return;
+
+  const mesh = panel.screen.getObject3D('mesh');
+  if (!mesh) return;
+
+  if (cameraState.texture !== texture || cameraState.textureKind !== kind || !cameraState.material) {
+    cameraState.material = new THREE.MeshBasicMaterial({
+      map: texture,
+      side: THREE.DoubleSide,
+      toneMapped: false,
+      transparent: state.image.opacity < 1,
+      opacity: state.image.opacity,
+      depthWrite: state.image.opacity >= 1
+    });
+    mesh.material = cameraState.material;
+    mesh.material.needsUpdate = true;
+    cameraState.texture = texture;
+    cameraState.textureKind = kind;
+  }
+}
+
+function applyCanvasTexture(id) {
+  const cameraState = state.image.states.get(id);
+  if (!cameraState) return;
+
+  if (!cameraState.texture || cameraState.textureKind !== 'canvas') {
+    disposeCameraTexture(cameraState);
+    cameraState.texture = new THREE.CanvasTexture(cameraState.canvas);
+    cameraState.texture.minFilter = THREE.LinearFilter;
+    cameraState.texture.magFilter = THREE.LinearFilter;
+    cameraState.texture.generateMipmaps = false;
+    if ('colorSpace' in cameraState.texture && THREE.SRGBColorSpace) {
+      cameraState.texture.colorSpace = THREE.SRGBColorSpace;
+    }
+    cameraState.textureKind = 'canvas';
+    cameraState.material = null;
+  }
+
+  setPanelTexture(id, cameraState.texture, 'canvas');
+  cameraState.texture.needsUpdate = true;
+}
+
+function applyVideoTexture(id) {
+  const cameraState = state.image.states.get(id);
+  if (!cameraState || !cameraState.video.srcObject) return;
+
+  if (!cameraState.texture || cameraState.textureKind !== 'video') {
+    disposeCameraTexture(cameraState);
+    cameraState.texture = new THREE.VideoTexture(cameraState.video);
+    cameraState.texture.minFilter = THREE.LinearFilter;
+    cameraState.texture.magFilter = THREE.LinearFilter;
+    cameraState.texture.generateMipmaps = false;
+    if ('colorSpace' in cameraState.texture && THREE.SRGBColorSpace) {
+      cameraState.texture.colorSpace = THREE.SRGBColorSpace;
+    }
+    cameraState.textureKind = 'video';
+    cameraState.material = null;
+  }
+
+  setPanelTexture(id, cameraState.texture, 'video');
+}
+
+function drawCameraFrame(id) {
+  const cameraState = state.image.states.get(id);
+  if (!cameraState || !cameraState.ctx) return;
+
+  if (cameraState.transportMode === 'webrtc') {
+    applyVideoTexture(id);
+    return;
+  }
+
+  if (!cameraState.img.complete || !cameraState.img.naturalWidth || !cameraState.img.naturalHeight) return;
+  if (cameraState.canvas.width !== cameraState.img.naturalWidth || cameraState.canvas.height !== cameraState.img.naturalHeight) {
+    cameraState.canvas.width = cameraState.img.naturalWidth;
+    cameraState.canvas.height = cameraState.img.naturalHeight;
+  }
+
+  try {
+    cameraState.ctx.drawImage(cameraState.img, 0, 0, cameraState.canvas.width, cameraState.canvas.height);
+    applyCanvasTexture(id);
+  } catch (error) {
+    console.warn(`Could not draw MJPEG frame for ${id}:`, error);
+  }
 }
 
 function createCameraPanel(cameraConfig) {
@@ -186,30 +331,122 @@ function createCameraPanel(cameraConfig) {
   state.image.panels.set(id, { panel, screen, label, meta });
 }
 
-function applyCameraTexture(id) {
+function updateCameraPanel(id) {
   const cameraState = state.image.states.get(id);
   const panel = state.image.panels.get(id);
-  const mesh = panel?.screen?.getObject3D('mesh');
-  if (!cameraState || !mesh) return;
+  if (!cameraState || !panel || !cameraState.status) return;
 
-  if (!cameraState.texture) {
-    cameraState.texture = new THREE.CanvasTexture(cameraState.canvas);
-    cameraState.texture.minFilter = THREE.LinearFilter;
-    cameraState.texture.magFilter = THREE.LinearFilter;
-    cameraState.texture.generateMipmaps = false;
-    if ('colorSpace' in cameraState.texture && THREE.SRGBColorSpace) {
-      cameraState.texture.colorSpace = THREE.SRGBColorSpace;
-    }
-    mesh.material = new THREE.MeshBasicMaterial({
-      map: cameraState.texture,
-      side: THREE.DoubleSide,
-      toneMapped: false,
-      transparent: state.image.opacity < 1,
-      opacity: state.image.opacity,
-      depthWrite: state.image.opacity >= 1
-    });
+  panel.label.setAttribute('value', cameraState.status.name || id);
+  const text = [
+    `${cameraState.status.width || 0}x${cameraState.status.height || 0}`,
+    `${cameraState.status.fps || 0} FPS`,
+    `transport: ${cameraState.transportMode}`,
+    `frame: ${cameraState.status.frame_version ?? 0}`,
+    cameraState.status.image_key || id
+  ];
+  if (cameraState.status.last_error) text.push(`error: ${cameraState.status.last_error}`);
+  panel.meta.setAttribute('value', text.join(' | '));
+}
+
+async function refreshCameraStatus(id) {
+  const cameraState = state.image.states.get(id);
+  if (!cameraState) return;
+  try {
+    cameraState.status = await fetch(`/api/camera/status?camera=${encodeURIComponent(id)}`).then(response => response.json());
+    updateCameraPanel(id);
+  } catch (error) {
+    console.warn(`Could not load ZMQ camera status for ${id}:`, error);
   }
-  cameraState.texture.needsUpdate = true;
+}
+
+function startMjpegStream(id) {
+  const cameraState = state.image.states.get(id);
+  if (!cameraState) return;
+
+  cameraState.transportMode = 'mjpeg-stream';
+  if (cameraState.peerConnection) {
+    try {
+      cameraState.peerConnection.close();
+    } catch (error) {
+      console.warn(`Failed to close ${id} WebRTC peer:`, error);
+    }
+    cameraState.peerConnection = null;
+  }
+  cameraState.video.pause();
+  cameraState.video.srcObject = null;
+
+  const loadStream = () => {
+    cameraState.img.src = `/api/camera/stream.mjpg?camera=${encodeURIComponent(id)}&ts=${Date.now()}`;
+  };
+  cameraState.img.onload = () => updateCameraPanel(id);
+  cameraState.img.onerror = () => {
+    cameraState.transportMode = 'mjpeg-retrying';
+    updateCameraPanel(id);
+    window.setTimeout(loadStream, 500);
+  };
+  loadStream();
+  updateCameraPanel(id);
+}
+
+async function startCameraFeed(id) {
+  const cameraState = state.image.states.get(id);
+  if (!cameraState) return;
+  cameraState.img.setAttribute('referrerpolicy', 'no-referrer');
+  cameraState.img.decoding = 'async';
+
+  try {
+    const statusResponse = await fetch('/api/webrtc/status');
+    const status = await statusResponse.json();
+    if (!status.available) {
+      startMjpegStream(id);
+      return;
+    }
+
+    cameraState.transportMode = 'webrtc-connecting';
+    updateCameraPanel(id);
+    cameraState.peerConnection = new RTCPeerConnection({ iceServers: [] });
+    cameraState.peerConnection.addTransceiver('video', { direction: 'recvonly' });
+    cameraState.peerConnection.ontrack = async event => {
+      cameraState.video.srcObject = event.streams[0];
+      cameraState.video.onloadedmetadata = () => {
+        applyVideoTexture(id);
+        updateCameraPanel(id);
+      };
+      try {
+        await cameraState.video.play();
+      } catch (playError) {
+        console.warn(`Autoplay retry required for ${id}:`, playError);
+      }
+      cameraState.transportMode = 'webrtc';
+      applyVideoTexture(id);
+      updateCameraPanel(id);
+    };
+    cameraState.peerConnection.onconnectionstatechange = () => {
+      if (['failed', 'disconnected', 'closed'].includes(cameraState.peerConnection.connectionState)) {
+        startMjpegStream(id);
+      }
+    };
+
+    const offer = await cameraState.peerConnection.createOffer();
+    await cameraState.peerConnection.setLocalDescription(offer);
+    await waitForIceGatheringComplete(cameraState.peerConnection);
+
+    const response = await fetch('/api/webrtc/offer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        camera_id: id,
+        sdp: cameraState.peerConnection.localDescription.sdp,
+        type: cameraState.peerConnection.localDescription.type
+      })
+    });
+    const answer = await response.json();
+    if (!response.ok || !answer.sdp) throw new Error(answer.error || `WebRTC offer failed for ${id}`);
+    await cameraState.peerConnection.setRemoteDescription(answer);
+  } catch (error) {
+    console.warn(`WebRTC startup failed for ${id}, using MJPEG fallback:`, error);
+    startMjpegStream(id);
+  }
 }
 
 function createAxisPart(type, attributes) {
@@ -269,20 +506,7 @@ function addControllerAxes(handEl) {
 function renderCameraFrames() {
   if (!state.image.enabled) return;
 
-  state.image.states.forEach((cameraState, id) => {
-    const { img, canvas, ctx } = cameraState;
-    if (!ctx || !img.complete || !img.naturalWidth || !img.naturalHeight) return;
-    if (canvas.width !== img.naturalWidth || canvas.height !== img.naturalHeight) {
-      canvas.width = img.naturalWidth;
-      canvas.height = img.naturalHeight;
-    }
-    try {
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      applyCameraTexture(id);
-    } catch (error) {
-      console.warn(`Could not draw ZMQ camera frame for ${id}:`, error);
-    }
-  });
+  state.image.states.forEach((_, id) => drawCameraFrame(id));
 
   window.requestAnimationFrame(renderCameraFrames);
 }
@@ -299,29 +523,20 @@ async function setupOptionalCameraPanels() {
     createCameraPanel(camera);
   });
 
-  cameras.forEach(camera => {
-    const id = cameraId(camera);
-    const cameraState = state.image.states.get(id);
-    if (cameraState) {
-      cameraState.img.src = `/api/camera/stream.mjpg?camera=${encodeURIComponent(id)}&ts=${Date.now()}`;
-    }
-  });
-
   await Promise.all(cameras.map(async camera => {
     const id = cameraId(camera);
-    try {
-      const status = await fetch(`/api/camera/status?camera=${encodeURIComponent(id)}`).then(response => response.json());
-      const panel = state.image.panels.get(id);
-      if (panel) panel.meta.setAttribute('value', `${status.width || 0}x${status.height || 0} | ${status.image_key || id}`);
-    } catch (error) {
-      console.warn(`Could not load ZMQ camera status for ${id}:`, error);
-    }
+    await refreshCameraStatus(id);
+    await startCameraFeed(id);
   }));
 
   if (!state.image.renderStarted) {
     state.image.renderStarted = true;
     window.requestAnimationFrame(renderCameraFrames);
   }
+
+  window.setInterval(() => {
+    cameras.forEach(camera => refreshCameraStatus(cameraId(camera)));
+  }, 5000);
 }
 
 function controllerData(handEl, hand, buttons) {

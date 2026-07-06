@@ -170,6 +170,25 @@ def _write_motor_param_with_fallback(motor_control: Any, motor: Any, variable: A
     logger.warning("Failed to write motor parameter %s with candidates %s", variable, values)
 
 
+def _joint_param_array(value: Any, name: str) -> np.ndarray:
+    """Return one value per arm joint while keeping scalar configs backward compatible."""
+    if np.isscalar(value):
+        return np.full(ARM_JOINT_COUNT, float(value), dtype=float)
+    array = np.asarray(value, dtype=float)
+    if array.shape != (ARM_JOINT_COUNT,):
+        raise ValueError(f"{name} must be a scalar or {ARM_JOINT_COUNT} values, got shape {array.shape}")
+    return array
+
+
+def _unique_fallback_values(*values: float) -> list[float]:
+    result = []
+    for value in values:
+        value = float(value)
+        if value not in result:
+            result.append(value)
+    return result
+
+
 class _ArmRuntime:
     def __init__(
         self,
@@ -190,6 +209,11 @@ class _ArmRuntime:
         self.min_rad = np.asarray(min_rad, dtype=float)
         self.max_rad = np.asarray(max_rad, dtype=float)
         self.config = config
+        # 机械臂 1-6 关节允许独立调参；joint4 是腕部根部，负载下优先调软、调慢。
+        self.arm_velocity_limits = _joint_param_array(config.arm_velocity_limit_rad_s, "arm_velocity_limit_rad_s")
+        self.arm_kp_apr = _joint_param_array(config.arm_kp_apr, "arm_kp_apr")
+        self.arm_acc = _joint_param_array(config.arm_acc, "arm_acc")
+        self.arm_dec = _joint_param_array(config.arm_dec, "arm_dec")
         self.serial_device = None
         self.motor_control = None
         self.motors: list[Any] = []
@@ -219,15 +243,18 @@ class _ArmRuntime:
             self.motor_control.switchControlMode(motor, dm_can.Control_Type.POS_VEL)
         self.motor_control.switchControlMode(self.motors[6], dm_can.Control_Type.Torque_Pos)
 
-        for motor in self.motors[:ARM_JOINT_COUNT]:
+        for idx, motor in enumerate(self.motors[:ARM_JOINT_COUNT]):
             _write_motor_param_with_fallback(
-                self.motor_control, motor, dm_can.DM_variable.KP_APR, [self.config.arm_kp_apr]
+                self.motor_control, motor, dm_can.DM_variable.KP_APR, [float(self.arm_kp_apr[idx])]
             )
             _write_motor_param_with_fallback(
-                self.motor_control, motor, dm_can.DM_variable.ACC, [self.config.arm_acc]
+                self.motor_control, motor, dm_can.DM_variable.ACC, [float(self.arm_acc[idx])]
             )
             _write_motor_param_with_fallback(
-                self.motor_control, motor, dm_can.DM_variable.DEC, [self.config.arm_dec, 12.0, 8.0, 5.0]
+                self.motor_control,
+                motor,
+                dm_can.DM_variable.DEC,
+                _unique_fallback_values(self.arm_dec[idx], -12.0, -8.0, -5.0),
             )
 
         for motor in self.motors:
@@ -246,8 +273,8 @@ class _ArmRuntime:
             return {}
         target = np.asarray(target_rad, dtype=float)
         target = np.clip(target * self.sign + self.offset_rad, self.min_rad, self.max_rad)
-        for motor, pos in zip(self.motors[:ARM_JOINT_COUNT], target[:ARM_JOINT_COUNT], strict=True):
-            self.motor_control.control_Pos_Vel(motor, float(pos), float(self.config.arm_velocity_limit_rad_s))
+        for idx, (motor, pos) in enumerate(zip(self.motors[:ARM_JOINT_COUNT], target[:ARM_JOINT_COUNT], strict=True)):
+            self.motor_control.control_Pos_Vel(motor, float(pos), float(self.arm_velocity_limits[idx]))
         self.motor_control.control_pos_force(
             self.motors[6],
             float(target[6]),

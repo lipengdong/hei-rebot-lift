@@ -4,3 +4,5 @@ websockets
 pyzmq
 pyyaml>=6.0
 opencv-python-headless
+aiortc
+av
