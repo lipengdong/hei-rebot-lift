@@ -51,6 +51,14 @@ def _load_serial():
         raise ImportError("pyserial is required for HEI ReBot Lift u2can/IO ports.") from exc
 
 
+def _dm_motor_type(dm_can, motor_type: str):
+    try:
+        return getattr(dm_can.DM_Motor_Type, motor_type)
+    except AttributeError as exc:
+        valid = ", ".join(name for name in dir(dm_can.DM_Motor_Type) if name.startswith("DM"))
+        raise ValueError(f"Unsupported Damiao motor type {motor_type!r}. Valid types: {valid}") from exc
+
+
 def _crc16_modbus(data: bytes | bytearray) -> int:
     crc = 0xFFFF
     for value in data:
@@ -325,11 +333,13 @@ class _ChassisRuntime:
     def connect(self) -> None:
         dm_can = _load_dm_can()
         serial = _load_serial()
+        # 底盘四轮现在统一使用 DM4310，型号从配置读取，方便后续换型。
+        motor_type = _dm_motor_type(dm_can, self.config.chassis_motor_type)
         self.motors = [
-            dm_can.Motor(dm_can.DM_Motor_Type.DM4340, 0x01, 0x11),
-            dm_can.Motor(dm_can.DM_Motor_Type.DM4340, 0x02, 0x12),
-            dm_can.Motor(dm_can.DM_Motor_Type.DM4340, 0x03, 0x13),
-            dm_can.Motor(dm_can.DM_Motor_Type.DM4340, 0x04, 0x14),
+            dm_can.Motor(motor_type, 0x01, 0x11),
+            dm_can.Motor(motor_type, 0x02, 0x12),
+            dm_can.Motor(motor_type, 0x03, 0x13),
+            dm_can.Motor(motor_type, 0x04, 0x14),
         ]
         self.serial_device = serial.Serial(self.port, self.baud, timeout=0.5)
         self.motor_control = dm_can.MotorControl(self.serial_device)
@@ -449,7 +459,8 @@ class _LiftRuntime:
             self.config.lift_upper_bit,
             self.config.lift_lower_bit,
         )
-        self.motor = dm_can.Motor(dm_can.DM_Motor_Type.DM4310, 0x01, 0x11)
+        # 升降平台电机使用 DM4310，型号从配置读取，和底盘保持一致的配置方式。
+        self.motor = dm_can.Motor(_dm_motor_type(dm_can, self.config.lift_motor_type), 0x01, 0x11)
         self.serial_device = serial.Serial(self.motor_port, self.config.u2can_baud, timeout=0.5)
         self.motor_control = dm_can.MotorControl(self.serial_device)
         self.motor_control.addMotor(self.motor)

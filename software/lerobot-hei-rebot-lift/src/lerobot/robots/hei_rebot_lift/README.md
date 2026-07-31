@@ -10,9 +10,9 @@ examples/hei_rebot_lift/
 
 ## Hardware
 
-- Dual arms: left and right arms with 7 Damiao motors each. Joints 1-3 use `DM4340`; joints 4-6 and gripper use `DM4310`.
-- Chassis: four-wheel O-type omnidirectional base with `x.vel`, `y.vel`, and `theta.vel` action interfaces.
-- Lift: lead-screw lift platform. It homes to the upper limit on startup and uses target height `height.pos`.
+- Dual arms: left and right arms with 7 Damiao motors each. Joints 1-3 use `DM4340P`; joints 4-6 and gripper use `DM4310`.
+- Chassis: four-wheel O-type omnidirectional base using four `DM4310` motors, with `x.vel`, `y.vel`, and `theta.vel` action interfaces.
+- Lift: lead-screw lift platform using one `DM4310` motor. It homes to the upper limit on startup and uses target height `height.pos`.
 - Cameras: three OpenCV cameras: `front`, `left_wrist`, and `right_wrist`.
 - Communication: robot-side host exchanges data with the computer-side client through ZMQ.
 

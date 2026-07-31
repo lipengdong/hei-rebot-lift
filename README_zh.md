@@ -120,10 +120,21 @@ cd software/lerobot-hei-rebot-lift
 
 ## 🦾 硬件组成
 
+当前硬件资料包已经包含整机总 BOM、整机 STEP 总装模型、3D 打印件、金属 / CNC / 钣金加工文件，方便从采购、加工到装配逐步复现。
+
+| 资料 | 文件 / 目录 | 说明 |
+| --- | --- | --- |
+| 硬件说明 | [hardware/README_zh.md](hardware/README_zh.md) | 硬件目录索引、推荐复现顺序和上电前检查清单 |
+| 整机 BOM | [hardware/HEI_ReBot_Lift_BOM.xlsx](hardware/HEI_ReBot_Lift_BOM.xlsx) | 整机外购件、加工件和装配准备清单 |
+| 整机总装模型 | [hardware/Hei_robot_lift.STEP](hardware/Hei_robot_lift.STEP) | 用于查看整机结构、空间布局和装配关系 |
+| 3D 打印件 | [hardware/3D_Printed_Parts/](hardware/3D_Printed_Parts/) | 外壳、支架、升降、底盘、相机等相关 STL 文件 |
+| 金属件清单 | [hardware/Metal_Parts/HEI_Metal_Body_Parts_List.xlsx](hardware/Metal_Parts/HEI_Metal_Body_Parts_List.xlsx) | 金属 / CNC / 钣金件清单 |
+| 金属 CAD 文件 | [hardware/Metal_Parts/step/](hardware/Metal_Parts/step/) / [hardware/Metal_Parts/dwg/](hardware/Metal_Parts/dwg/) | 用于加工沟通的 STEP 和 DWG 文件 |
+
 ```text
-双臂：左右各 7 个达妙电机，关节 1-3 使用 DM4340，关节 4-6 和夹爪使用 DM4310
-底盘：四轮 O 型全向移动底盘
-升降：丝杆升降平台，启动后上限位 homing，把上限位作为 height.pos = 0
+双臂：左右各 7 个达妙电机，关节 1-3 使用 DM4340P，关节 4-6 和夹爪使用 DM4310
+底盘：四轮 O 型全向移动底盘，轮毂/轮组电机使用 DM4310
+升降：丝杆升降平台，升降电机使用 DM4310，启动后上限位 homing，把上限位作为 height.pos = 0
 相机：front、left_wrist、right_wrist 三路 OpenCV 相机
 通信：机器人端 host 和电脑端 client 通过 ZMQ 通信
 遥操作：VR 头显 + 手柄，Telegrip 获取 VR 数据，MuJoCo + Pinocchio/CasADi 做 IK

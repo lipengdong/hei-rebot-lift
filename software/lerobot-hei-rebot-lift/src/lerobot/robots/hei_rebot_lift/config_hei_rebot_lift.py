@@ -56,6 +56,8 @@ class HeiRebotLiftConfig(RobotConfig):
     right_arm_offset_rad: tuple[float, ...] = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
     left_arm_offset_rad: tuple[float, ...] = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
 
+    # 底盘四个轮电机使用 DM4310；需要换型时只改这里，不需要改运行时代码。
+    chassis_motor_type: str = "DM4310"
     chassis_x_sign: float = -1.0
     chassis_y_sign: float = -1.0
     chassis_theta_sign: float = 1.0
@@ -65,6 +67,8 @@ class HeiRebotLiftConfig(RobotConfig):
     chassis_max_wheel_accel_rad_s2: float = 8.0
     chassis_wheel_sign: tuple[float, float, float, float] = (1.0, 1.0, 1.0, 1.0)
 
+    # 升降电机使用 DM4310，控制上仍采用速度闭环实现 height.pos 目标。
+    lift_motor_type: str = "DM4310"
     lift_upper_bit: int = 1
     lift_lower_bit: int = 2
     lift_up_sign: float = -1.0

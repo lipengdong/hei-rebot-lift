@@ -120,10 +120,21 @@ We will continue improving HEI ReBot Lift across hardware materials, software in
 
 ## 🦾 Hardware
 
+The hardware package now includes the overall BOM, full robot STEP assembly, 3D printed parts, and metal/CNC/sheet-metal manufacturing files.
+
+| Resource | File / Directory | Description |
+| --- | --- | --- |
+| Hardware guide | [hardware/README.md](hardware/README.md) | Hardware directory index, reproduction order, and safety checklist |
+| Overall BOM | [hardware/HEI_ReBot_Lift_BOM.xlsx](hardware/HEI_ReBot_Lift_BOM.xlsx) | Main purchasing and preparation checklist for the complete robot |
+| Full robot assembly | [hardware/Hei_robot_lift.STEP](hardware/Hei_robot_lift.STEP) | Full STEP model for structure review and assembly reference |
+| 3D printed parts | [hardware/3D_Printed_Parts/](hardware/3D_Printed_Parts/) | STL files for printed covers, brackets, lift, chassis, and camera-related parts |
+| Metal body parts list | [hardware/Metal_Parts/HEI_Metal_Body_Parts_List.xlsx](hardware/Metal_Parts/HEI_Metal_Body_Parts_List.xlsx) | Metal/CNC/sheet-metal part list |
+| Metal CAD files | [hardware/Metal_Parts/step/](hardware/Metal_Parts/step/) / [hardware/Metal_Parts/dwg/](hardware/Metal_Parts/dwg/) | STEP and DWG files for machining communication |
+
 ```text
-Dual arms: left and right arms with 7 Damiao motors each. Joints 1-3 use DM4340, joints 4-6 and gripper use DM4310
-Chassis: four-wheel O-type omnidirectional mobile base
-Lift: lead-screw lift platform. On startup, the upper limit is homed as height.pos = 0
+Dual arms: left and right arms with 7 Damiao motors each. Joints 1-3 use DM4340P, joints 4-6 and gripper use DM4310
+Chassis: four-wheel O-type omnidirectional mobile base, using DM4310 wheel motors
+Lift: lead-screw lift platform using a DM4310 motor. On startup, the upper limit is homed as height.pos = 0
 Cameras: three OpenCV cameras: front, left_wrist, right_wrist
 Communication: ZMQ between robot-side host and computer-side client
 Teleoperation: VR headset and controllers. Telegrip captures VR data; MuJoCo + Pinocchio/CasADi compute IK

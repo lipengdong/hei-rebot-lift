@@ -1,151 +1,161 @@
 # HEI ReBot Lift Hardware
 
-The HEI ReBot Lift hardware materials help reproduce the real robot platform with **dual arms + lift platform + four-wheel O-type omnidirectional chassis**. This directory currently contains 3D printed parts, metal/sheet-metal parts, and the purchased-parts BOM.
+This directory contains the hardware release package for **HEI ReBot Lift**, a dual-arm mobile manipulation robot with a lift platform and a four-wheel O-type omnidirectional chassis.
 
-The arm hardware organization is inspired by [Seeed reBot-DevArm](https://github.com/Seeed-Projects/reBot-DevArm): not only code, but also materials that are practical for sourcing, machining, assembling, calibrating, and debugging. HEI ReBot Lift extends this idea into a **dual-arm mobile manipulation platform** connected to LeRobot data collection, ACT/VLA training, and real-robot rollout workflows.
+The goal of this hardware folder is to make the robot easier to reproduce: not only software, but also the practical files needed for sourcing, machining, 3D printing, assembly review, and later maintenance.
 
-## 📁 Current Layout
+## 📁 Directory Layout
 
 ```text
 hardware/
-├── README.md
-├── README_zh.md
-├── 3D_Printed_Parts/              # STL 3D printed parts
-├── Metal_Parts/                   # STEP metal / sheet-metal parts
-└── Purchased_Parts/
-    ├── Purchased_Parts.xls        # Original purchased-parts sheet
-    └── Purchased_Parts.md         # Markdown purchased-parts BOM
+├── README.md                         # English hardware guide
+├── README_zh.md                      # Chinese hardware guide
+├── HEI_ReBot_Lift_BOM.xlsx                      # Overall robot BOM / purchasing checklist
+├── Hei_robot_lift.STEP               # Full robot STEP assembly
+├── 3D_Printed_Parts/                 # STL files for printed parts
+└── Metal_Parts/
+    ├── HEI_Metal_Body_Parts_List.xlsx       # Metal body parts list
+    ├── step/                         # STEP files for metal/CNC/sheet-metal parts
+    └── dwg/                          # DWG drawings for manufacturing reference
 ```
 
-## 🧾 Purchased Parts BOM
+## 🧾 Main Files
 
-- Markdown table: [Purchased_Parts/Purchased_Parts.md](Purchased_Parts/Purchased_Parts.md)
-- Original sheet: [Purchased_Parts/Purchased_Parts.xls](Purchased_Parts/Purchased_Parts.xls)
-
-The BOM includes cameras, cables, IO/RS485 modules, emergency stop parts, USB hubs, display, interface modules, bearings, omnidirectional wheels, battery, and power-related parts. Prices and links are for reproduction reference only; please re-check specifications, stock, price, and compatibility before purchasing.
-
-## 🖨️ 3D Printed Parts
-
-| File | Type | Notes |
+| File | Purpose | Notes |
 | --- | --- | --- |
-| [part_danpan_dm_zhijia_dayin.STL](3D_Printed_Parts/part_danpan_dm_zhijia_dayin.STL) | STL | 3D printed part: `part_danpan_dm_zhijia_dayin` |
-| [part_dianchi_ke_1.STL](3D_Printed_Parts/part_dianchi_ke_1.STL) | STL | 3D printed part: `part_dianchi_ke_1` |
-| [part_dianchi_ke_2.STL](3D_Printed_Parts/part_dianchi_ke_2.STL) | STL | 3D printed part: `part_dianchi_ke_2` |
-| [part_dianchi_ke_3.STL](3D_Printed_Parts/part_dianchi_ke_3.STL) | STL | 3D printed part: `part_dianchi_ke_3` |
-| [part_dipan_3-1.STL](3D_Printed_Parts/part_dipan_3-1.STL) | STL | 3D printed part: `part_dipan_3-1` |
-| [part_dipan_3.STL](3D_Printed_Parts/part_dipan_3.STL) | STL | 3D printed part: `part_dipan_3` |
-| [part_shengjiang_10.STL](3D_Printed_Parts/part_shengjiang_10.STL) | STL | 3D printed part: `part_shengjiang_10` |
-| [part_shengjiang_11.STL](3D_Printed_Parts/part_shengjiang_11.STL) | STL | 3D printed part: `part_shengjiang_11` |
-| [part_shengjiang_12.STL](3D_Printed_Parts/part_shengjiang_12.STL) | STL | 3D printed part: `part_shengjiang_12` |
-| [part_shengjiang_6.STL](3D_Printed_Parts/part_shengjiang_6.STL) | STL | 3D printed part: `part_shengjiang_6` |
-| [part_shengjiang_7.STL](3D_Printed_Parts/part_shengjiang_7.STL) | STL | 3D printed part: `part_shengjiang_7` |
-| [part_shengjiang_8.STL](3D_Printed_Parts/part_shengjiang_8.STL) | STL | 3D printed part: `part_shengjiang_8` |
-| [part_shengjiang_9.STL](3D_Printed_Parts/part_shengjiang_9.STL) | STL | 3D printed part: `part_shengjiang_9` |
-| [part_shengjiang_pingtai_1.STL](3D_Printed_Parts/part_shengjiang_pingtai_1.STL) | STL | 3D printed part: `part_shengjiang_pingtai_1` |
-| [part_shengjiang_pingtai_2.STL](3D_Printed_Parts/part_shengjiang_pingtai_2.STL) | STL | 3D printed part: `part_shengjiang_pingtai_2` |
-| [part_waike_7.STL](3D_Printed_Parts/part_waike_7.STL) | STL | 3D printed part: `part_waike_7` |
-| [part_xiangji_1.STL](3D_Printed_Parts/part_xiangji_1.STL) | STL | 3D printed part: `part_xiangji_1` |
-| [part_xiangji_2.STL](3D_Printed_Parts/part_xiangji_2.STL) | STL | 3D printed part: `part_xiangji_2` |
+| [HEI_ReBot_Lift_BOM.xlsx](HEI_ReBot_Lift_BOM.xlsx) | Overall robot BOM | Main purchasing and preparation checklist for the whole robot |
+| [Hei_robot_lift.STEP](Hei_robot_lift.STEP) | Full robot assembly model | Use this first to inspect the complete mechanical structure and spatial layout |
+| [Metal_Parts/HEI_Metal_Body_Parts_List.xlsx](Metal_Parts/HEI_Metal_Body_Parts_List.xlsx) | Metal body parts list | Used with `Metal_Parts/step/` and `Metal_Parts/dwg/` for machining |
+| [3D_Printed_Parts/](3D_Printed_Parts/) | 3D printed parts | STL files for printed covers, brackets, lift and camera-related parts |
+| [Metal_Parts/step/](Metal_Parts/step/) | Metal STEP files | 3D CAD files for CNC/sheet-metal communication and assembly check |
+| [Metal_Parts/dwg/](Metal_Parts/dwg/) | Metal DWG drawings | 2D drawing files for manufacturing reference |
 
-## 🧱 Metal / Sheet-Metal Parts
+## 🧭 Recommended Reproduction Order
 
-| File | Type | Notes |
-| --- | --- | --- |
-| [DM_4340P_banjin_falan.STEP](Metal_Parts/DM_4340P_banjin_falan.STEP) | STEP | Metal / sheet-metal part: `DM_4340P_banjin_falan` |
-| [part_danpan_dm_zhijia.STEP](Metal_Parts/part_danpan_dm_zhijia.STEP) | STEP | Metal / sheet-metal part: `part_danpan_dm_zhijia` |
-| [part_dipan_1.STEP](Metal_Parts/part_dipan_1.STEP) | STEP | Metal / sheet-metal part: `part_dipan_1` |
-| [part_shengjiang_falan.STEP](Metal_Parts/part_shengjiang_falan.STEP) | STEP | Metal / sheet-metal part: `part_shengjiang_falan` |
-| [part_shengjiang_falan_zhijia.STEP](Metal_Parts/part_shengjiang_falan_zhijia.STEP) | STEP | Metal / sheet-metal part: `part_shengjiang_falan_zhijia` |
-| [part_waike_2.STEP](Metal_Parts/part_waike_2.STEP) | STEP | Metal / sheet-metal part: `part_waike_2` |
-| [part_waike_3.STEP](Metal_Parts/part_waike_3.STEP) | STEP | Metal / sheet-metal part: `part_waike_3` |
-| [part_waike_5.STEP](Metal_Parts/part_waike_5.STEP) | STEP | Metal / sheet-metal part: `part_waike_5` |
-| [part_yaobu_1.STEP](Metal_Parts/part_yaobu_1.STEP) | STEP | Metal / sheet-metal part: `part_yaobu_1` |
-| [part_yaobu_2.STEP](Metal_Parts/part_yaobu_2.STEP) | STEP | Metal / sheet-metal part: `part_yaobu_2` |
-| [part_yaobu_3.STEP](Metal_Parts/part_yaobu_3.STEP) | STEP | Metal / sheet-metal part: `part_yaobu_3` |
+1. Open [Hei_robot_lift.STEP](Hei_robot_lift.STEP) to understand the full robot structure.
+2. Use [HEI_ReBot_Lift_BOM.xlsx](HEI_ReBot_Lift_BOM.xlsx) to prepare motors, electronics, sensors, fasteners, power parts, cables, cameras, and other purchased parts.
+3. Review [Metal_Parts/HEI_Metal_Body_Parts_List.xlsx](Metal_Parts/HEI_Metal_Body_Parts_List.xlsx) before sending metal parts for machining.
+4. Use `Metal_Parts/step/` and `Metal_Parts/dwg/` together when communicating with the manufacturer.
+5. Print the STL files in [3D_Printed_Parts/](3D_Printed_Parts/) and test-fit them before final assembly.
+6. Assemble the chassis, lift, dual arms, cameras, wiring, and emergency-stop/power system.
+7. After assembly, continue with the software-side checks: motor IDs, port binding, lift homing, chassis direction, arm zero position, and camera streams.
 
 ## 🦾 Arm Hardware Reference
 
-HEI ReBot Lift uses a dual-arm structure. Each side has 6 joints plus 1 gripper motor. The arm documentation follows the reBot-DevArm open-hardware style. Future documentation should continue to add joint structure, zero calibration, motor IDs, software limits, and gripper fingertip details.
+The dual arms follow the open-hardware spirit of [Seeed reBot-DevArm](https://github.com/Seeed-Projects/reBot-DevArm), while HEI ReBot Lift extends the system into a mobile dual-arm platform with lift and real-robot learning workflows.
 
 | Item | Current Configuration | Notes |
 | --- | --- | --- |
-| Number of arms | 2 | Left and right arms |
-| DOF per arm | 6 DOF + 1 Gripper | 6 joints plus gripper |
-| Joints 1-3 | DM4340 | Shoulder and higher-load joints |
-| Joints 4-6 | DM4310 | Wrist joints |
-| Gripper | DM4310 | Gripper open/close control |
-| Communication | U2CAN | Independent boards/ports for left and right arms |
-| Control mode | Mainly position control | LeRobot actions use `*.pos` |
+| Arm count | 2 | Left and right arms |
+| DOF per arm | 6 DOF + 1 gripper | 6 arm joints and one gripper motor |
+| Joints 1-3 | DM4340P series | Higher-load shoulder/elbow joints |
+| Joints 4-6 | DM4310 series | Wrist joints, tuned separately in software |
+| Gripper | DM4310 series | Open/close control |
+| Communication | U2CAN | Separate driver boards/ports are used by the system |
+| Main control mode | Position control | LeRobot actions use joint position targets |
 
 ## ⬆️ Lift Platform
 
-The lift platform extends the working height of the dual arms. The software supports automatic homing to the upper limit on startup and defines the upper limit as `height.pos = 0`.
+The lift platform expands the working height of the dual arms. In the software stack, the lift homes to the upper limit during startup and defines the upper limit as `height.pos = 0`.
 
 | Item | Current Configuration | Notes |
 | --- | --- | --- |
-| Mechanism | Lead-screw lift platform | Structure files are in printed and metal parts |
-| Motor communication | U2CAN | Default port `/dev/hei_lift` |
-| Limit input | Serial / IO | Default port `/dev/hei_lift_io` |
-| Position range | -800 mm to 0 mm | Upper limit is 0, downward is negative |
-| Control mode | Position target | LeRobot action uses `height.pos` |
+| Mechanism | Lead-screw lift platform | Related files are included in printed and metal parts |
+| Motor | DM4310 series | Lift motor, controlled through U2CAN |
+| Position range | -800 mm to 0 mm | Upper limit is 0; downward motion is negative |
+| Control interface | Position target | LeRobot action key: `height.pos` |
+| Homing | Upper limit switch | Required before reliable height control |
 
 ## 🛞 Four-Wheel O-Type Omnidirectional Base
 
-The chassis provides translation and rotation for mobile manipulation tasks. The software supports `x.vel`, `y.vel`, and `theta.vel`, with basic acceleration smoothing to reduce shaking during start and stop.
+The chassis supports translation and rotation for mobile manipulation tasks.
 
 | Item | Current Configuration | Notes |
 | --- | --- | --- |
-| Base type | Four-wheel O-type omnidirectional | Supports forward/backward, lateral, and yaw motion |
-| Communication | U2CAN | Default port `/dev/hei_chassis` |
+| Base type | Four-wheel O-type omnidirectional chassis | Supports forward/backward, lateral, and yaw motion |
+| Wheel motors | 4 x DM4310 series | Four chassis motors are configured as DM4310 in software |
 | Control interface | Velocity control | `x.vel`, `y.vel`, `theta.vel` |
-| Smoothing | Acceleration limit | Reduces robot shaking |
+| Smoothing | Acceleration/deceleration limit | Reduces shaking during start and stop |
 
-## 📷 Three Cameras
+## 🖨️ 3D Printed Parts
 
-Default OpenCV cameras:
+Current release: **25 STL files**.
+
+Typical groups include:
+
+- Base/chassis printed parts: `part_dipan_*`
+- Lift platform printed parts: `part_shengjiang_*`, `part_shengjiang_pingtai_*`
+- Battery/case parts: `part_dianchi_ke_*`, `part_waike_7`
+- Camera parts: `part_xiangji_*`
+- Motor/bracket printed parts: `part_danpan_dm_zhijia_dayin*`
+
+Printing notes:
+
+- Print one set first for fit checking before batch printing.
+- Check screw holes, cable clearance, motor mounting direction, and camera angle before final assembly.
+- Material and infill should be selected according to the actual load and mounting position.
+
+## 🧱 Metal / CNC / Sheet-Metal Parts
+
+Current release:
+
+| Type | Count | Directory |
+| --- | ---: | --- |
+| STEP | 11 | [Metal_Parts/step/](Metal_Parts/step/) |
+| DWG | 9 | [Metal_Parts/dwg/](Metal_Parts/dwg/) |
+| Metal list | 1 | [Metal_Parts/HEI_Metal_Body_Parts_List.xlsx](Metal_Parts/HEI_Metal_Body_Parts_List.xlsx) |
+
+Metal STEP files:
+
+- `cnc-DM_4340P_banjin_falan.STEP`
+- `cnc-part_shengjiang_falan.STEP`
+- `part_danpan_dm_zhijia.STEP`
+- `part_dipan_1.STEP`
+- `part_shengjiang_falan_zhijia.STEP`
+- `part_waike_2.STEP`
+- `part_waike_3.STEP`
+- `part_waike_5.STEP`
+- `part_yaobu_1.STEP`
+- `part_yaobu_2.STEP`
+- `part_yaobu_3.STEP`
+
+DWG files are provided for manufacturing communication and drawing review. Please verify tolerances, bending direction, surface treatment, hole size, and threaded holes with your manufacturer before production.
+
+## 📷 Cameras and Sensors
+
+The software side currently supports a multi-camera setup, typically:
 
 ```text
-front       /dev/video0
-left_wrist  /dev/video2
-right_wrist /dev/video4
+front       head/front camera
+left_wrist  left wrist camera
+right_wrist right wrist camera
 ```
 
-MJPG is recommended to reduce USB bandwidth usage and improve stability when multiple cameras are running at the same time.
+For USB cameras, MJPG is recommended to reduce bandwidth usage and improve stability. For D435 RGB-D usage, see the software examples under `software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/D435/`.
 
-## 🔌 Device Binding
+## ✅ Hardware Checklist Before Power-On
 
-Stable device names are used by default to avoid failures caused by changing `/dev/ttyACM*` or `/dev/video*` order.
-
-```text
-/dev/hei_right_arm   Right arm U2CAN
-/dev/hei_left_arm    Left arm U2CAN
-/dev/hei_chassis     Chassis U2CAN
-/dev/hei_lift        Lift motor U2CAN
-/dev/hei_lift_io     Lift limit-switch serial port
-```
-
-## ✅ Pre-Startup Hardware Checklist
-
-- [ ] Left and right arm mechanical zero positions are correct
+- [ ] The full assembly has been reviewed using [Hei_robot_lift.STEP](Hei_robot_lift.STEP)
+- [ ] Purchased parts match [HEI_ReBot_Lift_BOM.xlsx](HEI_ReBot_Lift_BOM.xlsx)
+- [ ] Metal parts match the metal list and CAD files
+- [ ] 3D printed parts are test-fitted before final assembly
+- [ ] Left/right arm zero positions are mechanically safe
 - [ ] Lift upper limit switch triggers reliably
-- [ ] Chassis wheel directions and ID mapping are correct
-- [ ] All U2CAN ports are recognized by the system
-- [ ] Three cameras output stable MJPG streams
-- [ ] Power voltage, current capacity, and emergency stop are normal
-- [ ] Sufficient safety space is available around the robot
+- [ ] Chassis wheel direction and motor ID mapping are correct
+- [ ] Emergency stop and power distribution are checked
+- [ ] USB/CAN/serial cables are fixed and strain-relieved
+- [ ] Cameras stream reliably before robot motion tests
 
-## 🧩 To Be Organized
+## ⚠️ Notes
 
-- Full assembly drawing and assembly steps
-- Electrical wiring diagram and power distribution diagram
-- U2CAN, motor IDs, limit switch, and camera port binding rules
-- Arm zero calibration, lift homing, chassis direction, and camera calibration workflows
-- More complete BOM categories and alternative part suggestions
+- The BOM, CAD files, and drawings are released for reproduction reference. Please re-check stock, price, mechanical tolerances, motor versions, and electrical compatibility before purchasing or machining.
+- Keep enough physical clearance during first power-on and first motion tests.
+- For the latest motor parameters, port mapping, camera configuration, and control commands, use the software documentation as the source of truth.
 
 ## 🙏 References
 
-- [Seeed reBot-DevArm](https://github.com/Seeed-Projects/reBot-DevArm): open robotic arm hardware, BOM, software ecosystem, and reproducible embodied AI hardware documentation.
-- [LeRobot](https://github.com/huggingface/lerobot): robot interface, dataset format, training and policy deployment ecosystem.
+- [Seeed reBot-DevArm](https://github.com/Seeed-Projects/reBot-DevArm): open robotic arm hardware and reproducible embodied AI hardware documentation.
+- [LeRobot](https://github.com/huggingface/lerobot): robot interface, dataset format, training, and real-robot policy deployment ecosystem.
 
 ## Chinese Version
 
