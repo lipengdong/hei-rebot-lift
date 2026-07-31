@@ -200,11 +200,11 @@ cd software/lerobot-hei-rebot-lift
 PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/rollout.py --model-id outputs/train/act_hei_rebot_lift_task1/checkpoints/010000/pretrained_model --task "Pick up the yellow block from the floor and put it on the table in front" --duration-sec 30 --inference sync
 ```
 
-## ⭐ Historique des stars
+## ⭐ Star History
 
 <p align="center">
-  <a href="https://star-history.com/#lipengdong/hei-rebot-lift&Date">
-    <img src="https://api.star-history.com/svg?repos=lipengdong/hei-rebot-lift&type=Date" alt="Historique des stars HEI ReBot Lift" width="72%">
+  <a href="https://www.star-history.com/?repos=lipengdong%2Fhei-rebot-lift&type=date&legend=top-left">
+    <img src="media/star-history-2026731.png" alt="HEI ReBot Lift Star History" width="72%">
   </a>
 </p>
 

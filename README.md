@@ -111,8 +111,8 @@ cd software/lerobot-hei-rebot-lift
 ## ⭐ Star History
 
 <p align="center">
-  <a href="https://star-history.com/#lipengdong/hei-rebot-lift&Date">
-    <img src="https://api.star-history.com/svg?repos=lipengdong/hei-rebot-lift&type=Date" alt="HEI ReBot Lift star history" width="72%">
+  <a href="https://www.star-history.com/?repos=lipengdong%2Fhei-rebot-lift&type=date&legend=top-left">
+    <img src="media/star-history-2026731.png" alt="HEI ReBot Lift Star History" width="72%">
   </a>
 </p>
 
