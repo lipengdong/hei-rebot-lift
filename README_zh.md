@@ -5,8 +5,16 @@
 </p>
 
 <p align="center">
-  <a href="README_zh.md"><img src="https://img.shields.io/badge/中文-README-d32f2f?style=for-the-badge" alt="中文 README"></a>
-  <a href="README.md"><img src="https://img.shields.io/badge/English-README-2f6fd3?style=for-the-badge" alt="English README"></a>
+  <a href="README.md"><b>English</b></a> <b>|</b>
+  <a href="README_zh.md"><b>中文</b></a> <b>|</b>
+  <a href="README_Fr.md"><b>français</b></a> <b>|</b>
+  <a href="README_es.md"><b>Español</b></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/lipengdong/hei-rebot-lift/stargazers">
+    <img src="https://img.shields.io/github/stars/lipengdong/hei-rebot-lift?style=social" alt="GitHub stars">
+  </a>
 </p>
 
 ## 🚀 项目简介
@@ -71,6 +79,8 @@
 hei-rebot-lift/
 ├── README.md
 ├── README_zh.md
+├── README_Fr.md
+├── README_es.md
 ├── LICENSE
 ├── community/                    # 社区资料、后续协作记录
 ├── hardware/                     # 硬件 BOM、接线、端口绑定、机械资料
@@ -96,6 +106,14 @@ cd software/lerobot-hei-rebot-lift
 
 <p align="center">
   <img src="media/7.jpg" alt="HEI ReBot Lift robot" width="72%">
+</p>
+
+## ⭐ Star 历史
+
+<p align="center">
+  <a href="https://star-history.com/#lipengdong/hei-rebot-lift&Date">
+    <img src="https://api.star-history.com/svg?repos=lipengdong/hei-rebot-lift&type=Date" alt="HEI ReBot Lift Star 历史" width="72%">
+  </a>
 </p>
 
 ## 🗺️ 路线图与最新进展
