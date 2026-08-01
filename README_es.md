@@ -92,7 +92,7 @@ cd software/lerobot-hei-rebot-lift
 | Recurso | Archivo / Directorio | Descripción |
 | --- | --- | --- |
 | Guía de hardware | [hardware/README.md](hardware/README.md) | Índice, orden de reproducción y checklist de seguridad |
-| BOM completo | [hardware/HEI_ReBot_Lift_BOM.xlsx](hardware/HEI_ReBot_Lift_BOM.xlsx) | Lista principal de compra y preparación |
+| BOM completo | [hardware/HEI_ReBot_Lift_BOM.md](hardware/HEI_ReBot_Lift_BOM.md) / [xlsx](hardware/HEI_ReBot_Lift_BOM.xlsx) | Lista principal de compra y preparación |
 | Ensamblaje completo | [hardware/Hei_robot_lift.STEP](hardware/Hei_robot_lift.STEP) | Modelo STEP completo del robot |
 | Piezas 3D | [hardware/3D_Printed_Parts/](hardware/3D_Printed_Parts/) | Archivos STL |
 | Lista de piezas metálicas | [hardware/Metal_Parts/HEI_Metal_Body_Parts_List.xlsx](hardware/Metal_Parts/HEI_Metal_Body_Parts_List.xlsx) | Lista CNC / chapa metálica |

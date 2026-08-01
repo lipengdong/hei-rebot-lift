@@ -143,7 +143,7 @@ cd software/lerobot-hei-rebot-lift
 | 资料 | 文件 / 目录 | 说明 |
 | --- | --- | --- |
 | 硬件说明 | [hardware/README_zh.md](hardware/README_zh.md) | 硬件目录索引、推荐复现顺序和上电前检查清单 |
-| 整机 BOM | [hardware/HEI_ReBot_Lift_BOM.xlsx](hardware/HEI_ReBot_Lift_BOM.xlsx) | 整机外购件、加工件和装配准备清单 |
+| 整机 BOM | [hardware/HEI_ReBot_Lift_BOM.md](hardware/HEI_ReBot_Lift_BOM.md) / [xlsx](hardware/HEI_ReBot_Lift_BOM.xlsx) | 整机外购件、加工件和装配准备清单 |
 | 整机总装模型 | [hardware/Hei_robot_lift.STEP](hardware/Hei_robot_lift.STEP) | 用于查看整机结构、空间布局和装配关系 |
 | 3D 打印件 | [hardware/3D_Printed_Parts/](hardware/3D_Printed_Parts/) | 外壳、支架、升降、底盘、相机等相关 STL 文件 |
 | 金属件清单 | [hardware/Metal_Parts/HEI_Metal_Body_Parts_List.xlsx](hardware/Metal_Parts/HEI_Metal_Body_Parts_List.xlsx) | 金属 / CNC / 钣金件清单 |

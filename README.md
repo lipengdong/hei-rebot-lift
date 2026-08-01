@@ -143,7 +143,7 @@ The hardware package now includes the overall BOM, full robot STEP assembly, 3D 
 | Resource | File / Directory | Description |
 | --- | --- | --- |
 | Hardware guide | [hardware/README.md](hardware/README.md) | Hardware directory index, reproduction order, and safety checklist |
-| Overall BOM | [hardware/HEI_ReBot_Lift_BOM.xlsx](hardware/HEI_ReBot_Lift_BOM.xlsx) | Main purchasing and preparation checklist for the complete robot |
+| Overall BOM | [hardware/HEI_ReBot_Lift_BOM.md](hardware/HEI_ReBot_Lift_BOM.md) / [xlsx](hardware/HEI_ReBot_Lift_BOM.xlsx) | Main purchasing and preparation checklist for the complete robot |
 | Full robot assembly | [hardware/Hei_robot_lift.STEP](hardware/Hei_robot_lift.STEP) | Full STEP model for structure review and assembly reference |
 | 3D printed parts | [hardware/3D_Printed_Parts/](hardware/3D_Printed_Parts/) | STL files for printed covers, brackets, lift, chassis, and camera-related parts |
 | Metal body parts list | [hardware/Metal_Parts/HEI_Metal_Body_Parts_List.xlsx](hardware/Metal_Parts/HEI_Metal_Body_Parts_List.xlsx) | Metal/CNC/sheet-metal part list |

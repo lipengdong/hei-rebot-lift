@@ -10,7 +10,8 @@
 hardware/
 ├── README.md                         # 英文硬件说明
 ├── README_zh.md                      # 中文硬件说明
-├── HEI_ReBot_Lift_BOM.xlsx                      # 整机 BOM / 总采购清单
+├── HEI_ReBot_Lift_BOM.md                        # GitHub 可直接浏览的 BOM 表格
+├── HEI_ReBot_Lift_BOM.xlsx                      # 原始可编辑 BOM 表格
 ├── Hei_robot_lift.STEP               # 整体机器人 STEP 总装模型
 ├── 3D_Printed_Parts/                 # 3D 打印件 STL
 └── Metal_Parts/
@@ -23,7 +24,7 @@ hardware/
 
 | 文件 | 用途 | 说明 |
 | --- | --- | --- |
-| [HEI_ReBot_Lift_BOM.xlsx](HEI_ReBot_Lift_BOM.xlsx) | 整机总 BOM | 用于准备电机、电控、传感器、紧固件、电源、线材、相机等整机物料 |
+| [HEI_ReBot_Lift_BOM.md](HEI_ReBot_Lift_BOM.md) / [xlsx](HEI_ReBot_Lift_BOM.xlsx) | 整机总 BOM | Markdown 用于在线查看，Excel 用于编辑维护 |
 | [Hei_robot_lift.STEP](Hei_robot_lift.STEP) | 整机总装模型 | 建议优先打开，用来理解整机结构、空间布局和装配关系 |
 | [Metal_Parts/HEI_Metal_Body_Parts_List.xlsx](Metal_Parts/HEI_Metal_Body_Parts_List.xlsx) | 金属件清单 | 与 `Metal_Parts/step/`、`Metal_Parts/dwg/` 配合给加工厂使用 |
 | [3D_Printed_Parts/](3D_Printed_Parts/) | 3D 打印件 | 包含外壳、支架、升降、底盘、相机等相关 STL 文件 |
@@ -33,7 +34,7 @@ hardware/
 ## 🧭 推荐复现顺序
 
 1. 先打开 [Hei_robot_lift.STEP](Hei_robot_lift.STEP)，理解整机结构和空间关系。
-2. 根据 [HEI_ReBot_Lift_BOM.xlsx](HEI_ReBot_Lift_BOM.xlsx) 准备电机、电控、传感器、相机、电源、线材、紧固件等物料。
+2. 根据 [HEI_ReBot_Lift_BOM.md](HEI_ReBot_Lift_BOM.md) / [xlsx](HEI_ReBot_Lift_BOM.xlsx) 准备电机、电控、传感器、相机、电源、线材、紧固件等物料。
 3. 加工金属件前，先核对 [Metal_Parts/HEI_Metal_Body_Parts_List.xlsx](Metal_Parts/HEI_Metal_Body_Parts_List.xlsx)。
 4. 给加工厂沟通时，建议 `Metal_Parts/step/` 和 `Metal_Parts/dwg/` 一起提供。
 5. 打印 [3D_Printed_Parts/](3D_Printed_Parts/) 中的 STL 文件，建议先小批量试装，再批量打印。
@@ -136,7 +137,7 @@ USB 相机建议使用 `MJPG` 格式，降低 USB 带宽占用，提高多相机
 ## ✅ 上电前硬件检查清单
 
 - [ ] 已使用 [Hei_robot_lift.STEP](Hei_robot_lift.STEP) 检查整机装配关系
-- [ ] 外购件已根据 [HEI_ReBot_Lift_BOM.xlsx](HEI_ReBot_Lift_BOM.xlsx) 核对
+- [ ] 外购件已根据 [HEI_ReBot_Lift_BOM.md](HEI_ReBot_Lift_BOM.md) / [xlsx](HEI_ReBot_Lift_BOM.xlsx) 核对
 - [ ] 金属件已对照清单和 CAD 文件确认
 - [ ] 3D 打印件已完成试装
 - [ ] 左右臂机械零位处于安全位置

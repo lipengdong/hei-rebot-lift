@@ -10,7 +10,8 @@ The goal of this hardware folder is to make the robot easier to reproduce: not o
 hardware/
 ├── README.md                         # English hardware guide
 ├── README_zh.md                      # Chinese hardware guide
-├── HEI_ReBot_Lift_BOM.xlsx                      # Overall robot BOM / purchasing checklist
+├── HEI_ReBot_Lift_BOM.md                        # GitHub-readable BOM table
+├── HEI_ReBot_Lift_BOM.xlsx                      # Original editable BOM spreadsheet
 ├── Hei_robot_lift.STEP               # Full robot STEP assembly
 ├── 3D_Printed_Parts/                 # STL files for printed parts
 └── Metal_Parts/
@@ -23,7 +24,7 @@ hardware/
 
 | File | Purpose | Notes |
 | --- | --- | --- |
-| [HEI_ReBot_Lift_BOM.xlsx](HEI_ReBot_Lift_BOM.xlsx) | Overall robot BOM | Main purchasing and preparation checklist for the whole robot |
+| [HEI_ReBot_Lift_BOM.md](HEI_ReBot_Lift_BOM.md) / [xlsx](HEI_ReBot_Lift_BOM.xlsx) | Overall robot BOM | Markdown for online viewing, Excel for editing |
 | [Hei_robot_lift.STEP](Hei_robot_lift.STEP) | Full robot assembly model | Use this first to inspect the complete mechanical structure and spatial layout |
 | [Metal_Parts/HEI_Metal_Body_Parts_List.xlsx](Metal_Parts/HEI_Metal_Body_Parts_List.xlsx) | Metal body parts list | Used with `Metal_Parts/step/` and `Metal_Parts/dwg/` for machining |
 | [3D_Printed_Parts/](3D_Printed_Parts/) | 3D printed parts | STL files for printed covers, brackets, lift and camera-related parts |
@@ -33,7 +34,7 @@ hardware/
 ## 🧭 Recommended Reproduction Order
 
 1. Open [Hei_robot_lift.STEP](Hei_robot_lift.STEP) to understand the full robot structure.
-2. Use [HEI_ReBot_Lift_BOM.xlsx](HEI_ReBot_Lift_BOM.xlsx) to prepare motors, electronics, sensors, fasteners, power parts, cables, cameras, and other purchased parts.
+2. Use [HEI_ReBot_Lift_BOM.md](HEI_ReBot_Lift_BOM.md) / [xlsx](HEI_ReBot_Lift_BOM.xlsx) to prepare motors, electronics, sensors, fasteners, power parts, cables, cameras, and other purchased parts.
 3. Review [Metal_Parts/HEI_Metal_Body_Parts_List.xlsx](Metal_Parts/HEI_Metal_Body_Parts_List.xlsx) before sending metal parts for machining.
 4. Use `Metal_Parts/step/` and `Metal_Parts/dwg/` together when communicating with the manufacturer.
 5. Print the STL files in [3D_Printed_Parts/](3D_Printed_Parts/) and test-fit them before final assembly.
@@ -136,7 +137,7 @@ For USB cameras, MJPG is recommended to reduce bandwidth usage and improve stabi
 ## ✅ Hardware Checklist Before Power-On
 
 - [ ] The full assembly has been reviewed using [Hei_robot_lift.STEP](Hei_robot_lift.STEP)
-- [ ] Purchased parts match [HEI_ReBot_Lift_BOM.xlsx](HEI_ReBot_Lift_BOM.xlsx)
+- [ ] Purchased parts match [HEI_ReBot_Lift_BOM.md](HEI_ReBot_Lift_BOM.md) / [xlsx](HEI_ReBot_Lift_BOM.xlsx)
 - [ ] Metal parts match the metal list and CAD files
 - [ ] 3D printed parts are test-fitted before final assembly
 - [ ] Left/right arm zero positions are mechanically safe
