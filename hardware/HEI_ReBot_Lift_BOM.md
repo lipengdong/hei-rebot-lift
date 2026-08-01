@@ -1,12 +1,6 @@
 # HEI ReBot Lift BOM
 
-This Markdown BOM is generated from [`HEI_ReBot_Lift_BOM.xlsx`](HEI_ReBot_Lift_BOM.xlsx) for convenient browsing on GitHub.
-
-For editing, price updates, supplier changes, or formula-based maintenance, use the original Excel file.
-
-> Note: The BOM contains supplier links and prices for reproduction reference only. Please verify stock, price, specifications, and compatibility before purchasing.
-
-## Overall BOM
+This Markdown table is generated from `HEI_ReBot_Lift_BOM.xlsx` so the bill of materials can be previewed directly on GitHub.
 
 | 分类 | 材料名称 | 型号 | 所需数量 | 单价 | 总价 | 采购链接 |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -15,6 +9,7 @@ For editing, price updates, supplier changes, or formula-based maintenance, use 
 |  | 无刷电机 | DM-J4310-2ECV1.2 | 5 | 599 | 2995 | https://item.taobao.com/item.htm?spm=a1z0d.6639537%2F202410.item.d815333472865.350b7484N9Fz4P&id=815333472865&from=cart&skuId=5965481553149&mi_id=0000BNbL09n5XFvjNRr6vtn96lMH4owOh3OKcx_hjjT7bqU&upStreamPrice=59900 |
 |  | 铝型材 | 100mm 两端攻丝M6欧标2020亮光氧化黑，臂厚1.5 | 10 | 13 | 130 | https://item.taobao.com/item.htm?spm=tbpc.boughtlist.suborder_itempic.d17388859879.12952e8d3UCi02&id=17388859879&mi_id=0000-NI_TuQvJ2b2nIACNXgrPK27w4vRn6oTAIErTrsRIbE |
 |  | 电机连接线 | XT30(2+2)-F30厘米双母头延长线 | 4 | 15 | 60 | https://item.taobao.com/item.htm?spm=tbpc.boughtlist.suborder_itempic.d822600109037.fd582e8d8wqe4i&id=822600109037&mi_id=00007hCATsE-fjaGZ8iuJly2mG3dCd0e-HZ9mHtnrk30L28 |
+|  | XT30单头线 | XT30U黄母V2版，18AWG（0.75平方）红黑线; 50cm | 4 | 9 | 36 | https://e.tb.cn/h.84Y2Y6OhkDc8Qd8?tk=0uragDI49y7 CZ193 「络黎XT30单头线XT30U转接线充电线带线插头延长线硅胶线特软软线」 |
 |  | 电机连接线 | XT30(2+2)双母头30厘米正弯+反弯 | 4 | 16 | 64 | https://item.taobao.com/item.htm?spm=tbpc.boughtlist.suborder_itempic.d822600109037.fd582e8d8wqe4i&id=822600109037&mi_id=00007hCATsE-fjaGZ8iuJly2mG3dCd0e-HZ9mHtnrk30L28 |
 | 升降部分 | 滑台模组GX | 1610丝杆800mm（找客服即可） | 1 | 429 | 429 | https://e.tb.cn/h.8exLaJE0rK9YDGT?tk=W1smgwOj0wZ CZ005 「含增票GX80双导轨直线滚珠丝杆滑台模组含57电机铝合金十字工作台」 |
 |  | 天线 | 剑型华硕;SMA内针 | 2 | 5 | 10 | https://item.taobao.com/item.htm?spm=tbpc.boughtlist.suborder_itempic.d615361930715.285a2e8dI1AxzH&id=615361930715&mi_id=000045b9GvP_G1Nvl8pHU0AiCB5N5CSHiTn29fTSbcO2FZ4 |
@@ -88,4 +83,3 @@ For editing, price updates, supplier changes, or formula-based maintenance, use 
 |  | 圆柱销 | m4*12 | 12 | 约： | 300 |  |
 |  | 螺丝刀/剪线钳/黑胶带/扎带/纳米胶/热熔胶枪 |  |  |  |  |  |
 |  |  |  |  | 合计= | 33510 |  |
-
