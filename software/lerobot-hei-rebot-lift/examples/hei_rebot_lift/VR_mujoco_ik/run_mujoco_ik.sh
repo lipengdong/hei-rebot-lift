@@ -18,4 +18,5 @@ fi
 
 # Pinocchio / CasADi 的动态库来自 conda-forge，旧 shell 里的 LD_LIBRARY_PATH
 # 可能优先指向系统库或其他环境库。这里清掉它，避免正逆解库导入失败。
-env -u LD_LIBRARY_PATH python hei_rebot_lift_vr_mujoco_ik.py "$@"
+# 默认运行实时跟手版：VR XYZ/RPY 1:1，取消控制帧率限制，并保留轻量防抖/防跳变。
+env -u LD_LIBRARY_PATH python hei_rebot_lift_vr_mujoco_ik_realtime.py "$@"
