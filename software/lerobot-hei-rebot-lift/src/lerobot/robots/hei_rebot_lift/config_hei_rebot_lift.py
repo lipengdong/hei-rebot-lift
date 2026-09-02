@@ -39,10 +39,10 @@ class HeiRebotLiftConfig(RobotConfig):
 
     # Arm joints 1-3 keep the original stronger settings. Joints 4-6 use softer
     # settings because wrist-root load can excite oscillation or motor protection.
-    arm_velocity_limit_rad_s: tuple[float, ...] = (8.0, 8.0, 8.0, 1.8, 2.5, 2.5)
-    arm_kp_apr: tuple[float, ...] = (100.0, 100.0, 100.0, 45.0, 50.0, 50.0)
-    arm_acc: tuple[float, ...] = (20.0, 20.0, 20.0, 6.0, 8.0, 8.0)
-    arm_dec: tuple[float, ...] = (-40.0, -40.0, -30.0, -6.0, -8.0, -8.0)
+    arm_velocity_limit_rad_s: tuple[float, ...] = (3.0, 3.0, 3.0, 1.8, 2.5, 2.5)
+    arm_kp_apr: tuple[float, ...] = (150.0, 200.0, 200.0, 45.0, 50.0, 50.0)
+    arm_acc: tuple[float, ...] = (2.0, 2.0, 2.0, 2.0, 2.0, 2.0)
+    arm_dec: tuple[float, ...] = (-2.0, -2.0, -2.0, -2.0, -2.0, -2.0)
     gripper_force_velocity: float = 1000.0
     gripper_current: float = 500.0
 
@@ -61,9 +61,9 @@ class HeiRebotLiftConfig(RobotConfig):
     chassis_x_sign: float = -1.0
     chassis_y_sign: float = -1.0
     chassis_theta_sign: float = 1.0
-    chassis_linear_speed_scale: float = 5.0
-    chassis_yaw_speed_scale: float = 1.0
-    chassis_max_wheel_speed_rad_s: float = 6.0
+    chassis_linear_speed_scale: float = 9.0
+    chassis_yaw_speed_scale: float = 2.0
+    chassis_max_wheel_speed_rad_s: float = 9.0
     chassis_max_wheel_accel_rad_s2: float = 8.0
     chassis_wheel_sign: tuple[float, float, float, float] = (1.0, 1.0, 1.0, 1.0)
 
