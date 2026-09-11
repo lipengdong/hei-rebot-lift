@@ -210,7 +210,7 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_
 继续录制已有数据集：
 
 ```bash
-PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/record.py   --repo-id HGM/hei_rebot_lift_task1   --root ~/.cache/huggingface/lerobot/HGM/hei_rebot_lift_task1   --resume   --num-episodes 5
+PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/record.py   --remote-ip 192.168.31.127   --repo-id HGM/hei_rebot_lift_task1   --root ~/.cache/huggingface/lerobot/HGM/hei_rebot_lift_task1   --resume   --num-episodes 5
 ```
 
 注意：如果相机数量或名字变了，比如从两相机改成三相机，不要 resume 到旧数据集，应该新建一个 `repo-id`。
@@ -271,13 +271,13 @@ export HF_DATASETS_OFFLINE=1
 ACT 推理：
 
 ```bash
-PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/rollout.py   --model-id outputs/train/act_hei_rebot_lift_task1/checkpoints/010000/pretrained_model   --task "Pick up the yellow block from the floor and put it on the table in front"   --duration-sec 30   --inference sync
+PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/rollout.py   --remote-ip 192.168.31.127   --model-id outputs/train/act_hei_rebot_lift_task1/checkpoints/010000/pretrained_model   --task "Pick up the yellow block from the floor and put it on the table in front"   --duration-sec 30   --inference sync
 ```
 
 SmolVLA 推理：
 
 ```bash
-PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/rollout.py   --model-id outputs/train/smolvla_hei_rebot_lift_task1/checkpoints/001000/pretrained_model   --task "Pick up the yellow block from the floor and put it on the table in front"   --duration-sec 60   --fps 10   --inference rtc
+PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/rollout.py   --remote-ip 192.168.31.127   --model-id outputs/train/smolvla_hei_rebot_lift_task1/checkpoints/001000/pretrained_model   --task "Pick up the yellow block from the floor and put it on the table in front"   --duration-sec 60   --fps 10   --inference rtc
 ```
 
 `sync` 是同步推理，适合先跑通。`rtc` 更适合推理较慢的 VLA 模型，会尽量保持控制节奏。
@@ -287,13 +287,13 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_
 回放某一集动作：
 
 ```bash
-PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/replay.py   --repo-id HGM/hei_rebot_lift_task1   --episode-index 0   --display-data
+PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/replay.py   --remote-ip 192.168.31.127   --repo-id HGM/hei_rebot_lift_task1   --episode-index 0   --display-data
 ```
 
 ACT 评估并保存 eval 数据：
 
 ```bash
-PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/evaluate.py   --model-id outputs/train/act_hei_rebot_lift_task1/checkpoints/010000/pretrained_model   --dataset-id HGM/hei_rebot_lift_task1_eval   --num-episodes 5   --episode-time-sec 60
+PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/evaluate.py   --remote-ip 192.168.31.127   --model-id outputs/train/act_hei_rebot_lift_task1/checkpoints/010000/pretrained_model   --dataset-id HGM/hei_rebot_lift_task1_eval   --num-episodes 5   --episode-time-sec 60
 ```
 
 ## 常见问题

@@ -103,6 +103,10 @@ def main():
     args = parse_args()
     init_logging()
 
+    print(
+        f"[HEI Rollout] Robot host={args.remote_ip}, robot_id={args.robot_id}, "
+        f"inference={args.inference}, fps={args.fps}"
+    )
     robot_config = HeiRebotLiftClientConfig(remote_ip=args.remote_ip, id=args.robot_id)
 
     model_id = resolve_model_id(args.model_id)

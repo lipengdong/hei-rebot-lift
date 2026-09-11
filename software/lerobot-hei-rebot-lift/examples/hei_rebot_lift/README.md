@@ -17,7 +17,10 @@ examples/hei_rebot_lift/VR_mujoco_ik/
 ## Scripts
 
 ```text
-Arm_Zero_Status_Test.py   Damiao arm zero-writing and status check
+debug/Arm_Zero_Status_Test.py   Damiao arm zero-writing and status check
+debug/Lift_Status_Test.py       Lift homing, I/K position control, limit IO, and motor status
+debug/Chassis_Status_Test.py    Keyboard chassis control, speed gears, and four-wheel status
+debug/Port_Binding_Wizard.py    Guided serial discovery, diagnosis, and udev port binding
 teleoperate.py            Teleoperate only, without recording data
 record.py                 Record LeRobotDataset with VR teleoperation
 replay.py                 Replay actions from a recorded episode
@@ -44,7 +47,7 @@ Default robot IP:
 192.168.31.127
 ```
 
-If the IP changes, pass `--remote-ip NEW_IP` to the scripts.
+If the IP changes, pass `--remote-ip NEW_IP` to `teleoperate.py`, `record.py`, `replay.py`, `evaluate.py`, or `rollout.py`. The scripts print the effective `host=...` before connecting.
 
 ## Minimal End-to-End Flow
 
@@ -83,17 +86,53 @@ right_wrist /dev/video4
 
 Cameras use `MJPG` by default for better stability with multiple USB cameras.
 
+### Serial port binding wizard
+
+Stop `hei-rebot-lift-host` and all serial debug tools first. Power all four U2CAN boards, the lift IO board, and the motors. To distinguish the two identical arm adapters, temporarily disconnect right-arm motors 4-7 so that the right arm responds only on IDs 1-3; keep the complete left arm connected on IDs 1-7.
+
+```bash
+PYTHONPATH=src conda run --no-capture-output -n lerobot5 \
+  python -u examples/hei_rebot_lift/debug/Port_Binding_Wizard.py
+```
+
+The wizard checks every `ttyACM`/`ttyUSB` device, identifies the four U2CAN boards from responding motor IDs, validates live Modbus frames from the lift limit-switch board, and reports missing, busy, or incorrectly wired devices. It shows the proposed mapping before writing `rules/99-nx-robot.rules` and can install it into `/etc/udev/rules.d/`. Existing IMU and lidar rules are preserved. Since the generated bindings use physical USB topology, keep each adapter connected to the same USB socket afterward.
+
+For a non-interactive repeat after the hardware layout has been verified:
+
+```bash
+PYTHONPATH=src conda run --no-capture-output -n lerobot5 \
+  python -u examples/hei_rebot_lift/debug/Port_Binding_Wizard.py --yes --install
+```
+
 Damiao arm zero-writing and status check:
 
 ```bash
-PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/Arm_Zero_Status_Test.py   --port /dev/hei_right_arm
+PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/debug/Arm_Zero_Status_Test.py   --port /dev/hei_right_arm
 ```
 
 Temporary debugging with a raw port:
 
 ```bash
-PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/Arm_Zero_Status_Test.py   --port /dev/ttyACM1
+PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/debug/Arm_Zero_Status_Test.py   --port /dev/ttyACM1
 ```
+
+### Independent lift test
+
+Stop `hei-rebot-lift-host` before running a hardware test, because only one process may open each serial port. The lift test performs the same startup homing and position-control logic as the production driver.
+
+```bash
+PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/debug/Lift_Status_Test.py
+```
+
+Keys: `I` moves the target up, `K` moves it down, `Space` stops and holds the measured height, `H` homes again, and `X` exits. Override ports with `--motor-port` and `--io-port`.
+
+### Independent chassis test
+
+```bash
+PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/debug/Chassis_Status_Test.py
+```
+
+Use `W/S/A/D` to translate, `Q/E` to rotate, `1/2/3` to select the speed gear, `Space` for immediate stop, and `X` to exit. The fixed dashboard shows requested and measured body velocity plus target and measured wheel speeds. A key watchdog stops stale movement commands.
 
 ## 2. Start Robot-Side Host
 
@@ -146,7 +185,7 @@ Pinocchio/CasADi dependencies are provided by conda-forge packages in `environme
 ## 4. Teleoperation Test
 
 ```bash
-PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/teleoperate.py
+PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/teleoperate.py   --remote-ip 192.168.31.127
 ```
 
 Control logic:
@@ -159,7 +198,7 @@ Control logic:
 ## 5. Record Data
 
 ```bash
-PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/record.py   --repo-id HGM/hei_rebot_lift_task1   --num-episodes 5   --episode-time-sec 120   --reset-time-sec 30   --task-description "Pick up the yellow block from the floor and put it on the table in front"
+PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/record.py   --remote-ip 192.168.31.127   --repo-id HGM/hei_rebot_lift_task1   --num-episodes 5   --episode-time-sec 120   --reset-time-sec 30   --task-description "Pick up the yellow block from the floor and put it on the table in front"
 ```
 
 By default, data is saved locally and is not pushed to the Hugging Face Hub. Add `--push-to-hub` only when needed.
@@ -199,17 +238,17 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 lerobot-train   --datas
 ACT and SmolVLA both use `rollout.py`:
 
 ```bash
-PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/rollout.py   --model-id outputs/train/act_hei_rebot_lift_task1/checkpoints/010000/pretrained_model   --task "Pick up the yellow block from the floor and put it on the table in front"   --duration-sec 30   --inference sync
+PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/rollout.py   --remote-ip 192.168.31.127   --model-id outputs/train/act_hei_rebot_lift_task1/checkpoints/010000/pretrained_model   --task "Pick up the yellow block from the floor and put it on the table in front"   --duration-sec 30   --inference sync
 ```
 
 ## 10. Replay and Evaluate
 
 ```bash
-PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/replay.py   --repo-id HGM/hei_rebot_lift_task1   --episode-index 0   --display-data
+PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/replay.py   --remote-ip 192.168.31.127   --repo-id HGM/hei_rebot_lift_task1   --episode-index 0   --display-data
 ```
 
 ```bash
-PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/evaluate.py   --model-id outputs/train/act_hei_rebot_lift_task1/checkpoints/010000/pretrained_model   --dataset-id HGM/hei_rebot_lift_task1_eval   --num-episodes 5   --episode-time-sec 60
+PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/evaluate.py   --remote-ip 192.168.31.127   --model-id outputs/train/act_hei_rebot_lift_task1/checkpoints/010000/pretrained_model   --dataset-id HGM/hei_rebot_lift_task1_eval   --num-episodes 5   --episode-time-sec 60
 ```
 
 ## Troubleshooting

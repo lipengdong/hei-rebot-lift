@@ -41,6 +41,10 @@ def main():
     actions = episode_frames.select_columns(ACTION)
     replay_fps = args.fps if args.fps is not None else dataset.fps
 
+    print(
+        f"[HEI Replay] Connecting to robot host={args.remote_ip}, "
+        f"robot_id={args.robot_id}, episode={args.episode_index}, fps={replay_fps}"
+    )
     robot.connect()
     if args.display_data:
         init_rerun(session_name="hei_rebot_lift_replay")

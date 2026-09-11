@@ -141,6 +141,7 @@ def main():
     print_status(
         f"Starting with repo_id={args.repo_id}, episodes={args.num_episodes}, "
         f"episode_time={args.episode_time_sec}s, reset_time={args.reset_time_sec}s, "
+        f"remote_ip={args.remote_ip}, robot_id={args.robot_id}, "
         f"push_to_hub={args.push_to_hub}"
     )
 

@@ -1,0 +1,8 @@
+SUBSYSTEM=="tty", KERNELS=="1-2.1.2",ATTRS{idVendor}=="2e88", ATTRS{idProduct}=="4603", MODE:="0777",SYMLINK+="hei_right_arm"
+SUBSYSTEM=="tty", KERNELS=="1-2.3.1",ATTRS{idVendor}=="2e88", ATTRS{idProduct}=="4603", MODE:="0777",SYMLINK+="hei_left_arm"
+SUBSYSTEM=="tty", KERNELS=="1-2.2.1",ATTRS{idVendor}=="2e88", ATTRS{idProduct}=="4603", MODE:="0777",SYMLINK+="hei_lift"
+SUBSYSTEM=="tty", KERNELS=="1-2.2.4",ATTRS{idVendor}=="2e88", ATTRS{idProduct}=="4603", MODE:="0777",SYMLINK+="hei_chassis"
+SUBSYSTEM=="tty", KERNELS=="1-2.4.2",ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7523", MODE:="0777",SYMLINK+="hei_lift_io"
+
+KERNEL=="ttyUSB*", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60",ATTRS{serial}=="0001", MODE:="0777", GROUP:="dialout", SYMLINK+="wheeltec_FDI_IMU_GNSS"
+KERNEL=="ttyACM*", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="55d4",ATTRS{serial}=="5B8E669679", MODE:="0777", GROUP:="dialout",SYMLINK+="wheeltec_lidar"

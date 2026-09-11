@@ -36,9 +36,9 @@ def parse_args():
     parser.add_argument("--root", type=str, default=None, help="Local dataset root.")
     parser.add_argument("--num-episodes", type=int, default=NUM_EPISODES)
     parser.add_argument("--episode-time-sec", type=float, default=EPISODE_TIME_SEC)
-    parser.add_argument("--task-description", type=str, default=TASK_DESCRIPTION)
-    parser.add_argument("--remote-ip", type=str, default=REMOTE_IP)
-    parser.add_argument("--robot-id", type=str, default=ROBOT_ID)
+    parser.add_argument("--task-description", type=str, default=TASK_DESCRIPTION, help="Task text per frame.")
+    parser.add_argument("--remote-ip", type=str, default=REMOTE_IP, help="HEI ReBot Lift host IP address.")
+    parser.add_argument("--robot-id", type=str, default=ROBOT_ID, help="HEI ReBot Lift robot id.")
     # 默认只保存到本地，需要同步到 Hugging Face 时再显式加 --push-to-hub。
     parser.add_argument("--push-to-hub", dest="push_to_hub", action="store_true", default=False)
     parser.add_argument("--no-push-to-hub", dest="push_to_hub", action="store_false")
@@ -76,6 +76,7 @@ def main():
         preprocessor_overrides={"device_processor": {"device": str(policy.config.device)}},
     )
 
+    print(f"[HEI Evaluate] Connecting to robot host={args.remote_ip}, robot_id={args.robot_id}")
     robot.connect()
     _, robot_action_processor, robot_observation_processor = make_default_processors()
 

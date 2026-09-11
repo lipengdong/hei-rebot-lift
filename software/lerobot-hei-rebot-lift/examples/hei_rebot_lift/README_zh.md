@@ -17,7 +17,10 @@ examples/hei_rebot_lift/VR_mujoco_ik/
 ## 脚本说明
 
 ```text
-Arm_Zero_Status_Test.py   达妙机械臂写零位和状态检查
+debug/Arm_Zero_Status_Test.py   达妙机械臂写零位和状态检查
+debug/Lift_Status_Test.py       升降归零、I/K 位置控制、限位 IO 和电机状态
+debug/Chassis_Status_Test.py    底盘键盘控制、速度档位和四轮状态
+debug/Port_Binding_Wizard.py    串口自动识别、故障诊断和 udev 端口绑定向导
 teleoperate.py            只遥操作，不录数据
 record.py                 VR 遥操作录制数据集
 replay.py                 回放数据集中的某一集动作
@@ -44,7 +47,7 @@ VR_mujoco_ik/             Telegrip + MuJoCo + Pinocchio IK 一体化 VR 控制�
 192.168.31.127
 ```
 
-如果 IP 改了，在脚本里用 `--remote-ip 新IP` 覆盖。
+如果 IP 改了，可以在 `teleoperate.py`、`record.py`、`replay.py`、`evaluate.py` 或 `rollout.py` 后传入 `--remote-ip 新IP`。程序会在连接前打印最终生效的 `host=...`；不传该参数时才使用脚本中的默认地址。
 
 ## 最短完整流程
 
@@ -85,19 +88,55 @@ right_wrist /dev/video4
 
 相机默认使用 `MJPG`，这样多个 USB 相机同时跑时更稳。
 
+### 串口绑定向导
+
+先停止 `hei-rebot-lift-host` 和所有串口调试程序，并给 4 块 U2CAN、升降限位 IO 板和电机上电。为了区分两块型号相同的机械臂转接板，请临时断开右臂 4-7 号电机，让右臂只响应 ID 1-3；左臂保持 ID 1-7 全部连接。
+
+```bash
+PYTHONPATH=src conda run --no-capture-output -n lerobot5 \
+  python -u examples/hei_rebot_lift/debug/Port_Binding_Wizard.py
+```
+
+向导会检查所有 `ttyACM`/`ttyUSB` 串口，根据实际响应的电机 ID 区分四块 U2CAN，并验证升降限位板是否持续输出有效 Modbus 帧。端口未插入、被其他程序占用、电机 ID 不符或 CAN 无响应都会明确列出。写入 `rules/99-nx-robot.rules` 前会显示并让你确认映射，之后可选安装到 `/etc/udev/rules.d/`。现有雷达和 IMU 规则会原样保留。
+
+规则使用 USB 物理拓扑绑定，生成后请保持每块转接板的 USB 插口不变。硬件已确认无误后，可用非交互方式重新扫描并安装：
+
+```bash
+PYTHONPATH=src conda run --no-capture-output -n lerobot5 \
+  python -u examples/hei_rebot_lift/debug/Port_Binding_Wizard.py --yes --install
+```
+
 达妙机械臂写零位和状态检查：
 
 ```bash
-PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/Arm_Zero_Status_Test.py \
+PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/debug/Arm_Zero_Status_Test.py \
   --port /dev/hei_right_arm
 ```
 
 临时调试真实端口：
 
 ```bash
-PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/Arm_Zero_Status_Test.py \
+PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/debug/Arm_Zero_Status_Test.py \
   --port /dev/ttyACM1
 ```
+
+### 单独调试升降
+
+运行硬件调试脚本前必须停止 `hei-rebot-lift-host`，因为同一个串口不能被两个进程同时占用。升降脚本复用正式驱动的启动 homing、限位保护、多圈高度、位置闭环和加减速逻辑。
+
+```bash
+PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/debug/Lift_Status_Test.py
+```
+
+按键：`I` 提高目标高度，`K` 降低目标高度，`Space` 停止并保持当前实测高度，`H` 重新 homing，`X` 退出。临时端口可用 `--motor-port` 和 `--io-port` 覆盖。
+
+### 单独调试底盘
+
+```bash
+PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/debug/Chassis_Status_Test.py
+```
+
+按键：`W/S/A/D` 平移，`Q/E` 旋转，`1/2/3` 选择速度档位，`Space` 立即停止，`X` 退出。固定状态面板显示目标/实测机体速度、四轮目标/实测速度、电机位置、力矩和错误码；按键看门狗会停止过期的运动命令。
 
 ## 2. 启动机器人端 host
 
@@ -165,7 +204,8 @@ MuJoCo IK -> record.py: tcp://*:6558
 只测试 VR 控制，不保存数据：
 
 ```bash
-PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/teleoperate.py
+PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/teleoperate.py \
+  --remote-ip 192.168.31.127
 ```
 
 控制逻辑：
@@ -181,6 +221,7 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_
 
 ```bash
 PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/record.py \
+  --remote-ip 192.168.31.127 \
   --repo-id HGM/hei_rebot_lift_task1 \
   --num-episodes 5 \
   --episode-time-sec 120 \
@@ -198,6 +239,7 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_
 
 ```bash
 PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/record.py \
+  --remote-ip 192.168.31.127 \
   --repo-id HGM/hei_rebot_lift_task1 \
   --root ~/.cache/huggingface/lerobot/HGM/hei_rebot_lift_task1 \
   --resume \
@@ -301,6 +343,7 @@ ACT 示例：
 
 ```bash
 PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/rollout.py \
+  --remote-ip 192.168.31.127 \
   --model-id outputs/train/act_hei_rebot_lift_task1/checkpoints/010000/pretrained_model \
   --task "Pick up the yellow block from the floor and put it on the table in front" \
   --duration-sec 30 \
@@ -311,6 +354,7 @@ SmolVLA 示例：
 
 ```bash
 PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/rollout.py \
+  --remote-ip 192.168.31.127 \
   --model-id outputs/train/smolvla_hei_rebot_lift_task1/checkpoints/001000/pretrained_model \
   --task "Pick up the yellow block from the floor and put it on the table in front" \
   --duration-sec 60 \
@@ -326,6 +370,7 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_
 
 ```bash
 PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/replay.py \
+  --remote-ip 192.168.31.127 \
   --repo-id HGM/hei_rebot_lift_task1 \
   --episode-index 0 \
   --display-data
@@ -335,6 +380,7 @@ ACT 评估并记录 eval 数据：
 
 ```bash
 PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/evaluate.py \
+  --remote-ip 192.168.31.127 \
   --model-id outputs/train/act_hei_rebot_lift_task1/checkpoints/010000/pretrained_model \
   --dataset-id HGM/hei_rebot_lift_task1_eval \
   --num-episodes 5 \
