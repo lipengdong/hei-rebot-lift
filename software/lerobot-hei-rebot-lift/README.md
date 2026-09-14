@@ -49,7 +49,31 @@ examples/hei_rebot_lift/VR_mujoco_ik/README.md
 ```bash
 conda create -n lerobot5 python=3.12 -y
 conda activate lerobot5
-pip install -e .
+pip install -e ".[core_scripts,training,pyzmq-dep]"
+```
+
+推荐使用上面这条完整安装命令，它会一次安装本项目在电脑端需要的依赖：
+
+| 功能 | 实际依赖来源 |
+| --- | --- |
+| ZMQ 通信 | `pyzmq-dep` 安装 `pyzmq` |
+| 数据录制与编辑 | `core_scripts` 包含 `dataset` |
+| Rerun 可视化 | `core_scripts` 包含 `viz`/`rerun-sdk` |
+| 键盘控制 | `core_scripts` 包含 `hardware`/`pynput` |
+| ACT、SmolVLA 等训练 | `training` |
+
+Python 中虽然写的是 `import zmq`，但需要安装的包名是 `pyzmq`，不要使用 `pip install zmq`。
+
+如果 Jetson 只用来运行机器人 host，不在 Jetson 上录数据或训练，可以使用轻量安装：
+
+```bash
+pip install -e ".[hardware,pyzmq-dep]"
+```
+
+完整安装后可以统一验证关键包：
+
+```bash
+python -m pip show pyzmq rerun-sdk pynput datasets accelerate
 ```
 
 常用启动命令里建议加上：

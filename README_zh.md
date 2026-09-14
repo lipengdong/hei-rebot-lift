@@ -175,7 +175,15 @@ software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/     VR + M
 cd software/lerobot-hei-rebot-lift
 conda create -n lerobot5 python=3.12 -y
 conda activate lerobot5
-pip install -e .
+pip install -e ".[core_scripts,training,pyzmq-dep]"
+```
+
+这条完整安装命令会同时安装数据集录制/编辑、Rerun 可视化、键盘输入、ZMQ 通信和策略训练所需依赖。Python 代码中使用 `import zmq`，但正确的安装包名是 `pyzmq`，不要安装无关的 `zmq` 占位包。
+
+如果 Jetson 只运行机器人端 host，可以使用更轻量的安装方式：
+
+```bash
+pip install -e ".[hardware,pyzmq-dep]"
 ```
 
 创建 VR/MuJoCo IK 环境：

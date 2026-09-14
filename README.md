@@ -175,7 +175,18 @@ Create the LeRobot environment:
 cd software/lerobot-hei-rebot-lift
 conda create -n lerobot5 python=3.12 -y
 conda activate lerobot5
-pip install -e .
+pip install -e ".[core_scripts,training,pyzmq-dep]"
+```
+
+This full installation includes dataset recording/editing, Rerun visualization,
+keyboard input, ZMQ communication, and policy training. The Python module is
+imported as `zmq`, but its correct package name is `pyzmq`; do not install the
+unrelated `zmq` package.
+
+For a Jetson that only runs the robot-side host, use the lighter installation:
+
+```bash
+pip install -e ".[hardware,pyzmq-dep]"
 ```
 
 Create the VR/MuJoCo IK environment:
