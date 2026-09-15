@@ -122,6 +122,13 @@ cd examples/hei_rebot_lift/VR_mujoco_ik
 ./run_hei_robot_vr_real.sh --enable-real-publish
 ```
 
+Real-robot mode loads only the complete robot URDF for IK and state
+visualization. It does not load the simulation floor, table, graspable objects,
+or other debug-scene elements. Its lift visualization defaults to about
+`0.0286 m/s`, matching the current `18 rad/s` motor limit and `10 mm/rev` lead
+screw. Override it with `--lift-speed-m-s VALUE` after changing the physical
+lift parameters. Standalone simulation keeps its original `0.20 m/s` default.
+
 Real publishing remains locked until it receives fresh robot feedback and a
 fresh Telegrip frame with both grip buttons released. The MuJoCo model is first
 synchronized to the measured arm, gripper, and lift positions; only then does

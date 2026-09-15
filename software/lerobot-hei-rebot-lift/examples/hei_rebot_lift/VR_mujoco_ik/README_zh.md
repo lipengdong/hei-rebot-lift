@@ -124,6 +124,11 @@ cd examples/hei_rebot_lift/VR_mujoco_ik
 ./run_hei_robot_vr_real.sh --enable-real-publish
 ```
 
+真机模式只加载完整机器人 URDF，用于逆解计算和实机状态显示；不会加载仿真地面、
+桌子、可抓取物体及其他调试场景元素。真机模式的升降显示速度默认为约
+`0.0286 m/s`，对应当前 `18 rad/s` 电机限速和 `10 mm/rev` 丝杆导程；硬件参数
+变化后可用 `--lift-speed-m-s VALUE` 覆盖。单独仿真仍保留原来的 `0.20 m/s` 默认值。
+
 程序同时收到新鲜的实机反馈，以及一帧“两个 grip 都已松开”的新鲜 Telegrip
 数据后，才会解锁真机发布。解锁前，MuJoCo 会先同步实测的双臂、夹爪和升降位置，
 再通过 `6558` 发布 14 个双臂/夹爪关节、底盘和升降命令。平行夹爪的 URDF

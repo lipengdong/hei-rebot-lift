@@ -134,7 +134,7 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 hei-rebot-lift-host
 6556  host -> client 观测和图像
 ```
 
-host 内置看门狗：如果超过 `watchdog_timeout_ms` 没有收到动作，会自动停止底盘和升降，避免断联后继续运动。
+host 内置看门狗：如果超过 `watchdog_timeout_ms`（默认 `1000 ms`）没有收到动作，会自动停止底盘和升降，避免断联后继续运动。
 
 ## 常调参数
 

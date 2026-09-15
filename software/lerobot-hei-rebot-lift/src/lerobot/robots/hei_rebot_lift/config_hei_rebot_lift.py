@@ -95,7 +95,7 @@ class HeiRebotLiftHostConfig:
     port_zmq_cmd: int = 6555
     port_zmq_observations: int = 6556
     connection_time_s: int = 30000
-    watchdog_timeout_ms: int = 500
+    watchdog_timeout_ms: int = 1000
     max_loop_freq_hz: int = 30
 
 

@@ -2,8 +2,8 @@
 """VR control for the complete HEI ReBot Lift MuJoCo model and real robot.
 
 The program receives Telegrip data, solves both arm targets against the complete
-URDF, updates the MuJoCo viewer, and publishes the existing 6558 bridge protocol
-consumed by examples/hei_rebot_lift/teleoperate.py or record.py.
+URDF, updates a robot-only MuJoCo viewer, and publishes the existing 6558 bridge
+protocol consumed by examples/hei_rebot_lift/teleoperate.py or record.py.
 """
 
 from __future__ import annotations
@@ -39,6 +39,13 @@ CHASSIS_MAX_THETA_COMMAND = 30.0
 MOBILE_COMMAND_TIME_CONSTANT_S = 0.08
 DEFAULT_PUBLISH_HZ = 30.0
 DEFAULT_FEEDBACK_TIMEOUT_S = 1.0
+# 与 HeiRebotLiftConfig 的升降参数保持一致：18 rad/s、10 mm/rev。
+# 线速度 = 角速度 / (2*pi) * 丝杆导程，约为 28.65 mm/s。
+REAL_LIFT_MAX_MOTOR_SPEED_RAD_S = 18.0
+REAL_LIFT_LEAD_MM_PER_REV = 10.0
+DEFAULT_REAL_LIFT_SPEED_M_S = (
+    REAL_LIFT_MAX_MOTOR_SPEED_RAD_S / (2.0 * np.pi) * REAL_LIFT_LEAD_MM_PER_REV / 1000.0
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -54,8 +61,16 @@ def parse_args() -> argparse.Namespace:
         help="Robot-state feedback SUB endpoint published by teleoperate.py/record.py.",
     )
     parser.add_argument("--vr-pos-scale", type=float, default=1.0, help="VR translation to robot TCP scale.")
-    parser.add_argument("--lift-speed-m-s", type=float, default=0.20, help="Simulated lift display speed.")
-    parser.add_argument("--vr-timeout-s", type=float, default=0.5, help="Stop chassis/lift after stale VR data.")
+    parser.add_argument(
+        "--lift-speed-m-s",
+        type=float,
+        default=DEFAULT_REAL_LIFT_SPEED_M_S,
+        help=(
+            "Robot-only viewer lift speed. The default matches the physical 18 rad/s motor limit "
+            "and 10 mm/rev lead screw."
+        ),
+    )
+    parser.add_argument("--vr-timeout-s", type=float, default=1.0, help="Stop chassis/lift after stale VR data.")
     parser.add_argument(
         "--feedback-timeout-s",
         type=float,
@@ -78,7 +93,7 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Unsafe legacy mode: permit arming without first synchronizing the real robot state.",
     )
-    parser.add_argument("--plain-scene", action="store_true", help="Disable the environment and show only the robot.")
+    parser.set_defaults(plain_scene=True)
     parser.add_argument("--headless-check", action="store_true", help="Run model/FK/IK/protocol checks without publishing.")
     parser.add_argument("--verbose", action="store_true", help="Print additional VR and IK diagnostics.")
     return parser.parse_args()
@@ -105,6 +120,9 @@ class HEIRobotVRRealController(HEIRobotVRSimulator):
             )
         if args.publish_hz <= 0.0:
             raise ValueError("--publish-hz must be greater than zero for real-robot control")
+
+        # 真机模式只借助完整 URDF 做 IK 和状态显示，不加载桌子、物体、地面等仿真场景。
+        args.plain_scene = True
 
         self.command_context = zmq.Context()
         self.command_socket = self.command_context.socket(zmq.PUB)
@@ -393,6 +411,10 @@ class HEIRobotVRRealController(HEIRobotVRSimulator):
 
     def run_real(self) -> None:
         print("[HEI VR Real] REAL ROBOT COMMAND MODE", flush=True)
+        print(
+            f"[HEI VR Real] lift display max speed={self.args.lift_speed_m_s * 1000.0:.2f} mm/s",
+            flush=True,
+        )
         print("[HEI VR Real] waiting for teleoperate.py/record.py feedback before arming", flush=True)
         print("[HEI VR Real] hold grip to move; release grip to stop chassis/lift immediately", flush=True)
         self.viewer = mujoco.viewer.launch_passive(

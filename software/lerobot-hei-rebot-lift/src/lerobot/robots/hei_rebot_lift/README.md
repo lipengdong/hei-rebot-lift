@@ -134,7 +134,7 @@ Default ZMQ ports:
 6556  host -> client observations and images
 ```
 
-The host includes a watchdog: if no action is received within `watchdog_timeout_ms`, it automatically stops the chassis and lift to avoid motion after disconnection.
+The host includes a watchdog: if no action is received within `watchdog_timeout_ms` (default: `1000 ms`), it automatically stops the chassis and lift to avoid motion after disconnection.
 
 ## Common Tuning Parameters
 
