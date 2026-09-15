@@ -37,7 +37,7 @@ VR_mujoco_ik/             Telegrip + MuJoCo + Pinocchio IK 一体化 VR 控制�
 ```text
 终端 1：机器人端 host
 终端 2：Telegrip VR 页面
-终端 3：MuJoCo IK
+终端 3：完整模型 MuJoCo IK + 真机桥接
 终端 4：record.py 录制数据
 ```
 
@@ -57,7 +57,7 @@ VR_mujoco_ik/             Telegrip + MuJoCo + Pinocchio IK 一体化 VR 控制�
 2. 启动 `hei-rebot-lift-host`，等待升降 homing 完成。
 3. 电脑端启动 `VR_mujoco_ik/run_telegrip.sh`。
 4. VR 头显访问 `https://电脑IP:8443` 并进入 VR。
-5. 电脑端启动 `VR_mujoco_ik/run_mujoco_ik.sh`。
+5. 电脑端启动 `VR_mujoco_ik/run_hei_robot_vr_real.sh --enable-real-publish`。
 6. 先跑 `teleoperate.py` 确认双臂、底盘、升降方向正确。
 7. 跑 `record.py` 录制数据。
 8. 用 `lerobot-dataset-viz` 检查数据，必要时用 `lerobot-edit-dataset` 删除坏 episode。
@@ -183,12 +183,14 @@ VR 头显访问：
 https://电脑IP:8443
 ```
 
-启动 MuJoCo IK：
+启动完整模型 MuJoCo IK 真机桥接：
 
 ```bash
 cd examples/hei_rebot_lift/VR_mujoco_ik
-./run_mujoco_ik.sh
+./run_hei_robot_vr_real.sh --enable-real-publish
 ```
+
+左右 VR grip 都松开过一次后，真机发布才会解锁。如需使用原双臂模型，仍可执行 `./run_mujoco_ik.sh`。
 
 默认链路：
 

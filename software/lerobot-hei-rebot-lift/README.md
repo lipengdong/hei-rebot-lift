@@ -184,12 +184,15 @@ VR 头显浏览器访问：
 https://电脑IP:8443
 ```
 
-再打开一个终端启动 MuJoCo IK：
+再打开一个终端启动完整模型 MuJoCo IK 真机桥接：
 
 ```bash
 cd examples/hei_rebot_lift/VR_mujoco_ik
-./run_mujoco_ik.sh
+./run_hei_robot_vr_real.sh --enable-real-publish
 ```
+
+真机命令需要显式加 `--enable-real-publish`，并在两个 VR grip 都松开后才解锁。
+原双臂模型入口 `./run_mujoco_ik.sh` 仍保留。
 
 默认数据链路：
 

@@ -37,7 +37,7 @@ Real-robot recording usually uses four terminals:
 ```text
 Terminal 1: robot-side host
 Terminal 2: Telegrip VR page
-Terminal 3: MuJoCo IK
+Terminal 3: complete-model MuJoCo IK + real-robot bridge
 Terminal 4: record.py data recording
 ```
 
@@ -55,7 +55,7 @@ If the IP changes, pass `--remote-ip NEW_IP` to `teleoperate.py`, `record.py`, `
 2. Start `hei-rebot-lift-host` and wait for lift homing to finish.
 3. On the computer, start `VR_mujoco_ik/run_telegrip.sh`.
 4. Open `https://COMPUTER_IP:8443` in the VR headset browser and enter VR.
-5. Start `VR_mujoco_ik/run_mujoco_ik.sh`.
+5. Start `VR_mujoco_ik/run_hei_robot_vr_real.sh --enable-real-publish`.
 6. Run `teleoperate.py` first to verify arm, base, and lift directions.
 7. Run `record.py` to collect data.
 8. Use `lerobot-dataset-viz` to inspect data, and use `lerobot-edit-dataset` to delete bad episodes if needed.
@@ -166,12 +166,15 @@ Open in the VR headset browser:
 https://COMPUTER_IP:8443
 ```
 
-Start MuJoCo IK:
+Start the complete-model MuJoCo IK real-robot bridge:
 
 ```bash
 cd examples/hei_rebot_lift/VR_mujoco_ik
-./run_mujoco_ik.sh
+./run_hei_robot_vr_real.sh --enable-real-publish
 ```
+
+The bridge remains locked until both VR grip buttons have been released once.
+For the legacy dual-arm model, use `./run_mujoco_ik.sh` instead.
 
 Default data flow:
 

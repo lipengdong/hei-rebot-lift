@@ -9,6 +9,7 @@ import numpy as np
 import zmq
 
 VR_ZMQ_ADDRESS = "tcp://localhost:6558"
+ROBOT_STATE_ZMQ_BIND_ADDRESS = "tcp://*:6559"
 
 RIGHT_QPOS_START = 0
 LEFT_QPOS_START = 7
@@ -29,6 +30,8 @@ HEIGHT_MIN_MM = -800.0
 HEIGHT_MAX_MM = 0.0
 HEIGHT_TARGET_STEP_MM = 80.0
 THETA_INPUT_SCALE = 30.0
+COMMAND_STALE_TIMEOUT_S = 0.5
+ROBOT_STATE_PUBLISH_HZ = 10.0
 
 
 def map_arm_qpos(packet_qpos, start, lower_rad, upper_rad, direction, trim_rad):
@@ -45,38 +48,137 @@ def arm_action(side, command):
 
 
 class VRActionReceiver:
-    def __init__(self, address: str = VR_ZMQ_ADDRESS):
+    def __init__(
+        self,
+        address: str = VR_ZMQ_ADDRESS,
+        stale_timeout_s: float = COMMAND_STALE_TIMEOUT_S,
+        feedback_bind_address: str | None = ROBOT_STATE_ZMQ_BIND_ADDRESS,
+    ):
         self.address = address
+        self.stale_timeout_s = float(stale_timeout_s)
+        self.feedback_bind_address = feedback_bind_address
         self._lock = threading.Lock()
         self._context = None
         self._socket = None
         self._thread = None
+        self._feedback_thread = None
+        self._feedback_ready = threading.Event()
+        self._feedback_error = None
         self._stop_event = threading.Event()
         self._left_arm_action = {}
         self._right_arm_action = {}
         self._base_action = {}
         self._height_axis = 0.0
+        self._last_message_s = 0.0
+        self._last_stale_log_s = 0.0
+        self._robot_state = None
+        self._feedback_sequence = 0
 
     def start(self):
         if self._thread is not None:
             return
+        self._stop_event.clear()
+        if self.feedback_bind_address is not None:
+            self._feedback_ready.clear()
+            self._feedback_error = None
+            self._feedback_thread = threading.Thread(
+                target=self._feedback_loop,
+                name="hei-robot-state-feedback",
+                daemon=True,
+            )
+            self._feedback_thread.start()
+            if not self._feedback_ready.wait(timeout=2.0):
+                raise RuntimeError("Timed out while starting the robot-state feedback publisher")
+            if self._feedback_error is not None:
+                raise RuntimeError(
+                    f"Failed to bind robot-state feedback at {self.feedback_bind_address}: "
+                    f"{self._feedback_error}"
+                )
         self._thread = threading.Thread(target=self._receive_loop, daemon=True)
         self._thread.start()
 
     def set_height_from_observation(self, observation):
+        self.set_robot_observation(observation)
         with self._lock:
             self._height_axis = 0.0
+
+    @staticmethod
+    def _robot_state_from_observation(observation):
+        if observation is None:
+            return None
+        joint_keys = [f"{side}_{joint}.pos" for side in ("right", "left") for joint in ARM_JOINTS]
+        if any(key not in observation for key in joint_keys):
+            return None
+        values = np.asarray([observation[key] for key in joint_keys], dtype=float)
+        height_mm = float(observation.get("height.pos", 0.0))
+        if not np.all(np.isfinite(values)) or not np.isfinite(height_mm):
+            return None
+        return {
+            "type": "hei_rebot_lift_state",
+            "right_arm_rad": values[:ARM_QPOS_COUNT].tolist(),
+            "left_arm_rad": values[ARM_QPOS_COUNT:].tolist(),
+            "height_mm": height_mm,
+        }
+
+    def set_robot_observation(self, observation) -> None:
+        state = self._robot_state_from_observation(observation)
+        if state is None:
+            return
+        with self._lock:
+            self._robot_state = state
+
+    def _feedback_loop(self) -> None:
+        context = zmq.Context()
+        socket = context.socket(zmq.PUB)
+        socket.setsockopt(zmq.SNDHWM, 2)
+        socket.setsockopt(zmq.LINGER, 0)
+        try:
+            socket.bind(self.feedback_bind_address)
+        except zmq.ZMQError as exc:
+            self._feedback_error = exc
+            self._feedback_ready.set()
+            socket.close(0)
+            context.term()
+            return
+        self._feedback_ready.set()
+        print(f"[HEI VR] robot-state feedback publishing on {self.feedback_bind_address}", flush=True)
+        period_s = 1.0 / ROBOT_STATE_PUBLISH_HZ
+        try:
+            while not self._stop_event.is_set():
+                with self._lock:
+                    state = self._robot_state.copy() if self._robot_state is not None else None
+                    sequence = self._feedback_sequence
+                    if state is not None:
+                        self._feedback_sequence += 1
+                if state is not None:
+                    state["sequence"] = sequence
+                    state["timestamp_s"] = time.time()
+                    try:
+                        socket.send_json(state, flags=zmq.NOBLOCK)
+                    except zmq.Again:
+                        pass
+                self._stop_event.wait(period_s)
+        finally:
+            socket.close(0)
+            context.term()
 
     def _receive_loop(self):
         self._context = zmq.Context()
         self._socket = self._context.socket(zmq.SUB)
-        self._socket.connect(self.address)
         self._socket.setsockopt_string(zmq.SUBSCRIBE, "")
+        # 限制队列并每次只消费最新包，避免网络恢复后回放过期动作。
+        self._socket.setsockopt(zmq.RCVHWM, 2)
         self._socket.setsockopt(zmq.RCVTIMEO, 250)
+        self._socket.connect(self.address)
 
         while not self._stop_event.is_set():
             try:
                 message = self._socket.recv_json()
+                while True:
+                    try:
+                        message = self._socket.recv_json(flags=zmq.NOBLOCK)
+                    except zmq.Again:
+                        break
             except zmq.Again:
                 continue
             except zmq.ZMQError as exc:
@@ -118,13 +220,33 @@ class VRActionReceiver:
                     self._base_action = base_action
                 if height_axis is not None:
                     self._height_axis = height_axis
+                self._last_message_s = time.monotonic()
 
         self._close_socket()
 
     def get_action(self, observation=None):
+        # 控制循环每次读取实机观测后都更新轻量反馈，供 MuJoCo 真机入口安全同步。
+        self.set_robot_observation(observation)
         with self._lock:
             height_axis = self._height_axis
             action = {**self._right_arm_action, **self._left_arm_action, **self._base_action}
+            last_message_s = self._last_message_s
+
+        stale = (
+            last_message_s <= 0.0
+            or time.monotonic() - last_message_s > max(self.stale_timeout_s, 0.1)
+        )
+        if stale:
+            # 保留最后关节位置让机械臂原地保持，只立即撤销底盘和升降运动。
+            action.update({"x.vel": 0.0, "y.vel": 0.0, "theta.vel": 0.0})
+            height_axis = 0.0
+            now_s = time.monotonic()
+            if last_message_s > 0.0 and now_s - self._last_stale_log_s >= 2.0:
+                logging.warning(
+                    "VR action stream is stale for %.3fs; stopping chassis and lift.",
+                    now_s - last_message_s,
+                )
+                self._last_stale_log_s = now_s
 
         current_height = 0.0
         if observation is not None:
@@ -158,6 +280,12 @@ class VRActionReceiver:
                 logging.warning("VR ZMQ receiver thread is still alive after forced shutdown.")
                 return
             self._thread = None
+        if self._feedback_thread is not None:
+            self._feedback_thread.join(timeout=1.5)
+            if self._feedback_thread.is_alive():
+                logging.warning("Robot-state feedback thread did not stop cleanly.")
+            else:
+                self._feedback_thread = None
         self._close_socket()
 
     def _close_socket(self):

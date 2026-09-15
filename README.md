@@ -252,12 +252,15 @@ Open this URL in the VR headset browser:
 https://COMPUTER_IP:8443
 ```
 
-Start MuJoCo IK on the computer:
+Start the complete-model MuJoCo IK real-robot bridge on the computer:
 
 ```bash
 cd software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik
-./run_mujoco_ik.sh
+./run_hei_robot_vr_real.sh --enable-real-publish
 ```
+
+Real publishing unlocks only after both VR grip buttons are released once. The
+legacy dual-arm model remains available through `./run_mujoco_ik.sh`.
 
 Test teleoperation:
 
