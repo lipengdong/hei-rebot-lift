@@ -200,14 +200,14 @@ class HEIRobotVRSimulator:
         self.last_vr_packet_s = 0.0
         self.received_packet_count = 0
         self.previous_buttons = {"right_a": False, "left_x": False}
-        self.gripper_target = {"right": GRIPPER_OPEN_M, "left": GRIPPER_OPEN_M}
+        self.gripper_target = {"right": GRIPPER_CLOSED_M, "left": GRIPPER_CLOSED_M}
         self.sim_chassis_velocity = np.zeros(3, dtype=float)
         self.base_pose = np.zeros(3, dtype=float)
         self.base_body_id = self._mujoco_body_id(BASE_FRAME)
         self.base_initial_pos = self.model.body_pos[self.base_body_id].copy()
         self.base_initial_quat = self.model.body_quat[self.base_body_id].copy()
         self.graspable_objects: dict[str, GraspableObjectRuntime] = {}
-        self.previous_gripper_closed = {"right": False, "left": False}
+        self.previous_gripper_closed = {"right": True, "left": True}
         self._initialize_graspable_objects()
         self.last_status_s = 0.0
 
@@ -284,8 +284,8 @@ class HEIRobotVRSimulator:
             self.model.body_quat[self.base_body_id] = self.base_initial_quat
             self._set_joint_q(RIGHT_ARM_JOINTS, DEFAULT_ARM_Q)
             self._set_joint_q(LEFT_ARM_JOINTS, DEFAULT_ARM_Q)
-            self._set_gripper("right", GRIPPER_OPEN_M)
-            self._set_gripper("left", GRIPPER_OPEN_M)
+            self._set_gripper("right", GRIPPER_CLOSED_M)
+            self._set_gripper("left", GRIPPER_CLOSED_M)
             self._reset_scene_objects()
             self.data.qpos[self.mj_qpos[LIFT_JOINT]] = 0.0
             mujoco.mj_forward(self.model, self.data)
@@ -297,7 +297,8 @@ class HEIRobotVRSimulator:
             runtime.held_by = None
             runtime.tcp_relative_pos = None
             runtime.tcp_relative_rot = None
-        self.previous_gripper_closed = {"right": False, "left": False}
+        # 复位后夹爪已经闭合，标记为稳定闭合状态，避免下一帧误触发抓取边沿。
+        self.previous_gripper_closed = {"right": True, "left": True}
 
     def _pin_joint_q_indices(self, pin_model: pin.Model, names: tuple[str, ...]) -> np.ndarray:
         indices = []
@@ -807,8 +808,8 @@ class HEIRobotVRSimulator:
                 controller = controllers[side]
                 if controller["gripActive"]:
                     self._update_arm_target(arm, controller)
-                    # 默认打开，trigger 按下闭合；松开 grip 后保留最后夹爪状态。
-                    target = GRIPPER_CLOSED_M if controller["trigger"] else GRIPPER_OPEN_M
+                    # 默认闭合，trigger 按下张开；松开 grip 后保留最后夹爪状态。
+                    target = GRIPPER_OPEN_M if controller["trigger"] else GRIPPER_CLOSED_M
                     self._set_gripper(side, target)
                     self._solve_arm(arm)
                 else:
@@ -885,7 +886,7 @@ class HEIRobotVRSimulator:
         print("[HEI VR Sim] pure simulation mode; no command will be sent to the robot", flush=True)
         print(
             "[HEI VR Sim] right grip + stick moves chassis; right B / left Y rotates; "
-            "hold grip to move an arm; trigger closes/grabs, release trigger drops; F frames; R reset",
+            "hold grip to move an arm; trigger opens, release trigger closes/grabs; F frames; R reset",
             flush=True,
         )
         self.viewer = mujoco.viewer.launch_passive(
@@ -938,6 +939,9 @@ class HEIRobotVRSimulator:
                 [0.02, 0.0, 0.0], dtype=float
             )
             mujoco.mj_forward(self.model, self.data)
+            # 默认闭合夹爪先张开再闭合，验证真正的闭合边沿会触发稳定抓取。
+            self._set_gripper("right", GRIPPER_OPEN_M)
+            self._step_stable_grasp()
             self._set_gripper("right", GRIPPER_CLOSED_M)
             self._step_stable_grasp()
             if runtime.held_by != "right":

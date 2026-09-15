@@ -87,7 +87,7 @@ table footprint, or on the floor otherwise. Each arm can hold one object.
 Controls:
 
 - Hold the left or right grip button to move that arm. Controller translation and rotation map to the corresponding TCP at a 1:1 scale.
-- While holding grip, press trigger to close the gripper and grasp a nearby scene object. Release trigger to open and place it. Releasing grip preserves the last gripper opening and any held object.
+- The grippers start closed. While holding grip, press trigger to open the gripper; release trigger to close it and grasp a nearby scene object. Releasing grip preserves the last gripper state and any held object.
 - Hold right grip and use the right thumbstick vertically for forward/backward motion and horizontally for strafing.
 - While holding right grip, right `B` rotates clockwise and left `Y` rotates counterclockwise. Releasing right grip or losing the VR stream stops the chassis immediately.
 - Hold left grip and move the left thumbstick vertically to control the lift.
