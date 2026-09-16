@@ -126,13 +126,6 @@ First real-robot use and recovery:
 3. A VR or robot-feedback timeout stops chassis/lift motion and locks the bridge. After recovery, release both `grip` buttons again to synchronize and re-arm.
 4. In pure simulation, `F` toggles body frames and `R` resets the robot and scene objects. Full keyboard reset is disabled in real mode; use right `A` and left `X` to return the arms gradually.
 
-Arm safety protection:
-
-- Arm commands are velocity- and acceleration-limited using elapsed time. Motion slows automatically near a kinematic singularity.
-- IK branch jumps, unreachable targets, entry into a joint soft-limit zone, or excessive real joint tracking error hold only the affected arm.
-- A hold is reported as `[HEI VR Safety] ... arm HOLD` in the terminal. Do not keep pushing the controller toward the boundary. Release that arm's `grip`, move the controller away from the boundary, and hold `grip` again to capture a new origin.
-- If the physical arm moved unexpectedly, press the emergency stop and inspect joint feedback, zero calibration, and motor alarms before re-enabling it.
-
 Run the model and IK self-check without opening a viewer:
 
 ```bash

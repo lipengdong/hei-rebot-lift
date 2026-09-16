@@ -89,20 +89,8 @@ VR_TO_ROBOT_ROT = np.array(
 TARGET_POS_EPS_M = 0.0012
 TARGET_ROT_EPS_RAD = np.deg2rad(0.35)
 MAX_MUJOCO_JOINT_STEP_RAD = 0.08
-# 真机速度上限之外再加一层基于时间的指令限速。腕部使用更保守的速度，
-# 避免高刷新率把“每帧限幅”累积成危险的关节速度。
-ARM_COMMAND_MAX_VELOCITY_RAD_S = np.array([2.0, 2.0, 2.0, 1.0, 1.2, 1.2], dtype=float)
-ARM_COMMAND_MAX_ACCEL_RAD_S2 = np.array([6.0, 6.0, 6.0, 3.0, 4.0, 4.0], dtype=float)
-IK_RAW_JUMP_LIMIT_RAD = np.array([0.55, 0.55, 0.55, 0.45, 0.55, 0.55], dtype=float)
-IK_POSITION_ERROR_LIMIT_M = 0.035
-IK_ROTATION_ERROR_LIMIT_RAD = np.deg2rad(25.0)
-JOINT_LIMIT_SOFT_MARGIN_RAD = 0.10
-SINGULARITY_SLOW_SIGMA = 0.025
-SINGULARITY_MIN_SPEED_SCALE = 0.15
 # 每个新 VR 目标最多允许若干次 IK 收敛，之后锁住关节，避免静止时反复寻解。
-# 加速度受限后需要更多周期才能到达目标；最终仍由 TCP/关节误差主动停止，
-# 该计数只用于防止异常情况下无限求解。
-IK_SETTLE_MAX_STEPS = 120
+IK_SETTLE_MAX_STEPS = 8
 IK_JOINT_HOLD_EPS_RAD = 0.001
 LIFT_DEADZONE = 0.15
 CHASSIS_DEADZONE = 0.15
@@ -148,9 +136,6 @@ class ArmRuntime:
     settle_steps_remaining: int = 0
     reset_requested: bool = False
     last_failure_log_s: float = 0.0
-    command_velocity: np.ndarray | None = None
-    safety_latched: bool = False
-    safety_reason: str = ""
 
 
 @dataclass
@@ -349,7 +334,6 @@ class HEIRobotVRSimulator:
                 solver=solver,
                 pin_q_indices=indices,
                 target_tf=zero_tf.copy(),
-                command_velocity=np.zeros(6, dtype=float),
             )
             xyz = zero_tf[:3, 3]
             print(
@@ -505,7 +489,6 @@ class HEIRobotVRSimulator:
         arm.last_solved_target_tf = current_tf.copy()
         arm.settle_steps_remaining = 0
         arm.reset_requested = False
-        arm.command_velocity[:] = 0.0
         print(f"[HEI VR Sim] {arm.side} controller origin captured", flush=True)
 
     @staticmethod
@@ -515,43 +498,6 @@ class HEIRobotVRSimulator:
         arm.robot_origin_tf = None
         arm.last_solved_target_tf = None
         arm.settle_steps_remaining = 0
-        if arm.command_velocity is not None:
-            arm.command_velocity[:] = 0.0
-
-    def _latch_arm_safety(self, arm: ArmRuntime, reason: str) -> None:
-        """Hold one arm until its grip is released and a new origin is captured."""
-        current_q = self._get_joint_q(ARM_JOINTS[arm.side])
-        arm.safety_latched = True
-        arm.safety_reason = reason
-        arm.target_tf = arm.solver.fk(current_q)
-        arm.last_solved_target_tf = arm.target_tf.copy()
-        arm.settle_steps_remaining = 0
-        arm.command_velocity[:] = 0.0
-        print(
-            f"[HEI VR Safety] {arm.side} arm HOLD: {reason}. "
-            "Release grip, move away from the boundary, then hold grip again.",
-            flush=True,
-        )
-
-    @staticmethod
-    def _joint_limit_violation(arm: ArmRuntime, current_q: np.ndarray, raw_q: np.ndarray) -> str | None:
-        lower = np.asarray(arm.solver.model.lowerPositionLimit, dtype=float)
-        upper = np.asarray(arm.solver.model.upperPositionLimit, dtype=float)
-        delta = raw_q - current_q
-        toward_lower = (raw_q <= lower + JOINT_LIMIT_SOFT_MARGIN_RAD) & (delta < 0.0)
-        toward_upper = (raw_q >= upper - JOINT_LIMIT_SOFT_MARGIN_RAD) & (delta > 0.0)
-        unsafe = np.flatnonzero(toward_lower | toward_upper)
-        if unsafe.size == 0:
-            return None
-        joints = ", ".join(str(index + 1) for index in unsafe)
-        return f"joint {joints} entered the {JOINT_LIMIT_SOFT_MARGIN_RAD:.2f} rad soft-limit zone"
-
-    @staticmethod
-    def _singularity_speed_scale(arm: ArmRuntime, current_q: np.ndarray) -> tuple[float, float]:
-        singular_values = np.linalg.svd(arm.solver.getJac(current_q), compute_uv=False)
-        sigma_min = float(np.min(singular_values)) if singular_values.size else 0.0
-        scale = float(np.clip(sigma_min / SINGULARITY_SLOW_SIGMA, SINGULARITY_MIN_SPEED_SCALE, 1.0))
-        return scale, sigma_min
 
     def _update_arm_target(self, arm: ArmRuntime, controller: dict) -> None:
         if arm.controller_origin_pos is None:
@@ -571,70 +517,22 @@ class HEIRobotVRSimulator:
             arm.last_solved_target_tf = target.copy()
             arm.settle_steps_remaining = IK_SETTLE_MAX_STEPS
 
-    def _solve_arm(self, arm: ArmRuntime, dt: float) -> None:
+    def _solve_arm(self, arm: ArmRuntime) -> None:
         if arm.settle_steps_remaining <= 0:
-            arm.command_velocity[:] = 0.0
             return
         current_q = self._get_joint_q(ARM_JOINTS[arm.side])
         full_solution, info = arm.solver.ik(arm.target_tf, current_q)
         arm.settle_steps_remaining -= 1
         if not info["success"]:
-            arm.command_velocity[:] = 0.0
             now = time.monotonic()
             if now - arm.last_failure_log_s >= 1.0:
                 print(f"[HEI VR Sim] {arm.side} IK failed; retaining previous pose", flush=True)
                 arm.last_failure_log_s = now
             return
         target_q = np.asarray(full_solution)[arm.pin_q_indices]
-        raw_solution = info.get("raw_solution")
-        raw_q = target_q if raw_solution is None else np.asarray(raw_solution)[arm.pin_q_indices]
-        raw_delta = raw_q - current_q
-        jumped = np.flatnonzero(np.abs(raw_delta) > IK_RAW_JUMP_LIMIT_RAD)
-        if jumped.size:
-            joints = ", ".join(str(index + 1) for index in jumped)
-            self._latch_arm_safety(arm, f"IK solution jump detected at joint {joints}")
-            return
-
-        limit_reason = self._joint_limit_violation(arm, current_q, raw_q)
-        if limit_reason is not None:
-            self._latch_arm_safety(arm, limit_reason)
-            return
-
-        raw_tf = arm.solver.fk(raw_q)
-        raw_position_error = np.linalg.norm(arm.target_tf[:3, 3] - raw_tf[:3, 3])
-        raw_rotation_error = self._rotation_delta_angle(raw_tf, arm.target_tf)
-        if (
-            raw_position_error > IK_POSITION_ERROR_LIMIT_M
-            or raw_rotation_error > IK_ROTATION_ERROR_LIMIT_RAD
-        ):
-            self._latch_arm_safety(
-                arm,
-                f"unreachable target (position error={raw_position_error:.3f} m, "
-                f"rotation error={np.degrees(raw_rotation_error):.1f} deg)",
-            )
-            return
-
-        safe_dt = float(np.clip(dt, 1e-4, 0.05))
-        speed_scale, _ = self._singularity_speed_scale(arm, current_q)
-        desired_velocity = np.clip(
-            (target_q - current_q) / safe_dt,
-            -ARM_COMMAND_MAX_VELOCITY_RAD_S * speed_scale,
-            ARM_COMMAND_MAX_VELOCITY_RAD_S * speed_scale,
-        )
-        max_velocity_delta = ARM_COMMAND_MAX_ACCEL_RAD_S2 * safe_dt
-        arm.command_velocity += np.clip(
-            desired_velocity - arm.command_velocity,
-            -max_velocity_delta,
-            max_velocity_delta,
-        )
-        delta = target_q - current_q
-        step = arm.command_velocity * safe_dt
-        # 目标很近时不允许加速度状态造成越过目标或反向振荡。
-        step = np.sign(delta) * np.minimum(np.abs(step), np.abs(delta))
-        step = np.clip(step, -MAX_MUJOCO_JOINT_STEP_RAD, MAX_MUJOCO_JOINT_STEP_RAD)
-        if np.max(np.abs(delta)) < IK_JOINT_HOLD_EPS_RAD:
+        step = np.clip(target_q - current_q, -MAX_MUJOCO_JOINT_STEP_RAD, MAX_MUJOCO_JOINT_STEP_RAD)
+        if np.max(np.abs(step)) < IK_JOINT_HOLD_EPS_RAD:
             arm.settle_steps_remaining = 0
-            arm.command_velocity[:] = 0.0
             return
         applied_q = current_q + step
         self._set_joint_q(ARM_JOINTS[arm.side], applied_q)
@@ -909,17 +807,12 @@ class HEIRobotVRSimulator:
                 arm = self.arms[side]
                 controller = controllers[side]
                 if controller["gripActive"]:
+                    self._update_arm_target(arm, controller)
                     # 默认闭合，trigger 按下张开；松开 grip 后保留最后夹爪状态。
                     target = GRIPPER_OPEN_M if controller["trigger"] else GRIPPER_CLOSED_M
                     self._set_gripper(side, target)
-                    if not arm.safety_latched:
-                        self._update_arm_target(arm, controller)
-                        self._solve_arm(arm, dt)
+                    self._solve_arm(arm)
                 else:
-                    if arm.safety_latched:
-                        print(f"[HEI VR Safety] {side} arm safety reset after grip release", flush=True)
-                    arm.safety_latched = False
-                    arm.safety_reason = ""
                     self._release_controller_origin(arm)
                     self._step_reset(arm)
 
@@ -1027,16 +920,6 @@ class HEIRobotVRSimulator:
             solution, info = arm.solver.ik(target, current_q)
             if not info["success"] or not np.all(np.isfinite(solution)):
                 raise RuntimeError(f"{side} IK self-check failed")
-            raw_solution = info.get("raw_solution")
-            if raw_solution is None or not np.all(np.isfinite(raw_solution)):
-                raise RuntimeError(f"{side} raw IK diagnostics self-check failed")
-            lower = np.asarray(arm.solver.model.lowerPositionLimit, dtype=float)
-            upper = np.asarray(arm.solver.model.upperPositionLimit, dtype=float)
-            middle = (lower + upper) * 0.5
-            toward_lower = middle.copy()
-            toward_lower[0] = lower[0] + JOINT_LIMIT_SOFT_MARGIN_RAD * 0.5
-            if self._joint_limit_violation(arm, middle, toward_lower) is None:
-                raise RuntimeError(f"{side} soft joint-limit self-check failed")
             print(f"[HEI VR Sim] {side} FK/IK self-check passed", flush=True)
         controllers = {"left": empty_controller("left"), "right": empty_controller("right")}
         controllers["right"]["poseValid"] = True
