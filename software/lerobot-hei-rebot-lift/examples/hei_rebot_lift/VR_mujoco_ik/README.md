@@ -84,15 +84,47 @@ its relative pose. The object remains attached after releasing the grip button.
 Opening the gripper releases it and places it on the table when it is above the
 table footprint, or on the floor otherwise. Each arm can hold one object.
 
-Controls:
+#### VR Controller Tutorial
 
-- Hold the left or right grip button to move that arm. Controller translation and rotation map to the corresponding TCP at a 1:1 scale.
-- The grippers start closed. While holding grip, press trigger to open the gripper; release trigger to close it and grasp a nearby scene object. Releasing grip preserves the last gripper state and any held object.
-- Hold right grip and use the right thumbstick vertically for forward/backward motion and horizontally for strafing.
-- While holding right grip, right `B` rotates clockwise and left `Y` rotates counterclockwise. Releasing right grip or losing the VR stream stops the chassis immediately.
-- Hold left grip and move the left thumbstick vertically to control the lift.
-- When grip is not held, right `A` resets the right arm and left `X` resets the left arm.
-- In the MuJoCo window, press `F` to toggle body frames and `R` to reset the robot and all scene objects.
+Arm motion uses relative poses. Each time a side's `grip` is pressed, the
+current controller pose and corresponding robot TCP pose become the control
+origin. Subsequent XYZ translation and rotation map to that TCP at a 1:1 scale.
+Releasing `grip` holds the last arm target; pressing it again captures a new
+origin, so the controller never needs to return to a fixed absolute pose.
+
+| Controller input | Active when | Function |
+| --- | --- | --- |
+| Left `grip` | Held | Enable relative left-arm control and left-stick lift control |
+| Right `grip` | Held | Enable relative right-arm control and chassis controls |
+| Left/right `trigger` | Corresponding `grip` held | Press to open that gripper; release to close it |
+| Left stick vertical | Left `grip` held | Push forward to raise the lift; pull back to lower it |
+| Right stick vertical | Right `grip` held | Drive the chassis forward or backward |
+| Right stick horizontal | Right `grip` held | Strafe the O-layout omnidirectional chassis left or right |
+| Right `B` | Right `grip` held | Rotate the chassis clockwise |
+| Left `Y` | Right `grip` held | Rotate the chassis counterclockwise |
+| Right `A` | Right `grip` released | Return the right arm gradually to its default pose |
+| Left `X` | Left `grip` released | Return the left arm gradually to its default pose |
+
+Arm and gripper procedure:
+
+1. Put the controller in a comfortable pose and clear the corresponding arm's workspace.
+2. Hold that side's `grip` to capture the current control origin, then translate or rotate the controller to move the TCP.
+3. The grippers start closed. While continuing to hold `grip`, press `trigger` to open the gripper and place it around the object.
+4. Release `trigger` to close and grasp. Releasing `grip` stops arm tracking but preserves the last gripper state.
+5. To release the object, hold the corresponding `grip` again and press `trigger`.
+
+Chassis and lift procedure:
+
+1. Right `grip` enables the chassis. Hold it while using the right stick for translation and right `B` or left `Y` for rotation. Releasing right `grip` stops the chassis immediately.
+2. Left `grip` enables the lift. Hold it while moving the left stick forward/backward to raise/lower the platform. Releasing left `grip` stops lift motion and preserves the current target height.
+3. Keep the corresponding stick centered when moving an arm without intending to move the chassis or lift.
+
+First real-robot use and recovery:
+
+1. After starting the real bridge, release both `grip` buttons and wait for `command bridge ARMED` in the terminal.
+2. Test one arm at a time with small, slow controller motions and keep the emergency stop reachable.
+3. A VR or robot-feedback timeout stops chassis/lift motion and locks the bridge. After recovery, release both `grip` buttons again to synchronize and re-arm.
+4. In pure simulation, `F` toggles body frames and `R` resets the robot and scene objects. Full keyboard reset is disabled in real mode; use right `A` and left `X` to return the arms gradually.
 
 Run the model and IK self-check without opening a viewer:
 
