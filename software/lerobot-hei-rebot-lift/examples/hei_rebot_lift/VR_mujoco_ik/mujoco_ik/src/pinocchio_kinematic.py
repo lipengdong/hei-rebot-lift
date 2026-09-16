@@ -314,7 +314,14 @@ class Kinematics:
             sol_tauff = pin.rnea(self.model, self.data, sol_q, v, np.zeros(self.model.nv))
             sol_tauff = np.concatenate([sol_tauff, np.zeros(self.model.nq - sol_tauff.shape[0])], axis=0)
             
-            info = {"sol_tauff": sol_tauff, "success": True, "clamped": clamped}
+            # 同时返回裁剪前的最优解。上层安全控制需要识别 IK 换解或不可达目标；
+            # 如果只看裁剪后的 sol_q，大跳变会被伪装成连续的多个小步。
+            info = {
+                "sol_tauff": sol_tauff,
+                "success": True,
+                "clamped": clamped,
+                "raw_solution": self._to_full_q(raw_sol_q, fallback_q),
+            }
 
             dof = self._to_full_q(sol_q, fallback_q)
             return dof, info
@@ -339,7 +346,12 @@ class Kinematics:
 
             print(f"sol_q:{sol_q} \nmotorstate: \n{current_arm_motor_q} \ntarget_pose: \n{T}")
 
-            info = {"sol_tauff": sol_tauff * 0.0, "success": False, "clamped": False}
+            info = {
+                "sol_tauff": sol_tauff * 0.0,
+                "success": False,
+                "clamped": False,
+                "raw_solution": None,
+            }
 
             dof = np.zeros(self.model.nq)
             if current_arm_motor_q is not None:

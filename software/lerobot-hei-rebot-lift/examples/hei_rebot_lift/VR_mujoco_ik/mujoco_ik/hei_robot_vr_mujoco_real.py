@@ -39,6 +39,7 @@ CHASSIS_MAX_THETA_COMMAND = 30.0
 MOBILE_COMMAND_TIME_CONSTANT_S = 0.08
 DEFAULT_PUBLISH_HZ = 30.0
 DEFAULT_FEEDBACK_TIMEOUT_S = 1.0
+ARM_TRACKING_ERROR_LIMIT_RAD = np.array([0.35, 0.35, 0.35, 0.25, 0.30, 0.30], dtype=float)
 # 与 HeiRebotLiftConfig 的升降参数保持一致：18 rad/s、10 mm/rev。
 # 线速度 = 角速度 / (2*pi) * 丝杆导程，约为 28.65 mm/s。
 REAL_LIFT_MAX_MOTOR_SPEED_RAD_S = 18.0
@@ -294,6 +295,29 @@ class HEIRobotVRRealController(HEIRobotVRSimulator):
         self.last_synced_feedback_sequence = sequence
         return True
 
+    def _guard_arm_tracking(self, controllers: dict[str, dict]) -> None:
+        """Stop one arm if the real motors no longer follow its commanded pose."""
+        if self.robot_feedback is None or not self._feedback_is_fresh():
+            return
+        with self.data_lock:
+            for side in ("right", "left"):
+                arm = self.arms[side]
+                if arm.safety_latched or not controllers[side]["gripActive"]:
+                    continue
+                commanded = self._get_joint_q(ARM_JOINTS[side])
+                measured = self.robot_feedback[f"{side}_arm_rad"][:6]
+                error = np.abs(commanded - measured)
+                unsafe = np.flatnonzero(error > ARM_TRACKING_ERROR_LIMIT_RAD)
+                if unsafe.size == 0:
+                    continue
+                joints = ", ".join(str(index + 1) for index in unsafe)
+                # 立即把发送目标收回到最新实测位置，避免继续积累跟踪误差。
+                self._set_joint_q(ARM_JOINTS[side], measured)
+                self._latch_arm_safety(
+                    arm,
+                    f"real joint tracking error at joint {joints} (max={np.max(error):.2f} rad)",
+                )
+
     def _lock_bridge(self, reason: str) -> None:
         if not self.bridge_armed:
             return
@@ -341,6 +365,9 @@ class HEIRobotVRRealController(HEIRobotVRSimulator):
         right_grip = fresh and bool(controllers["right"]["gripActive"])
         left_grip = fresh and bool(controllers["left"]["gripActive"])
         feedback_fresh = self._feedback_is_fresh()
+
+        if self.bridge_armed and feedback_fresh:
+            self._guard_arm_tracking(controllers)
 
         if not self.bridge_armed and feedback_fresh and not self.args.allow_no_feedback:
             self._sync_model_from_robot_feedback()
