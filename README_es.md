@@ -89,7 +89,7 @@ cd software/lerobot-hei-rebot-lift
 
 ## Hoja de ruta y últimos avances
 
-La tabla resume el estado actual del proyecto y enlaza la documentación correspondiente. Las guías técnicas enlazadas están disponibles en inglés.
+La tabla resume el estado actual del proyecto y enlaza la documentación correspondiente. Las guías técnicas enlazadas están disponibles en inglés, con versiones chinas para la mayoría.
 
 | Módulo | Estado | Avances actuales | Documentación |
 | --- | --- | --- | --- |
@@ -131,28 +131,53 @@ Teleoperación: visor VR + controladores, Telegrip, MuJoCo, Pinocchio/CasADi
 
 ## ⚡ Instalación rápida
 
-Crear el entorno LeRobot:
+**Cada bloque empieza en un terminal nuevo desde la raíz del repositorio, en
+la máquina indicada. No ejecutar todos los pasos en una sola máquina.**
+`lerobot5` usa Python 3.12; `hei-rebot-vr` usa Python 3.10 según
+`environment.yml`. Son entornos distintos con funciones diferentes.
+
+### 1. Jetson del robot: controladores de hardware
 
 ```bash
 cd software/lerobot-hei-rebot-lift
 conda create -n lerobot5 python=3.12 -y
 conda activate lerobot5
-pip install -e .
+python -m pip install -e ".[hardware,pyzmq-dep]"
+python -c "import serial, zmq, cv2; print('robot dependencies ok')"
 ```
 
-Crear el entorno VR/MuJoCo IK:
+Si el entorno existe, reutilizarlo. Las dependencias base incluyen PyTorch;
+no es un paquete de hardware autónomo. Ante conflictos en Jetson, comprobar
+JetPack y las restricciones PyTorch/torchvision; no copiar ruedas CUDA de PC ni
+ignorar todas las dependencias con `--no-deps`. No instalar VR/IK en el robot.
+
+### 2. Ordenador: control, datos y entrenamiento
+
+```bash
+cd software/lerobot-hei-rebot-lift
+conda create -n lerobot5 python=3.12 -y
+conda activate lerobot5
+python -m pip install -e ".[core_scripts,training,pyzmq-dep]"
+python -m pip show pyzmq rerun-sdk pynput datasets accelerate
+```
+
+Los extras incluyen herramientas de datos, Rerun, teclado, ZMQ y entrenamiento
+general. SmolVLA requiere además su extra específico, indicado más abajo.
+
+### 3. Ordenador: VR y MuJoCo IK
 
 ```bash
 cd software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik
 conda env create -f environment.yml
-```
-
-Verificar Pinocchio + CasADi:
-
-```bash
 conda activate hei-rebot-vr
 env -u LD_LIBRARY_PATH python -c "import pinocchio as pin; from pinocchio import casadi as cpin; print(pin.__version__); print('casadi binding ok')"
 ```
+
+Para actualizar, sustituir la creación por
+`conda env update -n hei-rebot-vr -f environment.yml --prune`.
+Pinocchio/CasADi/eigenpy/coal-python deben instalarse desde conda-forge según
+este archivo; no instalar `pin` por separado con pip. Los scripts activan
+`hei-rebot-vr` automáticamente; los de MuJoCo eliminan `LD_LIBRARY_PATH`.
 
 ## 🔌 Mapeo de dispositivos
 
@@ -164,44 +189,190 @@ env -u LD_LIBRARY_PATH python -c "import pinocchio as pin; from pinocchio import
 /dev/hei_lift_io     Puerto serie de finales de carrera
 ```
 
-## 🎮 Flujo de arranque
+### 1. Identificación y vinculación de puertos
 
-### 1. En el robot: iniciar el host
+En Jetson, detener el host y todas las herramientas serie. Apagar la alimentación
+y sujetar los brazos antes de cambiar conexiones. Desconectar temporalmente los
+motores **4-7 del brazo derecho** (dejar 1-3); mantener brazo izquierdo 1-7,
+chasis 1-4 y elevador 1 conectados. Alimentar las cuatro U2CAN, motores e IO
+durante la detección. El asistente [Port_Binding_Wizard.py](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/debug/Port_Binding_Wizard.py) no mueve motores
+ni escribe ceros.
 
 ```bash
 cd software/lerobot-hei-rebot-lift
-PYTHONPATH=src conda run --no-capture-output -n lerobot5 hei-rebot-lift-host
+PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/debug/Port_Binding_Wizard.py
 ```
 
-### 2. En el ordenador: iniciar Telegrip
+Confirmar los resultados antes de escribir reglas; instalación del sistema con
+sudo. Conserva las reglas lidar/IMU existentes. Mantener los mismos conectores
+USB, pues se vincula por topología física. Verificar los cinco enlaces, apagar
+y reconectar motores derechos 4-7 antes de probar.
+`--yes --install` solo para repeticiones verificadas y sin ambigüedades.
+
+### 2. Pruebas independientes tras vincular
+
+Detener el host, ejecutar una herramienta serie cada vez y mantener accesible
+el paro de emergencia. Activar `lerobot5` y ejecutar Python directamente desde
+un terminal interactivo (SSH con TTY). Detalles en el
+[manual de pruebas independientes](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README.md#1-hardware-check).
+
+- **Ceros de los brazos:** el script deshabilita y escribe los ceros de los siete motores inmediatamente, sin confirmación. Sujetar el brazo, colocarlo en el cero mecánico de diseño y cerrar la pinza a `0 rad`; una postura VR arbitraria no es el cero. No es una herramienta de solo lectura.
+- **Elevador:** `debug/Lift_Status_Test.py --height-step-mm 5` hace homing automático hacia arriba. Verificar ambos finales de carrera. `I/K` cambia el objetivo 5 mm por evento, `Space` mantiene la altura medida, `H` repite homing y `X` sale. Rango `-800..0 mm`.
+- **Chasis:** `debug/Chassis_Status_Test.py`, con ruedas sujetas y elevadas. `W/S/A/D` traslación, `Q/E` giro, `1/2/3` velocidades, `Space` velocidad cero y `X` salida. Empezar por 1. Mueve las cuatro ruedas, no ofrece control individual. IDs 1 delantera derecha, 2 trasera derecha, 3 trasera izquierda, 4 delantera izquierda; timeout de teclado 0.65 s.
+
+### 3. Cámaras
+
+Comprobar en el **robot**: `front=/dev/video0`, `left_wrist=/dev/video2`,
+`right_wrist=/dev/video4`; perfil actual `640x480 @ 30 FPS`, `MJPG`.
+Los dispositivos pueden variar. Ejecutar `lerobot-find-cameras` en el robot.
+La imagen VR está desactivada actualmente, no la captura del host.
+
+## 🎮 Flujo de arranque
+
+| Dirección de ejemplo | Máquina | Uso |
+| --- | --- | --- |
+| `192.168.31.245` | Ordenador de control | Visor: `https://192.168.31.245:8443` |
+| `192.168.31.127` | Jetson del robot | Cliente: `--remote-ip`; cámaras VR: `tcp://192.168.31.127:6556` |
+| `localhost / 127.0.0.1` | Máquina que ejecuta el programa | Conexiones locales Telegrip/IK/cliente |
+
+Sustituir cada dirección por la de su máquina. El visor usa la IP del
+ordenador, **no la del robot**. Las máquinas deben comunicarse por LAN.
+`--remote-ip` no modifica `telegrip/config.yaml`.
+
+### 1. Practicar en simulación antes del robot real
+
+<p align="center"><img src="media/robot-mujoco.png" alt="Simulación HEI ReBot Lift" width="85%"></p>
+
+Solo en el ordenador; **no iniciar host, teleoperate, record ni puente real**.
+Terminal A:
 
 ```bash
 cd software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik
 ./run_telegrip.sh
 ```
 
-### 3. En el ordenador: iniciar MuJoCo IK
+Abrir `https://192.168.31.245:8443` en el visor; verificar la dirección antes
+de aceptar el certificado autofirmado y entrar en VR. Terminal B separado:
 
 ```bash
 cd software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik
-./run_mujoco_ik.sh
+./run_hei_robot_vr_sim.sh
 ```
 
-### 4. En el ordenador: probar la teleoperación
+MuJoCo aparece en el ordenador: robot completo, ruedas animadas, suelo, luces,
+mesa, cubos y plátano local. No publica órdenes reales por 6558.
+El agarre estable vincula objetos al TCP; no valida física de contacto.
+Los límites/proyecciones IK no detectan colisiones.
+
+#### 1.1 Botones y calibración del origen
+
+<table align="center">
+  <tr>
+    <td align="center"><a href="media/META-QUEST-BUTTON.jpg"><img src="media/META-QUEST-BUTTON.jpg" alt="Meta Quest" width="200"></a><br>Meta Quest</td>
+    <td align="center"><a href="media/META-GRIP-BUTTON.jpg"><img src="media/META-GRIP-BUTTON.jpg" alt="Grip" width="200"></a><br>Grip</td>
+    <td align="center"><a href="media/META-FRONT-TRIGGER.jpg"><img src="media/META-FRONT-TRIGGER.jpg" alt="Trigger" width="200"></a><br>Trigger</td>
+  </tr>
+</table>
+
+> [!IMPORTANT]
+> **Mantener el META QUEST BUTTON del mando derecho unos 3 segundos para recentrar el marco VR con la posición y orientación actuales del visor.**
+> **Recalibrar al cambiar de posición o dirección, o si el brazo y el mando no siguen la misma dirección.**
+> Soltar ambos grips, centrar sticks, mirar hacia la dirección deseada, mantener el botón unos 3 segundos, esperar a estabilizar y volver a grip. Comprobar con un movimiento pequeño.
+
+El recentrado del visor no es el origen relativo capturado por grip.
+No calibra ceros de motores ni sustituye el homing del elevador.
+
+| Entrada | Condición | Función |
+| --- | --- | --- |
+| Grip izquierdo/derecho | Mantenido | Control relativo del brazo correspondiente, traslación y rotación a escala 1:1 dentro del espacio alcanzable |
+| Trigger | Grip correspondiente mantenido | Pulsar para abrir, soltar para cerrar; soltar grip conserva el último estado de la pinza |
+| Stick izquierdo vertical | Grip izquierdo mantenido | Hacia delante para subir, hacia atrás para bajar |
+| Stick derecho | Grip derecho mantenido | Avance/retroceso y desplazamiento lateral |
+| B derecho / Y izquierdo | Grip derecho mantenido | Giro horario / antihorario |
+| A derecho / X izquierdo | Grip correspondiente soltado | Retorno gradual del brazo a la postura predeterminada |
+| F / R en MuJoCo | Ventana activa | Marcos / reinicio de simulación; R está desactivado en modo real |
+
+Soltar grip derecho/izquierdo anula la solicitud del chasis/elevador; el frenado
+real depende del hardware. Practicar brazos, pinzas, recentrado y parada.
+Cerrar la simulación antes de continuar; Telegrip puede seguir abierto.
+La velocidad simulada del elevador (0.20 m/s) no es la del hardware.
+
+### 2. Jetson: iniciar el host
+
+Completar verificaciones de hardware, cerrar herramientas de debug y despejar
+el espacio. Esperar **hasta terminar el homing automático hacia arriba**.
+
+```bash
+cd software/lerobot-hei-rebot-lift
+PYTHONPATH=src conda run --no-capture-output -n lerobot5 hei-rebot-lift-host
+```
+
+Mantener abierto este terminal del robot.
+
+### 3. Ordenador: iniciar el control real
+
+#### 3.1 Telegrip y visor
+
+Iniciar `run_telegrip.sh` como arriba, salvo si ya está ejecutándose, y abrir
+la dirección **del ordenador** en el visor. Para activar imágenes, configurar
+`vr_images.enabled: true` y `vr_images.endpoint: tcp://192.168.31.127:6556`
+en `telegrip/config.yaml`, reiniciar Telegrip y recargar el visor.
+Aquí se usa la IP **del robot**; no cambia sus cámaras de captura.
+
+#### 3.2 Cliente con la IP del robot
 
 ```bash
 cd software/lerobot-hei-rebot-lift
 PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/teleoperate.py --remote-ip 192.168.31.127
 ```
 
+#### 3.3 Puente real del modelo completo
+
+```bash
+cd software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik
+./run_hei_robot_vr_real.sh --enable-real-publish
+```
+
+Con datos VR y feedback del robot recientes, **soltar ambos grips a la vez**
+y esperar `command bridge ARMED`. El flag autoriza publicar sin omitir la
+sincronización. No usar `--allow-no-feedback` para solucionar fallos de red.
+`run_mujoco_ik.sh` es el antiguo doble brazo, no esta entrada; nunca iniciar
+ambos puentes juntos.
+
+Un host del robot y tres programas del ordenador. VR y feedback caducan cada
+uno a 1 s; el host añade watchdog de órdenes de 1000 ms. Tras recuperar la
+conexión, soltar grips para sincronizar y rearmar. No sustituyen el paro de
+emergencia. El viewer real muestra solo el robot; la elevación ~0.0286 m/s es
+un límite teórico, no sincronización continua con la altura medida.
+
 ## 📷 Grabación de datos
+
+Detener teleoperate: record lo reemplaza y publica feedback en 6559. Mantener
+host, Telegrip y puente real; soltar grips para rearmar tras reconectar.
 
 ```bash
 cd software/lerobot-hei-rebot-lift
 PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/record.py --repo-id HGM/hei_rebot_lift_task1 --remote-ip 192.168.31.127 --num-episodes 5 --episode-time-sec 120 --reset-time-sec 30 --task-description "Pick up the yellow block from the floor and put it on the table in front"
 ```
 
+Guardado local por defecto; añadir `--push-to-hub` solo para subir.
+Continuar grabando (cinco episodios adicionales):
+
+```bash
+cd software/lerobot-hei-rebot-lift
+PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/record.py --repo-id HGM/hei_rebot_lift_task1 --remote-ip 192.168.31.127 --root ~/.cache/huggingface/lerobot/HGM/hei_rebot_lift_task1 --resume --num-episodes 5
+```
+
+Usar la ruta real de los logs; mantener nombres de cámaras, dimensiones y FPS.
+Crear otro dataset si cambia el esquema. Para visualizar o eliminar episodios,
+ver el [manual de datos](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README.md#6-visualize-and-clean-data).
+Hacer copia antes de borrar; los índices empiezan en cero y se renumeran.
+
 ## 🧠 Entrenamiento ACT
+
+En el ordenador, sin host ni VR. Si la carpeta es personalizada, añadir
+`--dataset.root=RUTA_REAL` con el ID correcto. Los entrenamientos cortos prueban
+el flujo, no garantizan calidad final.
 
 ```bash
 cd software/lerobot-hei-rebot-lift
@@ -210,17 +381,50 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 lerobot-train --dataset
 
 ## ✨ Entrenamiento SmolVLA
 
+Instalar primero sus dependencias, no incluidas en el extra training general:
+
+```bash
+cd software/lerobot-hei-rebot-lift
+conda run --no-capture-output -n lerobot5 python -m pip install -e ".[smolvla]"
+```
+
 ```bash
 cd software/lerobot-hei-rebot-lift
 PYTHONPATH=src conda run --no-capture-output -n lerobot5 lerobot-train --dataset.repo_id=HGM/hei_rebot_lift_task1 --policy.type=smolvla --policy.device=cuda --policy.push_to_hub=false --output_dir=outputs/train/smolvla_hei_rebot_lift_task1 --job_name=smolvla_hei_rebot_lift_task1 --batch_size=1 --steps=1000 --save_freq=1000 --log_freq=50 --num_workers=2 --wandb.enable=false
 ```
 
+La primera ejecución puede descargar backbone y tokenizer. El modo offline
+requiere que todos los archivos necesarios estén ya en caché.
+
 ## 🤖 Rollout en robot real
+
+Mantener host, detener puente VR, teleoperate, record y replay antes de
+inferencia. **Un controlador cada vez.** Comprobar checkpoint, cámaras,
+texto de tarea y espacio libre; empezar con una prueba corta.
 
 ```bash
 cd software/lerobot-hei-rebot-lift
-PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/rollout.py --model-id outputs/train/act_hei_rebot_lift_task1/checkpoints/010000/pretrained_model --task "Pick up the yellow block from the floor and put it on the table in front" --duration-sec 30 --inference sync
+PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/rollout.py --remote-ip 192.168.31.127 --model-id outputs/train/act_hei_rebot_lift_task1/checkpoints/010000/pretrained_model --task "Pick up the yellow block from the floor and put it on the table in front" --duration-sec 30 --inference sync
 ```
+
+SmolVLA:
+
+```bash
+cd software/lerobot-hei-rebot-lift
+PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/rollout.py --remote-ip 192.168.31.127 --model-id outputs/train/smolvla_hei_rebot_lift_task1/checkpoints/001000/pretrained_model --task "Pick up the yellow block from the floor and put it on the table in front" --duration-sec 60 --fps 10 --inference rtc
+```
+
+`--fps` cambia la cadencia de ejecución, no acelera el cálculo del modelo.
+Ver el [manual replay y evaluate](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README.md#10-replay-and-evaluate):
+replay reproduce acciones; evaluate ejecuta ACT y guarda nuevos episodios,
+sin calcular automáticamente la tasa de éxito.
+
+## Documentación adicional
+
+- [Índice de guías](docs/README.md)
+- [Control, datos y entrenamiento](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README.md)
+- [Parámetros, unidades y watchdog del robot](software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/README.md)
+- [VR, mandos y solución de problemas](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/README.md)
 
 ## ⭐ Star History
 
@@ -234,3 +438,8 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_
 
 - [Seeed reBot-DevArm](https://github.com/Seeed-Projects/reBot-DevArm)
 - [LeRobot](https://github.com/huggingface/lerobot)
+
+
+## Licencia
+
+El software se basa en LeRobot. Consultar [LICENSE](LICENSE) y respetar las licencias de dependencias y recursos de terceros, incluidos los recursos YCB.

@@ -1,5 +1,7 @@
 # MuJoCo IK
 
+[English](README.md) | [中文](README_zh.md)
+
 This is the MuJoCo + Pinocchio IK submodule in the HEI ReBot Lift VR teleoperation pipeline.
 
 For environment installation, controller inputs, network configuration, and

@@ -1,5 +1,7 @@
 # MuJoCo IK
 
+[English](README.md) | [中文](README_zh.md)
+
 这是 HEI ReBot Lift VR 遥操作链路里的 MuJoCo + Pinocchio IK 子模块。
 
 统一部署、手柄操作、网络配置和真机安全启动请看 [VR 使用教程](../README_zh.md)。

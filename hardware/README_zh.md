@@ -1,5 +1,7 @@
 # HEI ReBot Lift Hardware
 
+[English](README.md) | [中文](README_zh.md)
+
 本目录是 **HEI ReBot Lift** 的硬件资料包，用于复现一台 **双臂 + 升降平台 + 四轮 O 型全向底盘** 的移动操作机器人。
 
 这个目录的目标不是只放几个模型文件，而是尽量把复现真实机器人需要的资料整理清楚：采购、加工、3D 打印、装配检查、后期维护都能有对应入口。
@@ -132,7 +134,8 @@ left_wrist  左腕相机
 right_wrist 右腕相机
 ```
 
-USB 相机建议使用 `MJPG` 格式，降低 USB 带宽占用，提高多相机同时采集稳定性。D435 RGB-D 的使用示例见：`software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/D435/`。
+USB 相机建议使用 `MJPG` 格式，降低 USB 带宽占用，提高多相机同时采集稳定性。当前仓库不包含之前讨论的 D435 独立示例，不应按该目录部署；当前相机配置请看
+[驱动说明](../software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/README_zh.md#相机配置)。
 
 ## ✅ 上电前硬件检查清单
 
@@ -141,7 +144,7 @@ USB 相机建议使用 `MJPG` 格式，降低 USB 带宽占用，提高多相机
 - [ ] 金属件已对照清单和 CAD 文件确认
 - [ ] 3D 打印件已完成试装
 - [ ] 左右臂机械零位处于安全位置
-- [ ] 升降平台上限位开关可以可靠触发
+- [ ] 升降平台上下限位开关与 IO 状态均可可靠触发
 - [ ] 底盘四轮方向和电机 ID 映射正确
 - [ ] 急停和电源分配检查正常
 - [ ] USB / CAN / 串口线材固定可靠，有基本应力释放

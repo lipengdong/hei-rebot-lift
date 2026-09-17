@@ -20,6 +20,36 @@ and keep the emergency stop reachable.
 | Training and inference | [Examples guide](../software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README.md) | ACT/SmolVLA, checkpoint paths, replay, evaluate, rollout |
 | Reproduction and collaboration | [Community](../community/README.md) | WeChat group, contact details, QR code |
 
+## README Map and Maintenance
+
+Each guide has a different scope; synchronization means matching instructions
+and shared facts, not copying the entire homepage into every submodule.
+
+| Location (from repository root) | English | Chinese | Scope |
+| --- | --- | --- | --- |
+| Repository root | [README.md](../README.md) | [README_zh.md](../README_zh.md) | First deployment, simulation practice, real startup; also [French](../README_Fr.md) and [Spanish](../README_es.md) |
+| `hardware/` | [Guide](../hardware/README.md) | [Guide](../hardware/README_zh.md) | BOM, CAD, assembly and power-on checks |
+| `docs/` | [Index](README.md) | [Index](README_zh.md) | Documentation navigation and maintenance |
+| `community/` | [Guide](../community/README.md) | [Guide](../community/README_zh.md) | Contact details and group QR code |
+| `media/` | [Guide](../media/README.md) | [Guide](../media/README_zh.md) | Images, GIFs, controller diagrams and static Star History |
+| Software root | [Guide](../software/lerobot-hei-rebot-lift/README.md) | [Guide](../software/lerobot-hei-rebot-lift/README_zh.md) | Software module navigation; deployment links to the homepage |
+| HEI examples | [Guide](../software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README.md) | [Guide](../software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README_zh.md) | Debugging, recording, datasets, training, replay/evaluate/rollout |
+| VR/IK root | [Guide](../software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/README.md) | [Guide](../software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/README_zh.md) | VR environment, controller tutorial, simulation and real bridge |
+| Telegrip | [Guide](../software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/telegrip/README.md) | [Guide](../software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/telegrip/README_zh.md) | WebXR bridge and image-display configuration |
+| MuJoCo IK | [Guide](../software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/mujoco_ik/README.md) | [Guide](../software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/mujoco_ik/README_zh.md) | Complete-model vs. legacy entries and offline tests |
+| Complete URDF model | [Guide](../software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/mujoco_ik/model/HEI_robot_urdf/README.md) | [Guide](../software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/mujoco_ik/model/HEI_robot_urdf/README_zh.md) | Joint inspection, visualization, TCP/gripper conventions, MJCF export |
+| Robot driver | [Guide](../software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/README.md) | [Guide](../software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/README_zh.md) | Device config, protocol units, motor parameters, homing and watchdog |
+
+When changing installation or startup, update all four homepages. When changing
+controller behavior, update the VR guide pair and homepage controller summaries.
+When changing driver defaults, update the driver guide pair and any numerical
+examples in the VR/homepage guides. Source code and `environment.yml` take
+precedence over copied documentation values.
+
+General LeRobot policy, Docker, and other-robot READMEs remain outside this HEI
+guide set. The previously discussed standalone D435/audio examples are not in
+this checkout and are not advertised as available deployment steps.
+
 ## Important Conventions
 
 - Follow each guide's working-directory instructions; paths are relative, not tied to a particular home directory.

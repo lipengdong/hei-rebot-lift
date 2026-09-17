@@ -26,12 +26,12 @@
 </p>
 
 <p align="center">
-  <a href="#快速部署">🚀 快速部署</a> ·
-  <a href="#硬件组成">🦾 硬件组成</a> ·
-  <a href="#启动流程">🎮 VR 遥操作</a> ·
-  <a href="#录制数据">📷 数据录制</a> ·
-  <a href="#训练-act">🧠 ACT 训练</a> ·
-  <a href="#训练-smolvla">✨ VLA 训练</a>
+  <a href="#-快速部署">🚀 快速部署</a> ·
+  <a href="#-硬件组成">🦾 硬件组成</a> ·
+  <a href="#-启动流程">🎮 VR 遥操作</a> ·
+  <a href="#-录制数据">📷 数据录制</a> ·
+  <a href="#-训练-act">🧠 ACT 训练</a> ·
+  <a href="#-训练-smolvla">✨ VLA 训练</a>
 </p>
 
 ## ✨ 功能亮点
@@ -397,7 +397,7 @@ PYTHONPATH=src python -u examples/hei_rebot_lift/debug/Lift_Status_Test.py \
 
 ### 3. 相机映射
 
-默认相机：
+默认相机（请在**机器人端**确认实际设备，不是自己电脑的相机）：
 
 ```text
 front       /dev/video0
@@ -458,8 +458,8 @@ cd software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik
 
 在**电脑上的 MuJoCo 窗口**观察机器人。场景包含双臂、平行夹爪、升降、四轮
 全向底盘，以及桌子、方块和香蕉，可用于练习取放。没有真实机器人时，头显不会
-收到实机相机图像，这不影响仿真练习；可在 `telegrip/config.yaml` 中暂设
-`vr_images.enabled: false`，修改后重启 Telegrip。
+收到实机相机图像，这不影响仿真练习。当前 `telegrip/config.yaml` 已设为
+`vr_images.enabled: false`，练习时保持关闭即可；修改后需要重启 Telegrip。
 
 #### 1.3 按顺序练习手柄操作
 
@@ -486,7 +486,7 @@ Meta Quest 按钮校准的是**头显/VR 参考坐标**；`grip` 建立的是每
 | --- | --- |
 | 单臂平移与旋转 | 按住对应侧 `grip` 建立相对控制原点，小幅移动 XYZ、旋转手柄，观察 TCP；先练一条臂，再练另一条 |
 | 松开与重新抓取控制原点 | 松开 `grip` 停止跟随，换一个舒服的手柄位置再按住；机械臂不需要随手柄回到原点 |
-| 夹爪取放 | 夹爪默认闭合；按住 `grip` 时按 `trigger` 张开，松开 `trigger` 闭合；在物体附近闭合可练习稳定抓取，再张开放置 |
+| 夹爪取放 | 仿真夹爪默认闭合，真机启动先同步实际状态；按住 `grip` 时按 `trigger` 张开，松开 `trigger` 闭合；在物体附近闭合可练习稳定抓取，再张开放置 |
 | 升降 | 左 `grip` + 左摇杆上下；松开左 `grip` 停止升降请求 |
 | 底盘 | 右 `grip` + 右摇杆前后/左右；右 `B` 顺时针、左 `Y` 逆时针旋转；松开右 `grip` 停止请求 |
 | 恢复初始状态 | 对应 `grip` 松开时，右 `A` / 左 `X` 缓慢复位对应臂；电脑 MuJoCo 窗口获得焦点后按 `R` 重置机器人和场景物体，仅用于纯仿真 |
@@ -503,7 +503,7 @@ Meta Quest 按钮校准的是**头显/VR 参考坐标**；`grip` 建立的是每
 - 能控制底盘、升降方向，知道如何停止请求并保持摇杆回中。
 - 能区分纯仿真与真机启动入口，并清楚急停位置和真实工作区风险。
 
-练习结束，关闭纯仿真 MuJoCo 窗口或用 `Ctrl+C` 停止仿真程序，再按下面第 1、2
+练习结束，关闭纯仿真 MuJoCo 窗口或用 `Ctrl+C` 停止仿真程序，再按下面第 2、3
 节启动真机。Telegrip 可继续使用；若练习时停用了相机，需要显示实机画面时恢复
 `vr_images.enabled: true`、检查机器人相机 IP 并重启 Telegrip，不要重复启动两份。
 **仿真练习通过不代表硬件安全检查通过**：稳定抓取是运动学演示，不是接触力学
@@ -546,9 +546,9 @@ https://192.168.31.245:8443
 **电脑 IP，不是机器人 IP**，且必须使用 `https`。首次访问若提示自签名证书不受
 信任，请确认地址是自己的电脑后继续访问，并按页面提示进入 VR。
 
-如果需要在头显显示机器人相机，在电脑上的
+当前 VR 相机回传已关闭。如果需要在头显显示机器人相机，在电脑上的
 `software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/telegrip/config.yaml`
-设置 `vr_images.endpoint: tcp://192.168.31.127:6556`，这里必须填**机器人 IP**。
+设置 `vr_images.enabled: true` 和 `vr_images.endpoint: tcp://192.168.31.127:6556`，这里必须填**机器人 IP**。
 更改后重启 Telegrip；客户端的 `--remote-ip` 不会自动修改这个配置。
 
 #### 3.3 启动遥操作客户端（电脑终端 3）
@@ -593,6 +593,10 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_
 默认只保存本地，不上传 Hugging Face Hub。需要上传时显式加 `--push-to-hub`。
 
 ## 🧠 训练 ACT
+
+在电脑端训练，不需要运行机器人 host 或 VR 程序。数据路径以录制日志为准；
+若录制使用自定义 `--root`，训练也要加 `--dataset.root=实际数据集目录`，且
+repo ID 必须一致。下面的短训练用于跑通链路，不保证策略已经能可靠上机。
 
 ```bash
 cd software/lerobot-hei-rebot-lift

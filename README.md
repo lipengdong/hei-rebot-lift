@@ -426,7 +426,7 @@ for a serial port.
 
 ### 3. Camera Mapping
 
-Default cameras:
+Default cameras (verify actual devices on the **robot**, not your computer):
 
 ```text
 front       /dev/video0
@@ -492,8 +492,9 @@ cd software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik
 Observe the robot in the **MuJoCo window on your computer**. The scene includes
 both arms, parallel grippers, lift, four-wheel omnidirectional chassis, a table,
 cubes, and a banana for pick-and-place practice. Without a physical robot, no
-real camera feed will appear in the headset; simulation still works. Optionally
-set `vr_images.enabled: false` in `telegrip/config.yaml` and restart Telegrip.
+real camera feed will appear in the headset; simulation still works.
+`vr_images.enabled` is currently `false` in `telegrip/config.yaml`; leave it
+disabled for practice. Changing it requires restarting Telegrip.
 
 #### 1.3 Practice Controller Inputs in Order
 
@@ -521,7 +522,7 @@ procedure for both simulated and real VR control.
 | --- | --- |
 | Single-arm translation and rotation | Hold that side's `grip` to capture a relative origin; make small XYZ translations and rotations while observing the TCP. Practice each arm separately |
 | Release and recapture the origin | Release `grip` to stop tracking, reposition the controller comfortably, then hold it again; the arm need not follow the controller back to its origin |
-| Gripper pick and place | Grippers start closed. While holding `grip`, press `trigger` to open and release it to close; close near an object for stable-grasp practice, then open to place it |
+| Gripper pick and place | Simulation grippers start closed; real startup restores measured state. While holding `grip`, press `trigger` to open and release it to close; close near an object for stable-grasp practice, then open to place it |
 | Lift | Left `grip` + left stick vertical; releasing left `grip` stops the lift request |
 | Chassis | Right `grip` + right stick for forward/backward and strafing; right `B` rotates clockwise, left `Y` counterclockwise; releasing right `grip` stops the request |
 | Reset | With the corresponding `grip` released, right `A` / left `X` gradually resets that arm. Focus the computer's MuJoCo window and press `R` to reset the robot and objects, in pure simulation only |
@@ -541,7 +542,7 @@ for complete instructions.
 - Distinguish simulation and real launch scripts, locate the emergency stop, and understand real workspace hazards.
 
 Close the pure-simulation viewer or stop it with `Ctrl+C`, then follow sections
-1 and 2 below. Telegrip may stay running. If camera streaming was disabled,
+2 and 3 below. Telegrip may stay running. If camera streaming was disabled,
 restore `vr_images.enabled: true`, check the robot camera IP, and restart
 Telegrip when real camera display is needed; do not launch duplicate instances.
 **Simulation practice does not replace hardware safety checks.** Stable grasping
@@ -589,7 +590,8 @@ before opening the page. Use the **computer IP, not the robot IP**, and use
 before continuing past the self-signed certificate warning, then enter VR using
 the page controls.
 
-For robot camera display in VR, set
+VR camera display is currently disabled. To enable it, set
+`vr_images.enabled: true` and
 `vr_images.endpoint: tcp://192.168.31.127:6556` in the computer's
 `software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/telegrip/config.yaml`.
 This must use the **robot IP**. Restart Telegrip after editing it; the client's
@@ -640,6 +642,11 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_
 By default, data is saved locally and is not pushed to the Hugging Face Hub. Add `--push-to-hub` when uploading is needed.
 
 ## 🧠 Train ACT
+
+Train on your computer; no robot host or VR process is required. Use the actual
+dataset path printed during recording. If you chose a custom `--root`, also pass
+`--dataset.root=YOUR_DATASET_PATH`; the dataset ID must match. These short runs
+are smoke tests, not a guarantee of a deployable policy.
 
 ```bash
 cd software/lerobot-hei-rebot-lift

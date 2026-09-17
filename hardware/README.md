@@ -1,5 +1,7 @@
 # HEI ReBot Lift Hardware
 
+[English](README.md) | [中文](README_zh.md)
+
 This directory contains the hardware release package for **HEI ReBot Lift**, a dual-arm mobile manipulation robot with a lift platform and a four-wheel O-type omnidirectional chassis.
 
 The goal of this hardware folder is to make the robot easier to reproduce: not only software, but also the practical files needed for sourcing, machining, 3D printing, assembly review, and later maintenance.
@@ -132,7 +134,7 @@ left_wrist  left wrist camera
 right_wrist right wrist camera
 ```
 
-For USB cameras, MJPG is recommended to reduce bandwidth usage and improve stability. For D435 RGB-D usage, see the software examples under `software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/D435/`.
+For USB cameras, MJPG is recommended to reduce bandwidth usage and improve stability. The current checkout does not contain the previously discussed standalone D435 examples; do not treat them as part of this deployment. For the current camera configuration, see the [driver guide](../software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/README.md#camera-configuration).
 
 ## ✅ Hardware Checklist Before Power-On
 
@@ -141,7 +143,7 @@ For USB cameras, MJPG is recommended to reduce bandwidth usage and improve stabi
 - [ ] Metal parts match the metal list and CAD files
 - [ ] 3D printed parts are test-fitted before final assembly
 - [ ] Left/right arm zero positions are mechanically safe
-- [ ] Lift upper limit switch triggers reliably
+- [ ] Both lift limit switches and their IO states work reliably
 - [ ] Chassis wheel direction and motor ID mapping are correct
 - [ ] Emergency stop and power distribution are checked
 - [ ] USB/CAN/serial cables are fixed and strain-relieved

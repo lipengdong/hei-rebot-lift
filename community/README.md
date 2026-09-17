@@ -1,5 +1,7 @@
 # HEI ReBot Lift Community
 
+[English](README.md) | [中文](README_zh.md)
+
 Welcome to the HEI ReBot Lift community. This space is for discussing dual-arm mobile manipulation, VR teleoperation, LeRobot data collection, ACT/VLA training, real-robot deployment, and hardware reproduction.
 
 ## Join the WeChat Group

@@ -1,5 +1,7 @@
 # HEI ReBot Lift Examples
 
+[English](README.md) | [中文](README_zh.md)
+
 This directory is the real-robot entry point for HEI ReBot Lift. It covers hardware checks, VR/MuJoCo teleoperation, data recording, dataset cleanup, training, replay, evaluation, and policy rollout.
 
 Unless noted otherwise, run each command block in a new terminal at
@@ -55,6 +57,8 @@ If the IP changes, pass `--remote-ip NEW_IP` to `teleoperate.py`, `record.py`, `
 
 ## Minimal End-to-End Flow
 
+Before this real-robot flow, complete [pure simulation practice](VR_mujoco_ik/README.md#2a-test-vr-with-the-complete-robot-model). Do not run the host/client/real bridge during practice.
+
 1. On the robot side, check udev ports, cameras, and Damiao motors.
 2. Start `hei-rebot-lift-host` and wait for lift homing to finish.
 3. On the computer, start `VR_mujoco_ik/run_telegrip.sh`.
@@ -92,51 +96,93 @@ Cameras use `MJPG` by default for better stability with multiple USB cameras.
 
 ### Serial port binding wizard
 
-Stop `hei-rebot-lift-host` and all serial debug tools first. Power all four U2CAN boards, the lift IO board, and the motors. To distinguish the two identical arm adapters, temporarily disconnect right-arm motors 4-7 so that the right arm responds only on IDs 1-3; keep the complete left arm connected on IDs 1-7.
+Run on the **robot-side Jetson**, with the host and all serial debug tools stopped.
+Power down and support the arms before changing wiring. Temporarily disconnect
+right-arm IDs 4-7, leaving IDs 1-3; keep left-arm IDs 1-7, chassis IDs 1-4, and
+lift ID 1 connected. Power the four U2CAN boards, motors, and limit IO for scanning.
 
 ```bash
 PYTHONPATH=src conda run --no-capture-output -n lerobot5 \
   python -u examples/hei_rebot_lift/debug/Port_Binding_Wizard.py
 ```
 
-The wizard checks every `ttyACM`/`ttyUSB` device, identifies the four U2CAN boards from responding motor IDs, validates live Modbus frames from the lift limit-switch board, and reports missing, busy, or incorrectly wired devices. It shows the proposed mapping before writing `rules/99-nx-robot.rules` and can install it into `/etc/udev/rules.d/`. Existing IMU and lidar rules are preserved. Since the generated bindings use physical USB topology, keep each adapter connected to the same USB socket afterward.
-
-For a non-interactive repeat after the hardware layout has been verified:
-
-```bash
-PYTHONPATH=src conda run --no-capture-output -n lerobot5 \
-  python -u examples/hei_rebot_lift/debug/Port_Binding_Wizard.py --yes --install
-```
-
-Damiao arm zero-writing and status check:
+The wizard identifies motor IDs and valid limit IO frames, reports missing/busy
+or ambiguous devices, and asks for confirmation before writing
+`examples/hei_rebot_lift/rules/99-nx-robot.rules`. It can install the rules into
+`/etc/udev/rules.d/` with sudo and preserves existing lidar/IMU rules.
+It does not enable motors, write zeros, or command motion. Keep USB sockets
+unchanged; bindings use physical topology. Use `--yes --install` only for
+verified, unambiguous repeat binding.
 
 ```bash
-PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/debug/Arm_Zero_Status_Test.py   --port /dev/hei_right_arm
+ls -l /dev/hei_right_arm /dev/hei_left_arm /dev/hei_chassis /dev/hei_lift /dev/hei_lift_io
 ```
 
-Temporary debugging with a raw port:
+After verification, power down, reconnect right-arm IDs 4-7, then power up.
+For detailed diagnosis and hardware test precautions, see the
+[project device mapping guide](../../../../README.md#-device-mapping).
+
+### Arm mechanical zero calibration
+
+> [!WARNING]
+> **The zero-writing script immediately disables and writes zeros to IDs 1-7,
+> without confirmation. It is not a read-only status tool.** Support the arm,
+> position it at the designed mechanical zero, and close the gripper to its
+> physical zero (`0 rad`) without forcing it. Do not use an arbitrary VR pose.
+> Confirm all seven motors are connected before starting.
 
 ```bash
-PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/debug/Arm_Zero_Status_Test.py   --port /dev/ttyACM1
+conda activate lerobot5
+PYTHONPATH=src python -u examples/hei_rebot_lift/debug/Arm_Zero_Status_Test.py \
+  --port /dev/hei_right_arm
 ```
+
+Exit with `Ctrl+C`, correctly position the left arm, then repeat with
+`--port /dev/hei_left_arm`. The dashboard shows cached POS/VEL/TORQUE/state.
+A displayed zero does not prove motor connectivity or successful calibration.
+This procedure is for assembly/maintenance, not every startup.
 
 ### Independent lift test
 
-Stop `hei-rebot-lift-host` before running a hardware test, because only one process may open each serial port. The lift test performs the same startup homing and position-control logic as the production driver.
+Run only on the robot, with the host and other serial tools stopped.
+**Startup automatically homes upward; verify both limit switches and clear the
+travel path.** Use an interactive terminal; for SSH allocate a TTY (`ssh -t`).
+The tool reuses production homing, feedback-based height control, and limits.
 
 ```bash
-PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/debug/Lift_Status_Test.py
+conda activate lerobot5
+PYTHONPATH=src python -u examples/hei_rebot_lift/debug/Lift_Status_Test.py \
+  --motor-port /dev/hei_lift --io-port /dev/hei_lift_io --height-step-mm 5
 ```
 
-Keys: `I` moves the target up, `K` moves it down, `Space` stops and holds the measured height, `H` homes again, and `X` exits. Override ports with `--motor-port` and `--io-port`.
+`I/K` raises/lowers the target by 5 mm per key event in this example
+(the program default is 10 mm). `Space` stops and holds the reported height,
+`H` homes again, and `X` or `Ctrl+C` exits and disables.
+Check height `-800..0 mm`, IO freshness, both limits, and motor state.
+Stop for offline IO or inconsistent limits; software stop keys are not an
+emergency stop.
 
 ### Independent chassis test
 
+Secure the wheels off the ground and clear cables/people first. Run on the robot
+with the host stopped, in an interactive terminal.
+
 ```bash
-PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/debug/Chassis_Status_Test.py
+conda activate lerobot5
+PYTHONPATH=src python -u examples/hei_rebot_lift/debug/Chassis_Status_Test.py \
+  --port /dev/hei_chassis
 ```
 
-Use `W/S/A/D` to translate, `Q/E` to rotate, `1/2/3` to select the speed gear, `Space` for immediate stop, and `X` to exit. The fixed dashboard shows requested and measured body velocity plus target and measured wheel speeds. A key watchdog stops stale movement commands.
+`W/S/A/D` translates, `Q/E` rotates, `1/2/3` selects low/medium/high gear.
+Start with gear 1. `Space` commands zero wheel speed; `X` or `Ctrl+C` exits.
+Hold/repeat direction keys; the watchdog clears stale requests after 0.65 s.
+
+**All four wheels use chassis kinematics; there is no individual-wheel jog mode.**
+IDs: 1 right front, 2 right rear, 3 left rear, 4 left front.
+The fixed dashboard shows requested/reconstructed body velocity, wheel
+target/measured angular velocity, position, torque, and state codes.
+Body values are driver command units, not directly measured m/s.
+Exit all debug tools before starting the host.
 
 ## 2. Start Robot-Side Host
 
@@ -149,6 +195,12 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 hei-rebot-lift-host
 The host connects the arms, chassis, lift, and cameras; homes the lift to `height.pos = 0`; listens for commands on `6555`; and publishes observations/images on `6556`.
 
 ## 3. Start VR + MuJoCo IK
+
+Run this section on your computer. Start the client in section 4 before the real
+bridge so feedback is available. For button diagrams, **Meta Quest recentering
+(hold about 3 seconds)**, grip/trigger behavior, and all three 1-second safety
+links, follow the [VR controller guide](VR_mujoco_ik/README.md#vr-controller-tutorial).
+VR image streaming is currently disabled; enable it explicitly only if needed.
 
 Create the unified environment:
 
@@ -244,7 +296,8 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 lerobot-edit-dataset   
 
 ## 7. Train ACT
 
-For data recorded with a custom `--root`, add `--dataset.root=YOUR_DATASET_PATH`
+Training does not require the robot host or VR stack. Short runs below are
+pipeline checks, not proof of policy quality. For data recorded with a custom `--root`, add `--dataset.root=YOUR_DATASET_PATH`
 to training so it reads the correct local dataset. The repo ID must also match.
 
 ```bash
@@ -261,7 +314,9 @@ conda run --no-capture-output -n lerobot5 python -m pip install -e ".[smolvla]"
 
 The generic `training` extra does not include every VLA policy dependency.
 The first run may download the vision-language backbone and tokenizer; offline
-mode works only after all required files have been cached.
+mode works only after all required files have been cached. Set
+`HF_HUB_OFFLINE=1`, `TRANSFORMERS_OFFLINE=1`, and `HF_DATASETS_OFFLINE=1` in that
+terminal when an entirely local run is intended. Missing files still cause an error.
 
 Three-camera data is automatically mapped during rollout:
 
@@ -289,7 +344,27 @@ ACT and SmolVLA both use `rollout.py`:
 PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/rollout.py   --remote-ip 192.168.31.127   --model-id outputs/train/act_hei_rebot_lift_task1/checkpoints/010000/pretrained_model   --task "Pick up the yellow block from the floor and put it on the table in front"   --duration-sec 30   --inference sync
 ```
 
+SmolVLA example:
+
+```bash
+PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/rollout.py \
+  --remote-ip 192.168.31.127 \
+  --model-id outputs/train/smolvla_hei_rebot_lift_task1/checkpoints/001000/pretrained_model \
+  --task "Pick up the yellow block from the floor and put it on the table in front" \
+  --duration-sec 60 --fps 10 --inference rtc
+```
+
+`sync` executes inference inline; `rtc` uses the project's real-time chunking
+engine. Check camera compatibility and control timing; a slower FPS does not
+make inference faster. Rollout normally attempts to return to the captured
+initial joint/lift position during shutdown; keep that path clear too.
+
 ## 10. Replay and Evaluate
+
+Keep the host, but stop all other robot command sources, including VR publishing.
+Replay reproduces recorded actions; evaluate runs an **ACT** policy and saves
+new local episodes. It does not automatically calculate a task success rate,
+and is not the SmolVLA entry. Set the actual dataset/model path and task text.
 
 ```bash
 PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/replay.py   --remote-ip 192.168.31.127   --repo-id HGM/hei_rebot_lift_task1   --episode-index 0   --display-data

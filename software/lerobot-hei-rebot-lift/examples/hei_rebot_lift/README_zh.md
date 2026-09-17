@@ -1,5 +1,7 @@
 # HEI ReBot Lift Examples
 
+[English](README.md) | [中文](README_zh.md)
+
 这个目录是 HEI ReBot Lift 的实机使用入口，覆盖从硬件检查、VR/MuJoCo 遥操作、数据录制、数据清洗、训练到策略推理的完整流程。
 
 除非另有说明，每个命令块都在新终端的 `software/lerobot-hei-rebot-lift/` 目录
@@ -55,7 +57,7 @@ VR_mujoco_ik/             Telegrip + MuJoCo + Pinocchio IK 一体化 VR 控制�
 
 ## 最短完整流程
 
-第一次部署时按这个顺序走：
+先完成 [纯仿真练习](VR_mujoco_ik/README_zh.md#2a-先用完整模型测试-vr-仿真)，练习时不运行 host/客户端/真机桥接。之后实机按这个顺序走：
 
 1. 机器人端确认 udev 端口、相机和达妙电机可用。
 2. 启动 `hei-rebot-lift-host`，等待升降 homing 完成。
@@ -94,53 +96,81 @@ right_wrist /dev/video4
 
 ### 串口绑定向导
 
-先停止 `hei-rebot-lift-host` 和所有串口调试程序，并给 4 块 U2CAN、升降限位 IO 板和电机上电。为了区分两块型号相同的机械臂转接板，请临时断开右臂 4-7 号电机，让右臂只响应 ID 1-3；左臂保持 ID 1-7 全部连接。
+在**机器人 Jetson** 上执行，先停止 host 和所有串口调试程序。改接线前断电并
+支撑机械臂；暂时断开右臂 ID 4-7，只留 ID 1-3，左臂保留 ID 1-7，底盘 ID 1-4，
+升降 ID 1。扫描时给四块 U2CAN、电机及限位 IO 上电。
 
 ```bash
 PYTHONPATH=src conda run --no-capture-output -n lerobot5 \
   python -u examples/hei_rebot_lift/debug/Port_Binding_Wizard.py
 ```
 
-向导会检查所有 `ttyACM`/`ttyUSB` 串口，根据实际响应的电机 ID 区分四块 U2CAN，并验证升降限位板是否持续输出有效 Modbus 帧。端口未插入、被其他程序占用、电机 ID 不符或 CAN 无响应都会明确列出。写入 `rules/99-nx-robot.rules` 前会显示并让你确认映射，之后可选安装到 `/etc/udev/rules.d/`。现有雷达和 IMU 规则会原样保留。
-
-规则使用 USB 物理拓扑绑定，生成后请保持每块转接板的 USB 插口不变。硬件已确认无误后，可用非交互方式重新扫描并安装：
+向导根据电机响应 ID 和有效限位 IO 帧识别设备，提示缺失、占用或歧义，确认后写入
+`examples/hei_rebot_lift/rules/99-nx-robot.rules`；可通过 sudo 安装到
+`/etc/udev/rules.d/`，保留已有雷达/IMU 规则。不会使能、写零位或发送运动命令。
+规则绑定 USB 物理拓扑，插口不要变；`--yes --install` 仅用于接线已验证且
+识别结果无歧义的重复绑定。
 
 ```bash
-PYTHONPATH=src conda run --no-capture-output -n lerobot5 \
-  python -u examples/hei_rebot_lift/debug/Port_Binding_Wizard.py --yes --install
+ls -l /dev/hei_right_arm /dev/hei_left_arm /dev/hei_chassis /dev/hei_lift /dev/hei_lift_io
 ```
 
-达妙机械臂写零位和状态检查：
+确认后断电，接回右臂 ID 4-7，再上电。详细排查与测试注意事项见
+[主页设备映射教程](../../../../README_zh.md#-设备映射)。
+
+### 机械臂设计零位标定
+
+> [!WARNING]
+> **零位脚本启动即失能并对 ID 1-7 全部写零位，没有确认，也不是只读状态工具。**
+> 先支撑机械臂，将关节摆到设计机械零位，夹爪闭合到物理零位（`0 rad`），
+> 不要强压。不能把任意 VR 工作姿态当零位；运行前确认七个电机全部连接。
 
 ```bash
-PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/debug/Arm_Zero_Status_Test.py \
+conda activate lerobot5
+PYTHONPATH=src python -u examples/hei_rebot_lift/debug/Arm_Zero_Status_Test.py \
   --port /dev/hei_right_arm
 ```
 
-临时调试真实端口：
-
-```bash
-PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/debug/Arm_Zero_Status_Test.py \
-  --port /dev/ttyACM1
-```
+`Ctrl+C` 退出后，将左臂摆好，再用 `--port /dev/hei_left_arm` 单独运行。
+表格显示最近的 POS/VEL/TORQUE/状态缓存；显示零不能证明电机在线或标定成功。
+这是装配/维修标定流程，不是每次启动都执行。
 
 ### 单独调试升降
 
-运行硬件调试脚本前必须停止 `hei-rebot-lift-host`，因为同一个串口不能被两个进程同时占用。升降脚本复用正式驱动的启动 homing、限位保护、多圈高度、位置闭环和加减速逻辑。
+仅在机器人端执行，停止 host 和其他串口程序。**启动会自动上行回零，先验证
+上下限位并清空升降路径。** 键盘工具使用交互终端，SSH 需 TTY（如 `ssh -t`）。
+脚本复用正式驱动的 homing、反馈高度控制和限位逻辑。
 
 ```bash
-PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/debug/Lift_Status_Test.py
+conda activate lerobot5
+PYTHONPATH=src python -u examples/hei_rebot_lift/debug/Lift_Status_Test.py \
+  --motor-port /dev/hei_lift --io-port /dev/hei_lift_io --height-step-mm 5
 ```
 
-按键：`I` 提高目标高度，`K` 降低目标高度，`Space` 停止并保持当前实测高度，`H` 重新 homing，`X` 退出。临时端口可用 `--motor-port` 和 `--io-port` 覆盖。
+`I/K` 每次提高/降低目标 5 mm（本例；程序默认 10 mm），`Space` 停止并保持
+反馈高度，`H` 再次上行回零，`X` 或 `Ctrl+C` 退出并失能。检查
+`-800..0 mm` 高度、IO 新鲜度、上下限位和电机状态。IO 离线或限位状态异常时
+停止排查；软件停止键不能代替急停。
 
 ### 单独调试底盘
 
+先稳固架起四个轮子，清空周围线材和人员。在机器人端停止 host 后，
+使用交互终端执行。
+
 ```bash
-PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/debug/Chassis_Status_Test.py
+conda activate lerobot5
+PYTHONPATH=src python -u examples/hei_rebot_lift/debug/Chassis_Status_Test.py \
+  --port /dev/hei_chassis
 ```
 
-按键：`W/S/A/D` 平移，`Q/E` 旋转，`1/2/3` 选择速度档位，`Space` 立即停止，`X` 退出。固定状态面板显示目标/实测机体速度、四轮目标/实测速度、电机位置、力矩和错误码；按键看门狗会停止过期的运动命令。
+`W/S/A/D` 平移，`Q/E` 旋转，`1/2/3` 选择低/中/高档，先从低档 1 开始。
+`Space` 命令四轮零速度，`X` 或 `Ctrl+C` 退出。按住/重复方向键维持请求，
+0.65 s 没有新方向按键时看门狗清除请求。
+
+**这是四轮底盘运动学控制，不提供单轮点动模式。** ID 1 右前、2 右后、
+3 左后、4 左前。固定表格显示目标/反算机体速度、四轮目标/实测角速度、位置、
+力矩及状态码；机体值是驱动命令单位，不是直接实测 m/s。所有调试工具退出后，
+才能启动 host。
 
 ## 2. 启动机器人端 host
 
@@ -166,6 +196,11 @@ No command available
 说明电脑端 client 还没发命令。短时间出现正常，开始录制/推理后应减少。
 
 ## 3. 启动 VR + MuJoCo IK
+
+本节在电脑端运行。先启动第 4 节客户端提供反馈，再开真机桥。
+按钮示意图、**Meta Quest 长按约 3 秒校准**、grip/trigger 和三条 1 秒超时链路，
+统一看 [VR 手柄教程](VR_mujoco_ik/README_zh.md#vr-手柄使用教程)。当前 VR 图片
+回传关闭，需要时才显式开启。
 
 先部署统一环境：
 
@@ -307,7 +342,8 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 lerobot-train \
   --wandb.enable=false
 ```
 
-如果本地数据没有上传 Hub，但训练去联网找数据，通常需要指定本地 root 或确保数据在默认缓存目录：
+训练不需要运行 host/VR。短训练用于跑通链路，不保证策略质量。自定义录制目录时，
+训练增加 `--dataset.root=实际数据集目录`，并保持 repo ID 一致。默认目录为：
 
 ```text
 ~/.cache/huggingface/lerobot/HGM/hei_rebot_lift_task1
@@ -356,6 +392,7 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 lerobot-train \
 离线运行时可设置：
 
 ```bash
+export HF_HUB_OFFLINE=1
 export TRANSFORMERS_OFFLINE=1
 export HF_DATASETS_OFFLINE=1
 ```
@@ -391,9 +428,15 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_
   --inference rtc
 ```
 
-`sync` 是同步推理，适合先跑通。`rtc` 更适合推理较慢的 VLA 模型，会尽量保持控制更平滑。
+`sync` 在控制循环同步推理，`rtc` 使用项目的实时动作块引擎。应验证相机兼容
+和控制时序；降低 FPS 不会加快推理。rollout 结束时默认会尝试回到启动时记录的
+关节/升降位置，返回路径也需保持无障碍。
 
 ## 10. 回放和评估
+
+保留 host，但停止包括 VR 发布在内的其他控制源。replay 执行已录制动作；
+evaluate 运行 **ACT** 策略并录制新的本地 episode，不会自动计算任务成功率，
+也不是 SmolVLA 入口。请按实际情况填写数据/模型路径及任务文本。
 
 回放某一集数据：
 

@@ -1,5 +1,7 @@
 # HEI ReBot Lift Robot Driver
 
+[English](README.md) | [中文](README_zh.md)
+
 这个目录是 HEI ReBot Lift 的 LeRobot 机器人驱动层，负责把达妙双臂、升降平台、四轮 O 型全向底盘和三路相机封装成 LeRobot 的 `Robot` / `RobotClient` 接口。
 
 上层使用脚本在：
@@ -7,6 +9,11 @@
 ```text
 examples/hei_rebot_lift/
 ```
+
+下方命令从**软件根目录** `software/lerobot-hei-rebot-lift/` 执行，不是在本驱动
+目录执行。硬件命令在 Jetson 的 `lerobot5` 运行，VR/IK 环境在电脑端。
+先按 [项目部署教程](../../../../../../README_zh.md#-快速部署) 安装。默认参数以
+配置代码为准，文档中的数值仅是当前配置说明。
 
 ## 硬件组成
 
@@ -78,6 +85,10 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 lerobot-find-cameras
 ```bash
 v4l2-ctl --device=/dev/video2 --list-formats-ext
 ```
+
+端口绑定与升降/底盘独立控制见
+[示例硬件教程](../../../../examples/hei_rebot_lift/README_zh.md#1-硬件检查)。
+串口调试时不能同时启动 host。机械臂零位工具启动即写零位，不是只读检查。
 
 ## 动作和观测字段
 
@@ -176,8 +187,13 @@ chassis_y_sign
 chassis_theta_sign
 chassis_linear_speed_scale
 chassis_yaw_speed_scale
+chassis_max_wheel_speed_rad_s
 chassis_max_wheel_accel_rad_s2
 ```
+
+这些是机器人端参数，修改后重启 host。轮速上限可能覆盖机体输入比例变化的
+效果。ID 1 右前、2 右后、3 左后、4 左前；机体速度字段是驱动命令单位，
+不是标定后的 m/s，轮速上限单位是 rad/s。
 
 升降速度和平滑：
 
@@ -206,6 +222,10 @@ gripper_current
 right_arm_min_rad / right_arm_max_rad
 left_arm_min_rad / left_arm_max_rad
 ```
+
+硬件说明中 1-3 关节为 DM4340P，但当前通信实现实际选择
+`DM_Motor_Type.DM4340` 枚举。本次不修改代码；部署时应核对具体电机版本的
+协议范围与固件兼容性，不能把文档型号名称当作兼容性验证。
 
 当前值如下，部署时以配置文件为准：
 

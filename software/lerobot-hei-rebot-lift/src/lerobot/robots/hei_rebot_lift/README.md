@@ -1,5 +1,7 @@
 # HEI ReBot Lift Robot Driver
 
+[English](README.md) | [中文](README_zh.md)
+
 This directory is the LeRobot robot driver layer for HEI ReBot Lift. It wraps the Damiao dual arms, lift platform, four-wheel O-type omnidirectional chassis, and three cameras into LeRobot `Robot` / `RobotClient` interfaces.
 
 Upper-level scripts are in:
@@ -7,6 +9,11 @@ Upper-level scripts are in:
 ```text
 examples/hei_rebot_lift/
 ```
+
+Run commands below from the **software root** `software/lerobot-hei-rebot-lift/`,
+not this driver folder. Hardware commands run on Jetson in `lerobot5`; the VR/IK
+environment belongs on the computer. Follow the [project setup](../../../../../../README.md#-quick-setup)
+before starting. Configuration code is the source of truth for default values.
 
 ## Hardware
 
@@ -78,6 +85,11 @@ List supported formats:
 ```bash
 v4l2-ctl --device=/dev/video2 --list-formats-ext
 ```
+
+Serial binding and independent lift/chassis tests are documented in the
+[examples hardware guide](../../../../examples/hei_rebot_lift/README.md#1-hardware-check).
+Do not run the host while debug tools own these ports. The arm zero tool writes
+zeros immediately; do not use it for read-only inspection.
 
 ## Action and Observation Keys
 
@@ -178,8 +190,14 @@ chassis_y_sign
 chassis_theta_sign
 chassis_linear_speed_scale
 chassis_yaw_speed_scale
+chassis_max_wheel_speed_rad_s
 chassis_max_wheel_accel_rad_s2
 ```
+
+These are robot-side settings; restart the host after editing. The wheel speed
+cap can mask changes to body input scaling. IDs are 1 right front, 2 right rear,
+3 left rear, 4 left front. Body velocity keys use driver command units, not
+calibrated physical m/s; wheel limits are rad/s.
 
 Lift speed and smoothing:
 
@@ -211,6 +229,11 @@ active, so inspect startup warnings before testing.
 right_arm_min_rad / right_arm_max_rad
 left_arm_min_rad / left_arm_max_rad
 ```
+
+The deployed hardware is described as DM4340P for joints 1-3, but the current
+transport implementation selects the `DM_Motor_Type.DM4340` enum. This naming
+has not been changed in code. Verify protocol ranges and firmware compatibility
+for your motor version; the README model name alone is not validation.
 
 Current values (read the configuration file as the source of truth):
 

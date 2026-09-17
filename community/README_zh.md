@@ -1,5 +1,7 @@
 # HEI ReBot Lift Community
 
+[English](README.md) | [中文](README_zh.md)
+
 欢迎加入 HEI ReBot Lift 社区，一起交流双臂移动操作、VR 遥操作、LeRobot 数据采集、ACT/VLA 训练、真实机器人部署和硬件复现经验。
 
 ## 加入微信交流群

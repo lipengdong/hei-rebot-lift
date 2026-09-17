@@ -1,9 +1,11 @@
 # HEI ReBot Lift VR + MuJoCo IK
 
+[English](README.md) | [中文](README_zh.md)
+
 This directory contains the complete VR teleoperation pipeline:
 
 - `telegrip/`: starts the HTTPS/WebXR page, receives VR headset/controller data, and publishes it through ZMQ at `tcp://*:5567`.
-- `mujoco_ik/`: receives Telegrip VR data, visualizes the dual-arm model in MuJoCo, solves FK/IK with Pinocchio + CasADi, and publishes LeRobot-compatible actions to `tcp://*:6558`.
+- `mujoco_ik/`: receives Telegrip VR data, visualizes the complete robot model (or the legacy dual-arm model) in MuJoCo, solves FK/IK with Pinocchio + CasADi, and publishes LeRobot-compatible actions to `tcp://*:6558`.
 - `examples/hei_rebot_lift/vr_control.py`: receives those actions and publishes lightweight real-robot joint/lift feedback on `tcp://*:6559` for safe startup synchronization.
 - `mujoco_ik/hei_robot_vr_mujoco_sim.py`: controls the complete robot model in pure simulation. It never publishes commands to the real robot.
 - `examples/hei_rebot_lift/record.py`: subscribes to `tcp://localhost:6558` and saves robot actions/observations into a LeRobotDataset.
@@ -64,7 +66,9 @@ Open in the VR headset browser:
 https://COMPUTER_IP:8443
 ```
 
-For the first visit to the self-signed HTTPS page, manually continue in the browser.
+For example, use `https://192.168.31.245:8443` when that is your computer IP.
+The robot IP is different (examples use `192.168.31.127`). Verify the address is
+your computer before accepting the self-signed certificate warning.
 
 ### 2A. Test VR With the Complete Robot Model
 
@@ -140,7 +144,7 @@ Arm and gripper procedure:
 
 1. Put the controller in a comfortable pose and clear the corresponding arm's workspace.
 2. Hold that side's `grip` to capture the current control origin, then translate or rotate the controller to move the TCP.
-3. The grippers start closed. While continuing to hold `grip`, press `trigger` to open the gripper and place it around the object.
+3. Pure simulation starts with closed grippers; real startup first restores measured gripper state. While continuing to hold `grip`, press `trigger` to open the gripper and place it around the object.
 4. Release `trigger` to close and grasp. Releasing `grip` stops arm tracking but preserves the last gripper state.
 5. To release the object, hold the corresponding `grip` again and press `trigger`.
 
@@ -247,10 +251,10 @@ cd examples/hei_rebot_lift/VR_mujoco_ik
 8443  Telegrip HTTPS VR page
 8442  Telegrip WebSocket
 5567  Telegrip publishes VR data, MuJoCo IK subscribes
-6558  MuJoCo IK publishes actions, LeRobot record subscribes
+6558  MuJoCo real bridge publishes actions, teleoperate.py/record.py subscribes
 6559  teleoperate.py/record.py publishes real robot state for startup synchronization
 6555  LeRobot client sends robot commands to the host
-6556  Robot image stream, optionally displayed in Telegrip
+6556  Host observations and images; optionally displayed in Telegrip
 ```
 
 Key settings in `telegrip/config.yaml`:
@@ -261,7 +265,9 @@ vr:
   zmq_topic: vr_data
 ```
 
-To display robot cameras in VR:
+VR camera streaming is currently **disabled** (`vr_images.enabled: false`).
+This does not stop host camera capture or dataset recording, and it does not
+disable VR controller data. To enable robot camera display explicitly, edit:
 
 ```yaml
 vr_images:
@@ -295,7 +301,9 @@ conda activate hei-rebot-vr
 env -u LD_LIBRARY_PATH python -c "import pinocchio as pin; from pinocchio import casadi as cpin; print(pin.__version__)"
 ```
 
-If imports only work after clearing `LD_LIBRARY_PATH`, keep using `run_mujoco_ik.sh`, which handles this case.
+All MuJoCo launch wrappers clear `LD_LIBRARY_PATH` and activate `hei-rebot-vr`.
+Use `run_hei_robot_vr_sim.sh` / `run_hei_robot_vr_real.sh` for the complete model;
+`run_mujoco_ik.sh` is the legacy dual-arm entry, not the default complete-model controller.
 
 ### VR Page Cannot Open
 

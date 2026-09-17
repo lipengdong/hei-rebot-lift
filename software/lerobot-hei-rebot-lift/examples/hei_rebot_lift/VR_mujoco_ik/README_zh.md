@@ -1,9 +1,11 @@
 # HEI ReBot Lift VR + MuJoCo IK
 
+[English](README.md) | [中文](README_zh.md)
+
 这个目录是一套完整的 VR 遥操作链路：
 
 - `telegrip/`：启动 HTTPS/WebXR 页面，接收 VR 头显和手柄数据，并通过 ZMQ 发布到 `tcp://*:5567`。
-- `mujoco_ik/`：接收 Telegrip 的 VR 数据，用 MuJoCo 显示双臂模型，用 Pinocchio + CasADi 做正逆解，并通过 ZMQ 发布 LeRobot 可用的动作命令到 `tcp://*:6558`。
+- `mujoco_ik/`：接收 Telegrip 的 VR 数据，用 MuJoCo 显示完整机器人模型（或旧双臂模型），用 Pinocchio + CasADi 做正逆解，并通过 ZMQ 发布 LeRobot 可用的动作命令到 `tcp://*:6558`。
 - `examples/hei_rebot_lift/vr_control.py`：接收动作，同时在 `tcp://*:6559` 发布轻量实机关节/升降反馈，用于真机启动前安全同步。
 - `mujoco_ik/hei_robot_vr_mujoco_sim.py`：使用完整机器人模型进行纯仿真 VR 控制，不会向真实机器人发送命令。
 - LeRobot 录制端 `examples/hei_rebot_lift/record.py` 订阅 `tcp://localhost:6558`，把动作和机器人观测保存成数据集。
@@ -70,7 +72,9 @@ VR 头显浏览器访问：
 https://电脑IP:8443
 ```
 
-第一次访问自签名 HTTPS 页面时，需要在浏览器里手动继续访问。
+例如自己的电脑 IP 为 `192.168.31.245`，则访问 `https://192.168.31.245:8443`。
+机器人 IP 是另一个地址（示例为 `192.168.31.127`），不要混用。首次遇到自签名
+证书提示时，先确认地址确实是自己的电脑，再继续访问。
 
 ### 2A. 先用完整模型测试 VR 仿真
 
@@ -140,7 +144,7 @@ Meta Quest 按钮校准的是**头显/VR 参考坐标**；`grip` 建立的是每
 
 1. 把手柄放在舒适位置，确认目标机械臂周围没有障碍物。
 2. 按住对应侧 `grip`，以当前位姿建立控制原点，然后平移或旋转手柄控制末端。
-3. 夹爪启动默认为闭合。保持 `grip` 时按下 `trigger` 张开夹爪，将夹爪移动到物体两侧。
+3. 纯仿真夹爪默认闭合，真机启动先同步反馈的实际夹爪状态。保持 `grip` 时按下 `trigger` 张开夹爪，将夹爪移动到物体两侧。
 4. 松开 `trigger` 使夹爪闭合并抓取。松开 `grip` 只会停止机械臂跟随，夹爪仍保持最后状态。
 5. 需要释放物体时，再次按住对应侧 `grip` 并按下 `trigger`。
 
@@ -240,10 +244,10 @@ cd examples/hei_rebot_lift/VR_mujoco_ik
 8443  Telegrip HTTPS VR 页面
 8442  Telegrip WebSocket
 5567  Telegrip 发布 VR 数据，MuJoCo IK 订阅
-6558  MuJoCo IK 发布动作，LeRobot record 订阅
+6558  MuJoCo 真机桥发布动作，teleoperate.py/record.py 订阅
 6559  teleoperate.py/record.py 发布实机状态，供启动姿态同步
 6555  LeRobot 客户端向 host 发送机器人控制命令
-6556  机器人图像流，Telegrip 可选订阅显示
+6556  host 观测和图像，Telegrip 可选订阅显示
 ```
 
 `telegrip/config.yaml` 里主要看两个地方：
@@ -254,7 +258,8 @@ vr:
   zmq_topic: vr_data
 ```
 
-如果要在 VR 里显示机器人三路相机，打开：
+当前 VR 相机回传**默认关闭**（`vr_images.enabled: false`），但不影响 host
+采集相机、数据录制或 VR 手柄数据。确实需要头显画面时，再显式开启：
 
 ```yaml
 vr_images:
@@ -288,7 +293,10 @@ conda activate hei-rebot-vr
 env -u LD_LIBRARY_PATH python -c "import pinocchio as pin; from pinocchio import casadi as cpin; print(pin.__version__)"
 ```
 
-如果不用 `env -u LD_LIBRARY_PATH` 才失败，说明当前 shell 的 `LD_LIBRARY_PATH` 污染了 conda-forge 的动态库搜索路径。启动 MuJoCo IK 时继续用 `run_mujoco_ik.sh`，脚本里已经处理。
+若仅清除 `LD_LIBRARY_PATH` 后才能导入，说明动态库搜索路径有冲突。
+各 MuJoCo 启动脚本都会清除它并激活 `hei-rebot-vr`；完整模型请选择
+`run_hei_robot_vr_sim.sh` / `run_hei_robot_vr_real.sh`，`run_mujoco_ik.sh`
+仅用于旧双臂入口。
 
 ### VR 页面打不开
 
