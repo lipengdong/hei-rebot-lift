@@ -326,6 +326,12 @@ working pose. The physical gripper zero is closed (`0 rad`); do not force it
 against its stop. The script cannot verify the pose. If the designed zero is
 unclear, check the assembly references before writing anything.
 
+<p align="center">
+  <a href="media/arm_zero.png"><img src="media/arm_zero.png" alt="Designed mechanical zero posture of both arms" width="70%"></a>
+  <br>
+  <em>Designed mechanical zero posture reference. Verify each joint against the assembly design before writing zeros; this is not the VR working pose.</em>
+</p>
+
 Write the right-arm zeros:
 
 ```bash

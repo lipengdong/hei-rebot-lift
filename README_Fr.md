@@ -218,6 +218,13 @@ terminal interactif (SSH avec TTY). Les détails sont dans le
 [guide matériel indépendant](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README.md#1-hardware-check).
 
 - **Zéros des bras :** le script désactive et écrit immédiatement les zéros des sept moteurs, sans confirmation. Soutenir le bras, le placer au zéro mécanique de conception, pince fermée à `0 rad`; une pose VR quelconque n'est pas un zéro. Ce n'est pas un outil de lecture seule.
+
+<p align="center">
+  <a href="media/arm_zero.png"><img src="media/arm_zero.png" alt="Posture de zéro mécanique des deux bras" width="70%"></a>
+  <br>
+  <em>Référence du zéro mécanique de conception. Vérifier chaque articulation selon le plan d'assemblage avant d'écrire les zéros; ce n'est pas la posture de travail VR.</em>
+</p>
+
 - **Élévateur :** `debug/Lift_Status_Test.py --height-step-mm 5` effectue un homing automatique vers le haut. Vérifier les deux fins de course. `I/K` modifie la cible de 5 mm par événement, `Space` maintient la hauteur mesurée, `H` refait le homing, `X` quitte. Plage `-800..0 mm`.
 - **Châssis :** `debug/Chassis_Status_Test.py`, roues solidement suspendues. `W/S/A/D` translation, `Q/E` rotation, `1/2/3` vitesses, `Space` vitesse nulle, `X` quitte. Commencer à 1. Les quatre roues bougent ensemble; pas de mode roue individuelle. IDs 1 avant droit, 2 arrière droit, 3 arrière gauche, 4 avant gauche; timeout clavier 0.65 s.
 

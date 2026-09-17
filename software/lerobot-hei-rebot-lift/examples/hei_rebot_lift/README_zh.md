@@ -125,6 +125,12 @@ ls -l /dev/hei_right_arm /dev/hei_left_arm /dev/hei_chassis /dev/hei_lift /dev/h
 > 先支撑机械臂，将关节摆到设计机械零位，夹爪闭合到物理零位（`0 rad`），
 > 不要强压。不能把任意 VR 工作姿态当零位；运行前确认七个电机全部连接。
 
+<p align="center">
+  <a href="../../../../media/arm_zero.png"><img src="../../../../media/arm_zero.png" alt="双臂设计机械零位姿态" width="70%"></a>
+  <br>
+  <em>双臂设计机械零位姿态参考。写零位前逐一核对关节与装配设计；此姿态不是 VR 默认工作姿态。</em>
+</p>
+
 ```bash
 conda activate lerobot5
 PYTHONPATH=src python -u examples/hei_rebot_lift/debug/Arm_Zero_Status_Test.py \

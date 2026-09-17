@@ -131,6 +131,12 @@ For detailed diagnosis and hardware test precautions, see the
 > physical zero (`0 rad`) without forcing it. Do not use an arbitrary VR pose.
 > Confirm all seven motors are connected before starting.
 
+<p align="center">
+  <a href="../../../../media/arm_zero.png"><img src="../../../../media/arm_zero.png" alt="Designed mechanical zero posture of both arms" width="70%"></a>
+  <br>
+  <em>Designed mechanical zero posture reference. Verify each joint against the assembly design before writing zeros; this is not the VR working pose.</em>
+</p>
+
 ```bash
 conda activate lerobot5
 PYTHONPATH=src python -u examples/hei_rebot_lift/debug/Arm_Zero_Status_Test.py \
