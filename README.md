@@ -129,8 +129,8 @@ We will continue improving HEI ReBot Lift across hardware materials, software in
 | Complete robot URDF | ✅ Completed | Full robot model includes the chassis, wheels, lift, dual arms, parallel grippers, and TCP frames for simulation and real-robot IK | [URDF Model](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/mujoco_ik/model/HEI_robot_urdf/) |
 | MuJoCo simulation testing | ✅ Completed | VR control of both arms, grippers, lift, and chassis has been tested; includes wheel animations, workspace projection, and stable-grasp pick-and-place demonstrations | [Simulation Guide](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/README.md) |
 | Damiao motor driver | ✅ First version completed | `damiao_u2can` is implemented for dual arms, grippers, chassis, and lift motor control | [Damiao U2CAN](software/lerobot-hei-rebot-lift/src/lerobot/motors/damiao_u2can/) |
-| Lift platform | ✅ First version completed | Supports upper-limit homing on startup and `height.pos` position-target control | [Robot Driver](software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/README.md) |
-| Omnidirectional base | ✅ First version completed | Supports `x.vel`, `y.vel`, and `theta.vel` commands with basic acceleration smoothing | [Robot Driver](software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/README.md) |
+| Lift platform | ✅ First version completed | Supports upper-limit homing on startup and `height.pos` position-target control | [Robot Driver](software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/README.md) · [Independent Lift Control](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README.md#independent-lift-test) |
+| Omnidirectional base | ✅ First version completed | Supports `x.vel`, `y.vel`, and `theta.vel` commands with basic acceleration smoothing | [Robot Driver](software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/README.md) · [Independent Chassis Control](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README.md#independent-chassis-test) |
 | Three-camera vision | ✅ First version completed | Supports `front`, `left_wrist`, and `right_wrist` OpenCV cameras with MJPG by default | [Robot Driver](software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/README.md) |
 | VR + MuJoCo IK | ✅ First version completed | Telegrip + MuJoCo + Pinocchio/CasADi is connected to the real-robot control pipeline | [VR MuJoCo IK](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/README.md) |
 | LeRobot integration | ✅ First version completed | `hei_rebot_lift` robot/client/host is implemented with teleoperate, record, replay, evaluate, and rollout scripts | [Examples](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README.md) |
@@ -256,7 +256,7 @@ Stable udev device names are used by default:
 /dev/hei_lift_io     Lift limit-switch serial port
 ```
 
-### Serial Port Discovery and Binding Wizard
+### 1. Serial Port Discovery and Binding Wizard
 
 Run [Port_Binding_Wizard.py](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/debug/Port_Binding_Wizard.py)
 on the **robot-side Jetson**. It scans `ttyACM*` / `ttyUSB*`, identifies adapters
@@ -303,7 +303,7 @@ accepting any mapping. For permission errors, check serial access (usually the
 `dialout` group). Use interactive mode for first deployment; `--yes --install`
 is only for repeat binding with verified wiring and an unambiguous scan.
 
-### After Binding: Arm Zeros and Independent Hardware Tests
+### 2. After Binding: Arm Zeros and Independent Hardware Tests
 
 **Run all tests on the robot-side Jetson; no VR or computer client is needed.**
 Run one debug tool at a time with the host and other serial programs stopped.
@@ -312,7 +312,7 @@ activate `lerobot5` and run Python directly in an interactive terminal; allocate
 a TTY for SSH (for example, `ssh -t USER@ROBOT_IP`). Dashboards refresh in place.
 Keep the physical emergency stop reachable; software stop keys do not replace it.
 
-#### 1. Position the Arm at Its Designed Mechanical Zero Before Writing
+#### 2.1 Position the Arm at Its Designed Mechanical Zero Before Writing
 
 **Warning: `Arm_Zero_Status_Test.py` immediately disables and writes zeros to
 all seven motors (IDs 1-7) on that arm. It has no confirmation or read-only mode.
@@ -351,7 +351,7 @@ connectivity or successful calibration. Interpret `ERROR` according to the motor
 protocol; not every nonzero state is a fault. Exit after calibration; rewrite
 zeros only when assembly or maintenance requires recalibration.
 
-#### 2. Independent Chassis Test: Directions, Gears, and Wheel Feedback
+#### 2.2 Independent Chassis Test: Directions, Gears, and Wheel Feedback
 
 Secure the chassis with wheels off the ground, clear of cables and people.
 This tool connects only the chassis, not the arms, lift, or cameras.
@@ -392,7 +392,7 @@ After the suspended test passes, verify physical directions at low gear in a
 clear area. Single-wheel jogging needs a separate mode not provided by this
 tool; never substitute the arm zero-writing script on the chassis port.
 
-#### 3. Independent Lift Test: Homing, Height, and Limit IO
+#### 2.3 Independent Lift Test: Homing, Height, and Limit IO
 
 **Startup automatically homes upward.** Check both limit-switch connections and
 clear the travel path first. Support structures that could fall when disabled
@@ -424,7 +424,7 @@ driving into end stops.
 practice and real startup below. Never let a debug tool compete with the host
 for a serial port.
 
-### Camera Mapping
+### 3. Camera Mapping
 
 Default cameras:
 
@@ -460,7 +460,7 @@ the computer and headset to communicate; for real control, also connect the
 robot to the same mutually reachable LAN. **Run each block in a new terminal at
 the repository root on the specified machine.** Keep long-running processes open.
 
-### 0. Beginner Practice: Computer-Side Pure Simulation (No Hardware)
+### 1. Beginner Practice: Computer-Side Pure Simulation (No Hardware)
 
 <p align="center">
   <img src="media/robot-mujoco.png" alt="HEI ReBot Lift VR simulation in MuJoCo" width="85%">
@@ -471,7 +471,7 @@ Install `hei-rebot-vr` first. **Do not start the robot host, `teleoperate.py`,
 Pure simulation requires no motors, device bindings, or robot feedback and does
 not publish real actions on `6558`.
 
-#### 0.1 Computer Practice Terminal A: Start Telegrip
+#### 1.1 Computer Practice Terminal A: Start Telegrip
 
 ```bash
 cd software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik
@@ -482,7 +482,7 @@ Connect the headset and computer to the same LAN. In the headset browser, open
 `https://192.168.31.245:8443` (computer IP), verify the self-signed certificate
 warning, and enter VR.
 
-#### 0.2 Computer Practice Terminal B: Start the Complete Robot Simulation
+#### 1.2 Computer Practice Terminal B: Start the Complete Robot Simulation
 
 ```bash
 cd software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik
@@ -495,7 +495,7 @@ cubes, and a banana for pick-and-place practice. Without a physical robot, no
 real camera feed will appear in the headset; simulation still works. Optionally
 set `vr_images.enabled: false` in `telegrip/config.yaml` and restart Telegrip.
 
-#### 0.3 Practice Controller Inputs in Order
+#### 1.3 Practice Controller Inputs in Order
 
 <table align="center">
   <tr>
@@ -532,7 +532,7 @@ reachable area instead of pushing farther out. See the
 [controller tutorial](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/README.md)
 for complete instructions.
 
-#### 0.4 Move to Hardware Only After Practice
+#### 1.4 Move to Hardware Only After Practice
 
 - Control each arm's translation/rotation and confidently release/recapture the relative origin with `grip`.
 - Recenter with the Meta Quest button and know to recalibrate after moving, changing heading, or observing a direction mismatch.
@@ -549,7 +549,7 @@ is a kinematic demonstration, not contact-physics validation. Motor directions,
 zeros, limits, and load capacity still require independent verification, and
 simulation lift speed can differ from real hardware.
 
-### 1. Robot-Side Jetson: Start the Host (Terminal 1)
+### 2. Robot-Side Jetson: Start the Host (Terminal 1)
 
 Run only on the robot. Complete device mapping, clear the workspace, and keep
 the emergency stop reachable. Startup moves the lift upward to home;
@@ -563,18 +563,18 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 hei-rebot-lift-host
 
 Keep this robot terminal running. Do not start Telegrip or MuJoCo IK on Jetson.
 
-### 2. Your Computer: Start the Control Programs
+### 3. Your Computer: Start the Control Programs
 
 Run all three programs below on **your computer** at `192.168.31.245`, not on Jetson.
 
-#### 2.1 Start Telegrip (Computer Terminal 2)
+#### 3.1 Start Telegrip (Computer Terminal 2)
 
 ```bash
 cd software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik
 ./run_telegrip.sh
 ```
 
-#### 2.2 Headset Browser: Open the Computer's Page
+#### 3.2 Headset Browser: Open the Computer's Page
 
 For example, if the computer running Telegrip has LAN IP `192.168.31.245`, enter
 this address in the **VR headset browser**:
@@ -595,7 +595,7 @@ For robot camera display in VR, set
 This must use the **robot IP**. Restart Telegrip after editing it; the client's
 `--remote-ip` does not update this configuration.
 
-#### 2.3 Start the Teleoperation Client (Computer Terminal 3)
+#### 3.3 Start the Teleoperation Client (Computer Terminal 3)
 
 Set `--remote-ip` to the **robot Jetson IP**, not the computer's `192.168.31.245`.
 The client supplies robot feedback and waits for MuJoCo IK actions:
@@ -605,7 +605,7 @@ cd software/lerobot-hei-rebot-lift
 PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/teleoperate.py --remote-ip 192.168.31.127
 ```
 
-#### 2.4 Start the Complete-Model Real Bridge (Computer Terminal 4)
+#### 3.4 Start the Complete-Model Real Bridge (Computer Terminal 4)
 
 Run on the same computer as Telegrip and the client. Default internal
 connections stay local; do not replace their addresses with the robot IP:

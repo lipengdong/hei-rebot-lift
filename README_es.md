@@ -87,6 +87,28 @@ El software ejecutable está en:
 cd software/lerobot-hei-rebot-lift
 ```
 
+## Hoja de ruta y últimos avances
+
+La tabla resume el estado actual del proyecto y enlaza la documentación correspondiente. Las guías técnicas enlazadas están disponibles en inglés.
+
+| Módulo | Estado | Avances actuales | Documentación |
+| --- | --- | --- | --- |
+| Estructura del robot | Primera versión completada | Doble brazo, plataforma elevadora y base omnidireccional de cuatro ruedas en configuración O integrados y probados como un sistema completo | [Hardware](hardware/README.md) |
+| URDF del robot completo | Completado | Modelo del chasis, ruedas, elevador, brazos, pinzas paralelas y marcos TCP para simulación e IK en el robot real | [Modelo URDF](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/mujoco_ik/model/HEI_robot_urdf/) |
+| Pruebas de simulación MuJoCo | Completadas | Control VR de brazos, pinzas, elevador y chasis probado, con animación de ruedas, proyección al espacio de trabajo y demostraciones de recogida y colocación en modo de agarre estable | [Guía de simulación](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/README.md) |
+| Controlador de motores Damiao | Primera versión completada | `damiao_u2can` controla brazos, pinzas y motores del chasis y del elevador | [Damiao U2CAN](software/lerobot-hei-rebot-lift/src/lerobot/motors/damiao_u2can/) |
+| Plataforma elevadora | Primera versión completada | Homing al límite superior al iniciar y control de posición objetivo `height.pos` | [Controlador del robot](software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/README.md) · [Control independiente del elevador](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README.md#independent-lift-test) |
+| Base omnidireccional | Primera versión completada | Comandos `x.vel`, `y.vel` y `theta.vel`, con suavizado de aceleración y desaceleración | [Controlador del robot](software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/README.md) · [Control independiente del chasis](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README.md#independent-chassis-test) |
+| Visión con tres cámaras | Primera versión completada | Cámaras OpenCV `front`, `left_wrist` y `right_wrist`, con formato MJPG por defecto | [Controlador del robot](software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/README.md) |
+| VR e IK MuJoCo | Primera versión completada | Telegrip, MuJoCo y Pinocchio/CasADi conectados al flujo de control del robot real | [VR MuJoCo IK](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/README.md) |
+| Integración LeRobot | Primera versión completada | Robot, cliente y host `hei_rebot_lift`, con scripts de teleoperación, grabación, replay, evaluación y rollout | [Ejemplos](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README.md) |
+| Recopilación de datos | Primera versión completada | Grabación LeRobotDataset, reanudación, visualización y eliminación de episodios de baja calidad | [Guía de grabación](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README.md) |
+| Entrenamiento y rollout ACT | Verificados | Entrenamiento ACT y rollout en el robot real | [Ejemplos](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README.md) |
+| SmolVLA / VLA | Soporte inicial | Puntos de entrada para entrenamiento SmolVLA y rollout en el robot real | [Ejemplos](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README.md) |
+| Materiales de hardware abiertos | Completados | BOM general, ensamblaje STEP completo, piezas impresas STL, lista de piezas metálicas y archivos STEP/DWG de fabricación | [Hardware](hardware/README.md) |
+| Comunidad y reproducción | En curso | Grupo WeChat, contacto por correo electrónico y repositorio GitHub disponibles | [Comunidad](community/README.md) |
+| Reproducción de otros VLA populares | Próximamente | Reproducir y probar más políticas VLA para entrenamiento, inferencia y despliegue en HEI ReBot Lift | No completado |
+
 ## 🦾 Hardware
 
 | Recurso | Archivo / Directorio | Descripción |
@@ -144,28 +166,28 @@ env -u LD_LIBRARY_PATH python -c "import pinocchio as pin; from pinocchio import
 
 ## 🎮 Flujo de arranque
 
-En el robot:
+### 1. En el robot: iniciar el host
 
 ```bash
 cd software/lerobot-hei-rebot-lift
 PYTHONPATH=src conda run --no-capture-output -n lerobot5 hei-rebot-lift-host
 ```
 
-En el ordenador, iniciar Telegrip:
+### 2. En el ordenador: iniciar Telegrip
 
 ```bash
 cd software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik
 ./run_telegrip.sh
 ```
 
-Iniciar MuJoCo IK:
+### 3. En el ordenador: iniciar MuJoCo IK
 
 ```bash
 cd software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik
 ./run_mujoco_ik.sh
 ```
 
-Prueba de teleoperación:
+### 4. En el ordenador: probar la teleoperación
 
 ```bash
 cd software/lerobot-hei-rebot-lift

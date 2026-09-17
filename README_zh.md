@@ -127,8 +127,8 @@ cd software/lerobot-hei-rebot-lift
 | 完整机器人 URDF | ✅ 已完成 | 已建立底盘、轮组、升降、双臂、平行夹爪与 TCP 坐标系的完整模型，用于仿真和真机 IK | [URDF 模型](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/mujoco_ik/model/HEI_robot_urdf/) |
 | MuJoCo 仿真测试 | ✅ 已完成 | 已测试 VR 控制双臂、夹爪、升降与底盘，支持轮组动画、工作空间投影及稳定抓取模式的取放演示 | [仿真教程](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/README_zh.md) |
 | 达妙电机驱动 | ✅ 已完成首版 | 已封装 `damiao_u2can`，支持双臂、夹爪、底盘和升降电机控制 | [Damiao U2CAN](software/lerobot-hei-rebot-lift/src/lerobot/motors/damiao_u2can/) |
-| 升降平台 | ✅ 已完成首版 | 支持启动上限位 homing，并使用 `height.pos` 位置目标控制 | [Robot Driver](software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/README.md) |
-| 全向底盘 | ✅ 已完成首版 | 支持 `x.vel`、`y.vel`、`theta.vel` 控制，并加入基础加减速平滑 | [Robot Driver](software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/README.md) |
+| 升降平台 | ✅ 已完成首版 | 支持启动上限位 homing，并使用 `height.pos` 位置目标控制 | [Robot Driver](software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/README.md) · [升降独立控制](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README_zh.md#单独调试升降) |
+| 全向底盘 | ✅ 已完成首版 | 支持 `x.vel`、`y.vel`、`theta.vel` 控制，并加入基础加减速平滑 | [Robot Driver](software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/README.md) · [底盘独立控制](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README_zh.md#单独调试底盘) |
 | 三相机视觉 | ✅ 已完成首版 | 支持 `front`、`left_wrist`、`right_wrist` 三路 OpenCV 相机，默认 MJPG | [Robot Driver](software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/README.md) |
 | VR + MuJoCo IK | ✅ 已完成首版 | Telegrip + MuJoCo + Pinocchio/CasADi 已接入真实机器人控制链路 | [VR MuJoCo IK](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/README.md) |
 | LeRobot 集成 | ✅ 已完成首版 | 已实现 `hei_rebot_lift` robot/client/host，支持 teleoperate、record、replay、evaluate、rollout | [Examples](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README.md) |
@@ -246,7 +246,7 @@ env -u LD_LIBRARY_PATH python -c "import pinocchio as pin; from pinocchio import
 /dev/hei_lift_io     升降限位开关串口
 ```
 
-### 串口自动识别与绑定向导
+### 1. 串口自动识别与绑定向导
 
 在**机器人端 Jetson**运行
 [Port_Binding_Wizard.py](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/debug/Port_Binding_Wizard.py)，
@@ -288,7 +288,7 @@ ls -l /dev/hei_right_arm /dev/hei_left_arm /dev/hei_chassis /dev/hei_lift /dev/h
 权限不足时检查用户是否具有串口访问权限（通常为 `dialout` 组）。
 首次部署使用交互模式；`--yes --install` 仅适用于接线已验证且扫描无歧义的重复绑定。
 
-### 绑定后：机械臂零位与独立硬件测试
+### 2. 绑定后：机械臂零位与独立硬件测试
 
 **以下全部在机器人端 Jetson 执行，不需要 VR 或电脑客户端。** 每次只运行一个
 调试程序，保持 host 和其他串口程序关闭；每个命令块从项目根目录的新终端开始。
@@ -296,7 +296,7 @@ ls -l /dev/hei_right_arm /dev/hei_left_arm /dev/hei_chassis /dev/hei_lift /dev/h
 SSH 连接时分配 TTY（如 `ssh -t 用户名@机器人IP`）。各程序使用固定位置刷新的
 状态表，便于观察，不需要滚动查找日志。准备好物理急停，软件停止键不能替代急停。
 
-#### 1. 按设计零位摆放机械臂，再写入零位
+#### 2.1 按设计零位摆放机械臂，再写入零位
 
 **警告：`Arm_Zero_Status_Test.py` 一启动就会失能并对该臂 ID 1-7 全部写零位，
 没有确认步骤，也没有只读模式。不要在任意姿态下启动，不要把它作为日常查看
@@ -330,7 +330,7 @@ PYTHONPATH=src python -u examples/hei_rebot_lift/debug/Arm_Zero_Status_Test.py \
 `ERROR` 是驱动反馈状态码，需按对应电机协议解释，不要把所有非零值都当成故障。
 标定完成后退出程序；零位只应在装配/维修后需要重新标定时写入。
 
-#### 2. 底盘独立测试：方向、档位与四轮反馈
+#### 2.2 底盘独立测试：方向、档位与四轮反馈
 
 先架起并稳固底盘，让轮子离地，确认周围没有线缆或人员。此程序只连接底盘，
 不初始化双臂、升降和相机；**四轮按底盘运动学联动，不是单个轮子点动**。
@@ -367,7 +367,7 @@ PYTHONPATH=src python -u examples/hei_rebot_lift/debug/Chassis_Status_Test.py \
 需要单轮点动时应另加专用测试模式，现有程序没有该功能，不要用机械臂零位脚本
 连接底盘来代替。
 
-#### 3. 升降独立测试：回零、高度与 IO 限位
+#### 2.3 升降独立测试：回零、高度与 IO 限位
 
 **程序启动会自动向上回零。** 先确认上下限位 IO 接线正确、升降路径无障碍，
 支撑好可能在失能后下落的结构；首次测试保持急停可用。控制逻辑复用正式驱动，
@@ -395,7 +395,7 @@ PYTHONPATH=src python -u examples/hei_rebot_lift/debug/Lift_Status_Test.py \
 **独立测试全部完成并退出调试程序后**，再进行下面的新手仿真练习与真机启动；
 不要让调试程序与 host 同时占用串口。
 
-### 相机映射
+### 3. 相机映射
 
 默认相机：
 
@@ -429,7 +429,7 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 lerobot-find-cameras
 再确保机器人、电脑与头显处于能互相访问的同一局域网。
 **每个命令块都在指定机器的新终端、项目根目录执行**；长时间运行的进程不要关闭。
 
-### 0. 新手先练习：电脑端纯仿真（不连接真机）
+### 1. 新手先练习：电脑端纯仿真（不连接真机）
 
 <p align="center">
   <img src="media/robot-mujoco.png" alt="HEI ReBot Lift MuJoCo VR 仿真场景" width="85%">
@@ -439,7 +439,7 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 lerobot-find-cameras
 `teleoperate.py`、`record.py` 或真机桥接程序**；若它们已运行，先停止。
 纯仿真不需要电机、端口绑定或机器人反馈，也不会发布 `6558` 真机动作命令。
 
-#### 0.1 电脑练习终端 A：启动 Telegrip
+#### 1.1 电脑练习终端 A：启动 Telegrip
 
 ```bash
 cd software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik
@@ -449,7 +449,7 @@ cd software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik
 VR 头显与电脑连接同一局域网，在头显浏览器访问
 `https://192.168.31.245:8443`（电脑 IP），确认自签名证书后进入 VR。
 
-#### 0.2 电脑练习终端 B：启动完整机器人仿真
+#### 1.2 电脑练习终端 B：启动完整机器人仿真
 
 ```bash
 cd software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik
@@ -461,7 +461,7 @@ cd software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik
 收到实机相机图像，这不影响仿真练习；可在 `telegrip/config.yaml` 中暂设
 `vr_images.enabled: false`，修改后重启 Telegrip。
 
-#### 0.3 按顺序练习手柄操作
+#### 1.3 按顺序练习手柄操作
 
 <table align="center">
   <tr>
@@ -495,7 +495,7 @@ Meta Quest 按钮校准的是**头显/VR 参考坐标**；`grip` 建立的是每
 减小动作并返回可达区域，不要持续向边界外推。完整说明见
 [VR 手柄教程](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/README_zh.md)。
 
-#### 0.4 练熟后再进入真机
+#### 1.4 练熟后再进入真机
 
 - 能分别控制左右臂平移、旋转，并熟练松开/重新按住 `grip` 建立新原点。
 - 能长按 Meta Quest 按钮校准 VR 原点，知道换位置、换朝向或方向不一致时要重新校准。
@@ -509,7 +509,7 @@ Meta Quest 按钮校准的是**头显/VR 参考坐标**；`grip` 建立的是每
 **仿真练习通过不代表硬件安全检查通过**：稳定抓取是运动学演示，不是接触力学
 验证；实机方向、零位、限位和负载仍需单独检查，仿真升降速度也可能快于实机。
 
-### 1. 机器人端 Jetson：启动 host（终端 1）
+### 2. 机器人端 Jetson：启动 host（终端 1）
 
 本小节只在机器人上执行。先完成端口映射，清空工作区并确认急停可用；host
 启动后升降会自动上行归零，**等待归零完成**，再继续电脑端操作。host 运行在
@@ -522,18 +522,18 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 hei-rebot-lift-host
 
 机器人端保持这个终端运行，无需启动 Telegrip 或 MuJoCo IK。
 
-### 2. 自己的电脑：启动控制程序
+### 3. 自己的电脑：启动控制程序
 
 下面三个程序全部在 IP 为 `192.168.31.245` 的**自己的电脑**上运行，不是在 Jetson 上。
 
-#### 2.1 启动 Telegrip（电脑终端 2）
+#### 3.1 启动 Telegrip（电脑终端 2）
 
 ```bash
 cd software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik
 ./run_telegrip.sh
 ```
 
-#### 2.2 VR 头显浏览器：访问电脑页面
+#### 3.2 VR 头显浏览器：访问电脑页面
 
 例如，运行 Telegrip 的电脑局域网 IP 是 `192.168.31.245`，就在 **VR 头显浏览器**
 中输入：
@@ -551,7 +551,7 @@ https://192.168.31.245:8443
 设置 `vr_images.endpoint: tcp://192.168.31.127:6556`，这里必须填**机器人 IP**。
 更改后重启 Telegrip；客户端的 `--remote-ip` 不会自动修改这个配置。
 
-#### 2.3 启动遥操作客户端（电脑终端 3）
+#### 3.3 启动遥操作客户端（电脑终端 3）
 
 `--remote-ip` 填**机器人 Jetson 的 IP**，不是本电脑的 `192.168.31.245`。
 客户端提供实机反馈，并等待 MuJoCo IK 发布动作：
@@ -561,7 +561,7 @@ cd software/lerobot-hei-rebot-lift
 PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/teleoperate.py --remote-ip 192.168.31.127
 ```
 
-#### 2.4 启动完整模型 MuJoCo IK 真机桥接（电脑终端 4）
+#### 3.4 启动完整模型 MuJoCo IK 真机桥接（电脑终端 4）
 
 与 Telegrip、遥操作客户端运行在同一台电脑，默认使用电脑内部连接，不需要
 把这些内部地址改为机器人 IP：
