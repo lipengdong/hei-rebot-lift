@@ -314,7 +314,13 @@ class Kinematics:
             sol_tauff = pin.rnea(self.model, self.data, sol_q, v, np.zeros(self.model.nv))
             sol_tauff = np.concatenate([sol_tauff, np.zeros(self.model.nq - sol_tauff.shape[0])], axis=0)
             
-            info = {"sol_tauff": sol_tauff, "success": True, "clamped": clamped}
+            # 返回裁剪前的解，避免上层把一次大幅换解误判为连续的多个小步。
+            info = {
+                "sol_tauff": sol_tauff,
+                "success": True,
+                "clamped": clamped,
+                "raw_solution": self._to_full_q(raw_sol_q, fallback_q),
+            }
 
             dof = self._to_full_q(sol_q, fallback_q)
             return dof, info

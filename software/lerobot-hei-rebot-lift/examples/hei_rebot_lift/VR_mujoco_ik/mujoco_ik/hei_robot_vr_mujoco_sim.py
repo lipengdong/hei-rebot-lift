@@ -89,8 +89,17 @@ VR_TO_ROBOT_ROT = np.array(
 TARGET_POS_EPS_M = 0.0012
 TARGET_ROT_EPS_RAD = np.deg2rad(0.35)
 MAX_MUJOCO_JOINT_STEP_RAD = 0.08
+# 只判断候选目标是否连续可达，不改变原有速度、加速度和电机参数。
+IK_TARGET_MAX_JOINT_DELTA_RAD = np.deg2rad([20.0, 20.0, 20.0, 25.0, 25.0, 25.0])
+IK_TARGET_MAX_POSITION_ERROR_M = 0.100
+# 只有完整 VR 目标不可达时才执行边界投影。5 次二分最多额外调用 5 次 IK，
+# 可将“最后可达位姿 -> 手柄请求位姿”的线段细分到 1/32。
+IK_BOUNDARY_PROJECTION_ITERATIONS = 5
+IK_BOUNDARY_MIN_TRANSLATION_M = 0.0005
+IK_BOUNDARY_MIN_ROTATION_RAD = np.deg2rad(0.20)
 # 每个新 VR 目标最多允许若干次 IK 收敛，之后锁住关节，避免静止时反复寻解。
 IK_SETTLE_MAX_STEPS = 8
+IK_SETTLE_MAX_RECOVERY_STEPS = 100
 IK_JOINT_HOLD_EPS_RAD = 0.001
 LIFT_DEADZONE = 0.15
 CHASSIS_DEADZONE = 0.15
@@ -132,10 +141,13 @@ class ArmRuntime:
     controller_origin_pos: dict[str, float] | None = None
     controller_origin_quat: dict[str, float] | None = None
     robot_origin_tf: np.ndarray | None = None
+    controller_origin_q: np.ndarray | None = None
     last_solved_target_tf: np.ndarray | None = None
     settle_steps_remaining: int = 0
     reset_requested: bool = False
     last_failure_log_s: float = 0.0
+    last_accepted_ik_q: np.ndarray | None = None
+    last_accepted_target_tf: np.ndarray | None = None
 
 
 @dataclass
@@ -484,9 +496,12 @@ class HEIRobotVRSimulator:
         arm.controller_origin_pos = controller["position"].copy()
         arm.controller_origin_quat = controller["quaternion"].copy()
         arm.robot_origin_tf = current_tf.copy()
+        arm.controller_origin_q = current_q.copy()
         arm.target_tf = current_tf.copy()
         # 抓取原点时 TCP 已经在当前位置，不应仅因 grip 按下就再求解一次。
         arm.last_solved_target_tf = current_tf.copy()
+        arm.last_accepted_ik_q = current_q.copy()
+        arm.last_accepted_target_tf = current_tf.copy()
         arm.settle_steps_remaining = 0
         arm.reset_requested = False
         print(f"[HEI VR Sim] {arm.side} controller origin captured", flush=True)
@@ -496,7 +511,10 @@ class HEIRobotVRSimulator:
         arm.controller_origin_pos = None
         arm.controller_origin_quat = None
         arm.robot_origin_tf = None
+        arm.controller_origin_q = None
         arm.last_solved_target_tf = None
+        arm.last_accepted_ik_q = None
+        arm.last_accepted_target_tf = None
         arm.settle_steps_remaining = 0
 
     def _update_arm_target(self, arm: ArmRuntime, controller: dict) -> None:
@@ -517,19 +535,145 @@ class HEIRobotVRSimulator:
             arm.last_solved_target_tf = target.copy()
             arm.settle_steps_remaining = IK_SETTLE_MAX_STEPS
 
-    def _solve_arm(self, arm: ArmRuntime) -> None:
-        if arm.settle_steps_remaining <= 0:
-            return
-        current_q = self._get_joint_q(ARM_JOINTS[arm.side])
-        full_solution, info = arm.solver.ik(arm.target_tf, current_q)
-        arm.settle_steps_remaining -= 1
-        if not info["success"]:
-            now = time.monotonic()
-            if now - arm.last_failure_log_s >= 1.0:
-                print(f"[HEI VR Sim] {arm.side} IK failed; retaining previous pose", flush=True)
-                arm.last_failure_log_s = now
-            return
-        target_q = np.asarray(full_solution)[arm.pin_q_indices]
+    def _candidate_rejection_reason(
+        self,
+        arm: ArmRuntime,
+        current_q: np.ndarray,
+        raw_q: np.ndarray,
+        target_tf: np.ndarray | None = None,
+    ) -> str | None:
+        if target_tf is None:
+            target_tf = arm.target_tf
+        if raw_q.shape != current_q.shape or not np.all(np.isfinite(raw_q)):
+            return "invalid raw IK solution"
+        # 与上一帧已经接受的完整 IK 解比较，而不是和仍在追赶目标的当前关节角比较。
+        # 这样正常快速运动不会因关节暂时落后而被误判为换解。
+        reference_q = arm.last_accepted_ik_q
+        if reference_q is None:
+            reference_q = current_q
+        returning_to_origin = False
+        if (
+            arm.robot_origin_tf is not None
+            and arm.controller_origin_q is not None
+            and arm.last_accepted_target_tf is not None
+        ):
+            requested_distance = np.linalg.norm(
+                target_tf[:3, 3] - arm.robot_origin_tf[:3, 3]
+            )
+            accepted_distance = np.linalg.norm(
+                arm.last_accepted_target_tf[:3, 3] - arm.robot_origin_tf[:3, 3]
+            )
+            requested_joint_distance = np.linalg.norm(raw_q - arm.controller_origin_q)
+            accepted_joint_distance = np.linalg.norm(reference_q - arm.controller_origin_q)
+            returning_to_origin = (
+                requested_distance < accepted_distance - TARGET_POS_EPS_M
+                and requested_joint_distance < accepted_joint_distance
+            )
+        changed = np.flatnonzero(np.abs(raw_q - reference_q) > IK_TARGET_MAX_JOINT_DELTA_RAD)
+        if returning_to_origin:
+            changed = np.empty(0, dtype=int)
+        if changed.size:
+            joints = ", ".join(str(index + 1) for index in changed)
+            return f"IK branch jump at joint {joints}"
+        raw_tf = arm.solver.fk(raw_q)
+        position_error = float(np.linalg.norm(target_tf[:3, 3] - raw_tf[:3, 3]))
+        if not np.isfinite(position_error) or position_error > IK_TARGET_MAX_POSITION_ERROR_M:
+            return f"unreachable target (position error={position_error * 1000.0:.1f} mm)"
+        return None
+
+    @staticmethod
+    def _interpolate_target(start_tf: np.ndarray, end_tf: np.ndarray, alpha: float) -> np.ndarray:
+        """在 SE(3) 中插值 TCP 目标：位置线性插值，姿态沿最短旋转路径插值。"""
+        alpha = float(np.clip(alpha, 0.0, 1.0))
+        interpolated = np.eye(4)
+        interpolated[:3, 3] = (
+            start_tf[:3, 3] + alpha * (end_tf[:3, 3] - start_tf[:3, 3])
+        )
+        relative_rotation = start_tf[:3, :3].T @ end_tf[:3, :3]
+        interpolated[:3, :3] = (
+            start_tf[:3, :3] @ pin.exp3(alpha * pin.log3(relative_rotation))
+        )
+        return interpolated
+
+    def _solve_ik_candidate(
+        self,
+        arm: ArmRuntime,
+        current_q: np.ndarray,
+        target_tf: np.ndarray,
+    ) -> tuple[np.ndarray | None, np.ndarray | None, str | None]:
+        """求解并检查一个 TCP 候选目标，但不将结果写入 MuJoCo。"""
+        full_solution, info = arm.solver.ik(target_tf, current_q)
+        if not info.get("success", False):
+            return None, None, "IK solve failed"
+        raw_solution = info.get("raw_solution")
+        if raw_solution is None:
+            return None, None, "raw IK diagnostics unavailable"
+        raw_q = np.asarray(raw_solution, dtype=float)[arm.pin_q_indices]
+        reason = self._candidate_rejection_reason(arm, current_q, raw_q, target_tf)
+        if reason is not None:
+            return None, raw_q, reason
+        return np.asarray(full_solution, dtype=float), raw_q, None
+
+    def _project_target_to_workspace(
+        self,
+        arm: ArmRuntime,
+        current_q: np.ndarray,
+        requested_tf: np.ndarray,
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, float] | None:
+        """从最后可达位姿向 VR 请求位姿二分搜索最远可执行目标。"""
+        safe_tf = arm.last_accepted_target_tf
+        if safe_tf is None:
+            safe_tf = arm.solver.fk(current_q)
+        safe_tf = safe_tf.copy()
+
+        low = 0.0
+        high = 1.0
+        best: tuple[np.ndarray, np.ndarray, np.ndarray, float] | None = None
+        for _ in range(IK_BOUNDARY_PROJECTION_ITERATIONS):
+            alpha = 0.5 * (low + high)
+            candidate_tf = self._interpolate_target(safe_tf, requested_tf, alpha)
+            full_solution, raw_q, reason = self._solve_ik_candidate(
+                arm, current_q, candidate_tf
+            )
+            if reason is None and full_solution is not None and raw_q is not None:
+                best = (candidate_tf, full_solution, raw_q, alpha)
+                low = alpha
+            else:
+                high = alpha
+
+        if best is None:
+            return None
+        projected_tf = best[0]
+        translation = np.linalg.norm(projected_tf[:3, 3] - safe_tf[:3, 3])
+        rotation = self._rotation_delta_angle(safe_tf, projected_tf)
+        if (
+            translation < IK_BOUNDARY_MIN_TRANSLATION_M
+            and rotation < IK_BOUNDARY_MIN_ROTATION_RAD
+        ):
+            return None
+        return best
+
+    def _accept_arm_candidate(
+        self,
+        arm: ArmRuntime,
+        current_q: np.ndarray,
+        target_tf: np.ndarray,
+        full_solution: np.ndarray,
+        raw_q: np.ndarray,
+    ) -> None:
+        arm.target_tf = target_tf.copy()
+        arm.last_accepted_ik_q = raw_q.copy()
+        arm.last_accepted_target_tf = target_tf.copy()
+        # 快速回程可能远大于 8 * 0.08 rad。只延长收敛周期，不改变原来的
+        # 单步幅度；接近目标后仍由下方 TCP 误差条件提前停止。
+        required_steps = int(
+            np.ceil(np.max(np.abs(raw_q - current_q)) / MAX_MUJOCO_JOINT_STEP_RAD)
+        ) + 2
+        arm.settle_steps_remaining = max(
+            arm.settle_steps_remaining,
+            min(required_steps, IK_SETTLE_MAX_RECOVERY_STEPS),
+        )
+        target_q = full_solution[arm.pin_q_indices]
         step = np.clip(target_q - current_q, -MAX_MUJOCO_JOINT_STEP_RAD, MAX_MUJOCO_JOINT_STEP_RAD)
         if np.max(np.abs(step)) < IK_JOINT_HOLD_EPS_RAD:
             arm.settle_steps_remaining = 0
@@ -537,10 +681,67 @@ class HEIRobotVRSimulator:
         applied_q = current_q + step
         self._set_joint_q(ARM_JOINTS[arm.side], applied_q)
         achieved_tf = arm.solver.fk(applied_q)
-        position_error = np.linalg.norm(arm.target_tf[:3, 3] - achieved_tf[:3, 3])
-        rotation_error = self._rotation_delta_angle(achieved_tf, arm.target_tf)
+        position_error = np.linalg.norm(target_tf[:3, 3] - achieved_tf[:3, 3])
+        rotation_error = self._rotation_delta_angle(achieved_tf, target_tf)
         if position_error < TARGET_POS_EPS_M and rotation_error < TARGET_ROT_EPS_RAD:
             arm.settle_steps_remaining = 0
+
+    def _reject_arm_target(self, arm: ArmRuntime, current_q: np.ndarray, reason: str) -> None:
+        # 拒绝危险目标后仍继续靠近最后安全目标，不会在正常追赶过程中突然冻结。
+        # last_solved_target_tf 回退到安全目标，使下一帧立即重试最新手柄目标；快速回程
+        # 因此无需松开 grip，也不会被先前的边界目标缓存卡住。
+        safe_q = arm.last_accepted_ik_q
+        safe_tf = arm.last_accepted_target_tf
+        if safe_q is None:
+            safe_q = current_q
+        if safe_tf is None:
+            safe_tf = arm.solver.fk(current_q)
+        arm.target_tf = safe_tf.copy()
+        arm.last_solved_target_tf = safe_tf.copy()
+        arm.settle_steps_remaining = 0
+        arm.solver.init_data = current_q.copy()
+        safe_step = np.clip(
+            safe_q - current_q,
+            -MAX_MUJOCO_JOINT_STEP_RAD,
+            MAX_MUJOCO_JOINT_STEP_RAD,
+        )
+        if np.max(np.abs(safe_step)) >= IK_JOINT_HOLD_EPS_RAD:
+            self._set_joint_q(ARM_JOINTS[arm.side], current_q + safe_step)
+        now = time.monotonic()
+        if now - arm.last_failure_log_s >= 1.0:
+            print(f"[HEI VR Boundary] {arm.side}: {reason}; keeping current pose", flush=True)
+            arm.last_failure_log_s = now
+
+    def _solve_arm(self, arm: ArmRuntime) -> None:
+        if arm.settle_steps_remaining <= 0:
+            return
+        current_q = self._get_joint_q(ARM_JOINTS[arm.side])
+        requested_tf = arm.target_tf.copy()
+        full_solution, raw_q, reason = self._solve_ik_candidate(
+            arm, current_q, requested_tf
+        )
+        arm.settle_steps_remaining -= 1
+        if reason is not None:
+            projection = self._project_target_to_workspace(arm, current_q, requested_tf)
+            if projection is None:
+                self._reject_arm_target(arm, current_q, reason)
+                return
+            projected_tf, full_solution, raw_q, alpha = projection
+            # last_solved_target_tf 保留投影后的安全目标。下一帧若手柄仍在
+            # 边界外，_update_arm_target 会继续重试原始请求，因此可沿边界滑动。
+            arm.last_solved_target_tf = projected_tf.copy()
+            now = time.monotonic()
+            if now - arm.last_failure_log_s >= 1.0:
+                print(
+                    f"[HEI VR Boundary] {arm.side}: projected {alpha * 100.0:.1f}% "
+                    f"toward requested target ({reason})",
+                    flush=True,
+                )
+                arm.last_failure_log_s = now
+            target_tf = projected_tf
+        else:
+            target_tf = requested_tf
+        self._accept_arm_candidate(arm, current_q, target_tf, full_solution, raw_q)
 
     def _step_reset(self, arm: ArmRuntime) -> None:
         if not arm.reset_requested:
