@@ -142,7 +142,6 @@ class HEIRobotVRRealController(HEIRobotVRSimulator):
         self.last_publish_s = 0.0
         self.last_bridge_status_s = 0.0
         self.bridge_armed = False
-        self.previous_fresh = False
         self.previous_right_grip = False
         self.previous_left_grip = False
         self.chassis_command = np.zeros(3, dtype=float)
@@ -364,7 +363,6 @@ class HEIRobotVRRealController(HEIRobotVRSimulator):
             (self.previous_right_grip and not right_grip)
             or (self.previous_left_grip and not left_grip)
         )
-        self.previous_fresh = fresh
         self.previous_right_grip = right_grip
         self.previous_left_grip = left_grip
 

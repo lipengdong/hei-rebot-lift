@@ -96,7 +96,10 @@ The runnable software lives in:
 software/lerobot-hei-rebot-lift/
 ```
 
-All commands below assume you first enter this directory:
+Quick Setup starts at the repository root. For later sections, open a new
+terminal at the repository root for each command block; each block includes its
+own `cd`. Replace `192.168.31.127` with your robot IP. The headset connects to
+the **computer IP**, not the robot IP. The software directory is:
 
 ```bash
 cd software/lerobot-hei-rebot-lift
@@ -191,8 +194,10 @@ pip install -e ".[hardware,pyzmq-dep]"
 
 Create the VR/MuJoCo IK environment:
 
+Continue from the software directory entered above:
+
 ```bash
-cd software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik
+cd examples/hei_rebot_lift/VR_mujoco_ik
 conda env create -f environment.yml
 ```
 
@@ -232,6 +237,9 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 lerobot-find-cameras
 
 ## 🎮 Startup Flow
 
+Use separate terminals. Clear the workspace and keep the emergency stop
+reachable: startup moves the lift to its upper limit. Wait for homing to finish.
+
 Start the robot-side host:
 
 ```bash
@@ -252,24 +260,32 @@ Open this URL in the VR headset browser:
 https://COMPUTER_IP:8443
 ```
 
-Start the complete-model MuJoCo IK real-robot bridge on the computer:
+Start the computer-side client to supply robot feedback (it waits for VR actions):
+
+```bash
+cd software/lerobot-hei-rebot-lift
+PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/teleoperate.py --remote-ip 192.168.31.127
+```
+
+Then start the complete-model MuJoCo IK real-robot bridge on the computer:
 
 ```bash
 cd software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik
 ./run_hei_robot_vr_real.sh --enable-real-publish
 ```
 
-Real publishing unlocks only after both VR grip buttons are released once. The
-legacy dual-arm model remains available through `./run_mujoco_ik.sh`.
-
-Test teleoperation:
-
-```bash
-cd software/lerobot-hei-rebot-lift
-PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/teleoperate.py   --remote-ip 192.168.31.127
-```
+With fresh robot feedback and VR data, release both grip buttons together and
+wait for `command bridge ARMED`. The flag acknowledges real command publishing;
+it does not bypass synchronization. For simulation only, use
+`./run_hei_robot_vr_sim.sh`; the legacy dual-arm entry is `./run_mujoco_ik.sh`.
+See the [VR guide](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/README.md)
+for controller inputs, recovery, and lift visualization limitations.
 
 ## 📷 Record Data
+
+Stop `teleoperate.py` first. `record.py` replaces it as the action receiver and
+feedback publisher; never run both together. Keep the host and Telegrip running,
+then release both grips to re-arm the bridge after feedback reconnects.
 
 ```bash
 cd software/lerobot-hei-rebot-lift
@@ -287,12 +303,26 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 lerobot-train   --datas
 
 ## ✨ Train SmolVLA
 
+Install the policy-specific dependencies first (new terminal at repository root):
+
+```bash
+cd software/lerobot-hei-rebot-lift
+conda run --no-capture-output -n lerobot5 python -m pip install -e ".[smolvla]"
+```
+
+The general `training` extra does not install every VLA policy's dependencies.
+
 ```bash
 cd software/lerobot-hei-rebot-lift
 PYTHONPATH=src conda run --no-capture-output -n lerobot5 lerobot-train   --dataset.repo_id=HGM/hei_rebot_lift_task1   --policy.type=smolvla   --policy.device=cuda   --policy.push_to_hub=false   --output_dir=outputs/train/smolvla_hei_rebot_lift_task1   --job_name=smolvla_hei_rebot_lift_task1   --batch_size=1   --steps=1000   --save_freq=1000   --log_freq=50   --num_workers=2   --wandb.enable=false
 ```
 
 ## 🤖 Real-Robot Rollout
+
+Keep the robot host running, but stop VR command publishing and any teleoperation,
+recording, or replay process first. Use only one robot command source. Confirm the
+checkpoint exists and camera names match the training data; start with a clear
+workspace and a short test.
 
 ACT rollout:
 
@@ -310,12 +340,10 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_
 
 ## 📖 More Documentation
 
-```text
-software/lerobot-hei-rebot-lift/README.md
-software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README.md
-software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/README.md
-software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/README.md
-```
+- [Documentation index](docs/README.md)
+- [Recording, resume, training, and rollout](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README.md)
+- [Robot configuration, lift units, and watchdog](software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/README.md)
+- [VR deployment, controller tutorial, and self-checks](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/README.md)
 
 ## 🙏 References & Acknowledgments
 

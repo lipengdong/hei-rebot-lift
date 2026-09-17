@@ -119,6 +119,38 @@ lift_max_height_mm = 0.0
 
 The upper limit is `0`, and downward positions are negative.
 
+`height.pos` is in **millimeters**. The motor uses `VEL` mode: the host implements
+the outer position loop, converts height error into velocity, applies speed and
+acceleration limits, and checks IO limits. It is not the motor's native position
+mode. Height comes from homing plus motor position feedback, not joystick timing.
+
+### Speed Units and the 1610 Lead Screw
+
+Configuration lives in [config_hei_rebot_lift.py](config_hei_rebot_lift.py).
+The deployed 1610 screw uses `10 mm/rev` lead. These conversions assume 1:1
+coupling between the motor output shaft and screw; account for any added gearing.
+
+```text
+rpm = angular_speed_rad_s * 60 / (2 * pi)
+linear_speed_mm_s = angular_speed_rad_s * lead_mm_per_rev / (2 * pi)
+18 rad/s = 171.89 rpm = 28.65 mm/s (10 mm/rev)
+200 rpm = 20.94 rad/s = 33.33 mm/s (conversion only, not a recommended setting)
+```
+
+| Parameter | Current default | Meaning |
+| --- | --- | --- |
+| `lift_lead_mm_per_rev` | `10.0` | Millimeters per output-shaft revolution |
+| `lift_max_speed_rad_s` | `18.0` | Motor angular velocity cap in radians/second |
+| `lift_max_accel_rad_s2` | `30.0` | Motor angular acceleration limit |
+| `lift_position_kp_rad_s_per_mm` | `0.45` | Velocity requested per millimeter of height error |
+| `lift_position_tolerance_mm` | `1.0` | Position-error deadband |
+
+These are robot-side settings; restart the host after changing them. A motor's
+no-load maximum RPM is not a guaranteed continuous loaded operating speed.
+Validate load, temperature, power supply, and end-stop behavior before increasing
+limits. The real VR viewer's `--lift-speed-m-s` only changes visualization; see
+the [VR guide](../../../../examples/hei_rebot_lift/VR_mujoco_ik/README.md).
+
 ## Robot-Side Host
 
 Start on the robot side:
@@ -166,10 +198,32 @@ gripper_current
 
 Arm software limits:
 
+Joints 1-6 use `POS_VEL`; on connect the driver attempts to write `KP_APR`,
+`ACC`, and `DEC`. The six-element tuples follow joint order 1 through 6 and are
+shared by both arms. `arm_velocity_limit_rad_s` sets the velocity limit in
+position/velocity commands, while `arm_kp_apr` is the motor position-loop gain,
+not an IK weight or MIT-mode stiffness. The driver does not configure a complete
+position PID (I/D terms are not set here). `arm_dec` must be negative for this
+firmware; a failed parameter write means the requested configuration may not be
+active, so inspect startup warnings before testing.
+
 ```python
 right_arm_min_rad / right_arm_max_rad
 left_arm_min_rad / left_arm_max_rad
 ```
+
+Current values (read the configuration file as the source of truth):
+
+```python
+arm_velocity_limit_rad_s = (3.0, 3.0, 3.0, 1.8, 2.5, 2.5)
+arm_kp_apr = (150.0, 200.0, 200.0, 45.0, 50.0, 50.0)
+arm_acc = (2.0, 2.0, 2.0, 2.0, 2.0, 2.0)
+arm_dec = (-2.0, -2.0, -2.0, -2.0, -2.0, -2.0)
+```
+
+These joint parameters do not apply to the seventh gripper motor, which uses
+`Torque_Pos` and its own `gripper_force_velocity` / `gripper_current` commands.
+Higher gain/current is not automatically better; test without payload first.
 
 ## Related Directories
 

@@ -4,6 +4,10 @@ HEI ReBot Lift 是基于 LeRobot 改造的一套双臂升降轮式机器人项�
 
 项目目标是让这台自定义机器人可以像 LeRobot 官方机器人一样完成：遥操作采集数据、保存 LeRobotDataset、训练模仿学习或 VLA 策略，并把策略部署回真实机器人。
 
+本页为软件目录的中文使用说明；[English quick setup](../../README.md) 和
+[中文项目主页](../../README_zh.md) 提供整机入口。
+以下每个命令块均从本软件根目录的新终端执行，除非标明接着上一段运行。
+
 ## 硬件组成
 
 ```text
@@ -26,11 +30,10 @@ examples/hei_rebot_lift/VR_mujoco_ik/     VR + MuJoCo + Pinocchio IK 控制链�
 
 更细的说明可以看：
 
-```text
-src/lerobot/robots/hei_rebot_lift/README.md
-examples/hei_rebot_lift/README.md
-examples/hei_rebot_lift/VR_mujoco_ik/README.md
-```
+- [机器人驱动与升降单位](src/lerobot/robots/hei_rebot_lift/README_zh.md)
+- [录制、续录、调试、训练与推理](examples/hei_rebot_lift/README_zh.md)
+- [VR 环境、手柄操作与自检](examples/hei_rebot_lift/VR_mujoco_ik/README_zh.md)
+- [整机文档导航](../../docs/README_zh.md)
 
 ## 推荐部署结构
 
@@ -39,7 +42,7 @@ examples/hei_rebot_lift/VR_mujoco_ik/README.md
 ```text
 机器人端：连接达妙驱动板、升降限位开关、底盘、相机，启动 host
 电脑端：启动 Telegrip、MuJoCo IK、record/rollout/evaluate
-默认机器人 IP：192.168.31.127
+机器人 IP 示例：192.168.31.127，建议通过 --remote-ip 显式指定
 ```
 
 ## 1. 创建 LeRobot 环境
@@ -60,7 +63,7 @@ pip install -e ".[core_scripts,training,pyzmq-dep]"
 | 数据录制与编辑 | `core_scripts` 包含 `dataset` |
 | Rerun 可视化 | `core_scripts` 包含 `viz`/`rerun-sdk` |
 | 键盘控制 | `core_scripts` 包含 `hardware`/`pynput` |
-| ACT、SmolVLA 等训练 | `training` |
+| 通用策略训练依赖 | `training`；SmolVLA 另需 `smolvla` 安装项 |
 
 Python 中虽然写的是 `import zmq`，但需要安装的包名是 `pyzmq`，不要使用 `pip install zmq`。
 
@@ -191,8 +194,11 @@ cd examples/hei_rebot_lift/VR_mujoco_ik
 ./run_hei_robot_vr_real.sh --enable-real-publish
 ```
 
-真机命令需要显式加 `--enable-real-publish`，并在两个 VR grip 都松开后才解锁。
-原双臂模型入口 `./run_mujoco_ik.sh` 仍保留。
+另开终端先运行下面第 6 节的 `teleoperate.py`（或直接用 `record.py`），提供
+`6559` 实机反馈；客户端可先启动并等待动作。收到新鲜实机反馈和 VR 数据后，
+同时松开两侧 grip，等待 `command bridge ARMED`。`--enable-real-publish`
+不会跳过同步检查。纯仿真用 `./run_hei_robot_vr_sim.sh`，不发送真机命令；旧双臂
+入口 `./run_mujoco_ik.sh` 与完整模型真机桥接二选一。
 
 默认数据链路：
 
@@ -215,12 +221,15 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_
 
 ```text
 双臂：VR 手柄位姿经过 MuJoCo/Pinocchio IK 生成关节目标
-底盘：右手握把按下时，右摇杆控制 x/y/theta；松开握把立刻停止
-升降：左手握把按下时，左摇杆 Y 轴控制升降方向；松开握把立刻停止
+底盘：右手握把按下时，右摇杆控制 x/y，B/Y 控制旋转；松开握把清除运动请求
+升降：左手握把按下时，左摇杆 Y 轴控制升降方向；松开握把以最新反馈高度保持
 升降动作：最终发送 height.pos 目标高度，不直接发送速度
 ```
 
 ## 7. 录制数据
+
+先停止 `teleoperate.py`，再启动 `record.py`；两者不能同时运行。实机反馈重连后
+松开两侧 grip 重新解锁。物理制动受加减速与硬件影响，不等于瞬间机械停止。
 
 新建数据集：
 
@@ -272,6 +281,12 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 lerobot-train   --datas
 
 ## 10. 训练 SmolVLA
 
+先在软件根目录安装策略专用依赖，通用 `training` 安装项不包含它们：
+
+```bash
+conda run --no-capture-output -n lerobot5 python -m pip install -e ".[smolvla]"
+```
+
 SmolVLA 是当前比较适合继续尝试的 VLA 路线。三相机数据在推理时会自动映射：
 
 ```text
@@ -294,6 +309,9 @@ export HF_DATASETS_OFFLINE=1
 ```
 
 ## 11. 实机推理
+
+保留机器人 host，停止 VR 真机发布、遥操作、录制及回放，避免多个控制源同时
+发送命令。先确认模型目录存在，相机字段与训练数据一致，再做短时间测试。
 
 ACT 推理：
 

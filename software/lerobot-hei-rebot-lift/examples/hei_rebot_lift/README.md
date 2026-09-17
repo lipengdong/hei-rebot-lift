@@ -2,6 +2,10 @@
 
 This directory is the real-robot entry point for HEI ReBot Lift. It covers hardware checks, VR/MuJoCo teleoperation, data recording, dataset cleanup, training, replay, evaluation, and policy rollout.
 
+Unless noted otherwise, run each command block in a new terminal at
+`software/lerobot-hei-rebot-lift/`, not in this examples folder. Install the
+LeRobot environment using the [project setup guide](../../../../README.md) first.
+
 Robot driver code:
 
 ```text
@@ -41,7 +45,7 @@ Terminal 3: complete-model MuJoCo IK + real-robot bridge
 Terminal 4: record.py data recording
 ```
 
-Default robot IP:
+Example robot IP (script defaults may differ; always pass `--remote-ip`):
 
 ```text
 192.168.31.127
@@ -55,12 +59,12 @@ If the IP changes, pass `--remote-ip NEW_IP` to `teleoperate.py`, `record.py`, `
 2. Start `hei-rebot-lift-host` and wait for lift homing to finish.
 3. On the computer, start `VR_mujoco_ik/run_telegrip.sh`.
 4. Open `https://COMPUTER_IP:8443` in the VR headset browser and enter VR.
-5. Start `VR_mujoco_ik/run_hei_robot_vr_real.sh --enable-real-publish`.
-6. Run `teleoperate.py` first to verify arm, base, and lift directions.
-7. Run `record.py` to collect data.
+5. Start `teleoperate.py` to supply robot feedback; it waits for VR actions.
+6. Start `VR_mujoco_ik/run_hei_robot_vr_real.sh --enable-real-publish`, release both grips together, and wait for `command bridge ARMED`; then verify directions slowly.
+7. Stop `teleoperate.py`, start `record.py`, and release both grips to re-arm after feedback reconnects.
 8. Use `lerobot-dataset-viz` to inspect data, and use `lerobot-edit-dataset` to delete bad episodes if needed.
 9. Train ACT or SmolVLA.
-10. Use `rollout.py` for real-robot inference.
+10. Stop VR command publishing and recording before using `rollout.py` for real-robot inference; leave the host running.
 
 ## 1. Hardware Check
 
@@ -173,7 +177,9 @@ cd examples/hei_rebot_lift/VR_mujoco_ik
 ./run_hei_robot_vr_real.sh --enable-real-publish
 ```
 
-The bridge remains locked until both VR grip buttons have been released once.
+Start one client (`teleoperate.py` or `record.py`) in a separate terminal to
+provide fresh feedback on `6559`. With fresh VR data, release both grips together
+and wait for `command bridge ARMED`; grip release alone cannot unlock it.
 For the legacy dual-arm model, use `./run_mujoco_ik.sh` instead.
 
 Default data flow:
@@ -200,13 +206,33 @@ Control logic:
 
 ## 5. Record Data
 
+Stop `teleoperate.py` before starting this script; both would compete for the
+feedback port and robot control. Re-arm the real bridge after feedback reconnects.
+
 ```bash
 PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/record.py   --remote-ip 192.168.31.127   --repo-id HGM/hei_rebot_lift_task1   --num-episodes 5   --episode-time-sec 120   --reset-time-sec 30   --task-description "Pick up the yellow block from the floor and put it on the table in front"
 ```
 
 By default, data is saved locally and is not pushed to the Hugging Face Hub. Add `--push-to-hub` only when needed.
 
+Resume an existing dataset (`--root` is required):
+
+```bash
+PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/record.py \
+  --remote-ip 192.168.31.127 \
+  --repo-id HGM/hei_rebot_lift_task1 \
+  --root ~/.cache/huggingface/lerobot/HGM/hei_rebot_lift_task1 \
+  --resume --num-episodes 5
+```
+
+Use the actual path printed by `Dataset ready at ...` if your cache location is
+different. Keep camera names, shapes, and FPS consistent; use a new dataset after
+schema changes. `--num-episodes 5` adds five episodes during this run.
+
 ## 6. Visualize and Clean Data
+
+Episode indices start at zero. Back up the dataset before editing; deletion
+renumbers remaining episodes. Do not edit a dataset while recording into it.
 
 ```bash
 PYTHONPATH=src conda run --no-capture-output -n lerobot5 lerobot-dataset-viz   --repo-id HGM/hei_rebot_lift_task1   --episode-index 0
@@ -218,11 +244,24 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 lerobot-edit-dataset   
 
 ## 7. Train ACT
 
+For data recorded with a custom `--root`, add `--dataset.root=YOUR_DATASET_PATH`
+to training so it reads the correct local dataset. The repo ID must also match.
+
 ```bash
 PYTHONPATH=src conda run --no-capture-output -n lerobot5 lerobot-train   --dataset.repo_id=HGM/hei_rebot_lift_task1   --policy.type=act   --policy.device=cuda   --policy.push_to_hub=false   --output_dir=outputs/train/act_hei_rebot_lift_task1   --job_name=act_hei_rebot_lift_task1   --batch_size=8   --steps=10000   --save_freq=10000   --log_freq=200   --num_workers=4   --wandb.enable=false
 ```
 
 ## 8. Train SmolVLA
+
+Install its extra dependencies from the software root first:
+
+```bash
+conda run --no-capture-output -n lerobot5 python -m pip install -e ".[smolvla]"
+```
+
+The generic `training` extra does not include every VLA policy dependency.
+The first run may download the vision-language backbone and tokenizer; offline
+mode works only after all required files have been cached.
 
 Three-camera data is automatically mapped during rollout:
 
@@ -237,6 +276,12 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 lerobot-train   --datas
 ```
 
 ## 9. Policy Rollout
+
+Keep the host running but stop VR real publishing, teleoperation, recording,
+and replay first. Run only one command source. Check that `--model-id` points to
+an existing pretrained model directory, camera names match training, and the task
+describes the demonstrated behavior. `--fps` changes control timing, not model
+inference performance; lowering it changes how recorded trajectories are executed.
 
 ACT and SmolVLA both use `rollout.py`:
 

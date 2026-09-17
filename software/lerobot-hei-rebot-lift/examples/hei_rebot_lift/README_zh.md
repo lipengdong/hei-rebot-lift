@@ -2,6 +2,10 @@
 
 这个目录是 HEI ReBot Lift 的实机使用入口，覆盖从硬件检查、VR/MuJoCo 遥操作、数据录制、数据清洗、训练到策略推理的完整流程。
 
+除非另有说明，每个命令块都在新终端的 `software/lerobot-hei-rebot-lift/` 目录
+执行，不是在本 examples 文件夹执行。先按 [项目部署教程](../../../../README_zh.md)
+安装 LeRobot 环境。
+
 机器人驱动代码在：
 
 ```text
@@ -41,7 +45,7 @@ VR_mujoco_ik/             Telegrip + MuJoCo + Pinocchio IK 一体化 VR 控制�
 终端 4：record.py 录制数据
 ```
 
-默认机器人 IP：
+机器人 IP 示例（不同脚本默认值可能不同，建议始终传入 `--remote-ip`）：
 
 ```text
 192.168.31.127
@@ -57,12 +61,12 @@ VR_mujoco_ik/             Telegrip + MuJoCo + Pinocchio IK 一体化 VR 控制�
 2. 启动 `hei-rebot-lift-host`，等待升降 homing 完成。
 3. 电脑端启动 `VR_mujoco_ik/run_telegrip.sh`。
 4. VR 头显访问 `https://电脑IP:8443` 并进入 VR。
-5. 电脑端启动 `VR_mujoco_ik/run_hei_robot_vr_real.sh --enable-real-publish`。
-6. 先跑 `teleoperate.py` 确认双臂、底盘、升降方向正确。
-7. 跑 `record.py` 录制数据。
+5. 先跑 `teleoperate.py` 提供实机反馈，它会等待 VR 动作。
+6. 启动 `VR_mujoco_ik/run_hei_robot_vr_real.sh --enable-real-publish`，同时松开两侧 grip，等待 `command bridge ARMED`，再缓慢检查各模块方向。
+7. 停止 `teleoperate.py` 后跑 `record.py`；反馈恢复后松开两侧 grip 重新解锁。
 8. 用 `lerobot-dataset-viz` 检查数据，必要时用 `lerobot-edit-dataset` 删除坏 episode。
 9. 训练 ACT 或 SmolVLA。
-10. 用 `rollout.py` 上机推理。
+10. 停止 VR 真机发布与录制，保留 host，再用 `rollout.py` 上机推理。
 
 ## 1. 硬件检查
 
@@ -190,7 +194,10 @@ cd examples/hei_rebot_lift/VR_mujoco_ik
 ./run_hei_robot_vr_real.sh --enable-real-publish
 ```
 
-左右 VR grip 都松开过一次后，真机发布才会解锁。如需使用原双臂模型，仍可执行 `./run_mujoco_ik.sh`。
+另开一个终端运行 `teleoperate.py` 或 `record.py`，为 `6559` 提供新鲜反馈。
+同时收到 VR 数据后，松开左右 grip 并等待 `command bridge ARMED`，仅松握把
+不能跳过反馈条件。如需使用原双臂模型，执行 `./run_mujoco_ik.sh`，不能与完整
+模型真机桥接同时运行。
 
 默认链路：
 
@@ -218,6 +225,9 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_
 - 升降最终发送的是目标高度 `height.pos`，不是速度积分。
 
 ## 5. 录制数据
+
+先停止 `teleoperate.py`，两者不能同时运行，否则会争用反馈端口与机器人控制。
+反馈恢复后松开两侧 grip，重新解锁真机桥接。
 
 新建数据集：
 
@@ -250,7 +260,12 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_
 
 注意：如果相机数量或名字变了，比如从 `front/wrist` 改成 `front/left_wrist/right_wrist`，不要 resume 到旧数据集，应该新建 repo-id。
 
+`--root` 请以日志 `Dataset ready at ...` 输出的实际目录为准；续录需保持相机
+字段、图像尺寸和 FPS 一致。`--num-episodes 5` 表示本次新增五集。
+
 ## 6. 查看和清洗数据
+
+episode 编号从零开始。编辑前另做备份，录制过程中不要同时编辑该数据集。
 
 可视化某一集：
 
@@ -300,6 +315,14 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 lerobot-train \
 
 ## 8. 训练 SmolVLA
 
+先在软件根目录安装该策略额外依赖：
+
+```bash
+conda run --no-capture-output -n lerobot5 python -m pip install -e ".[smolvla]"
+```
+
+通用 `training` 安装项不包含所有 VLA 的专用依赖。
+
 SmolVLA 是当前更适合继续尝试的 VLA 路线。三相机数据会在 rollout 时自动映射：
 
 ```text
@@ -338,6 +361,10 @@ export HF_DATASETS_OFFLINE=1
 ```
 
 ## 9. 策略推理
+
+保留机器人 host，但先停止 VR 真机命令发布、遥操作、录制与回放；同一时间
+只保留一个控制源。确认 `--model-id` 目录存在、相机名称与训练一致、任务描述
+符合演示内容。`--fps` 改变执行时序，不会加快模型推理；降低它也会改变轨迹节奏。
 
 ACT 或 SmolVLA 都可以用 `rollout.py`。
 

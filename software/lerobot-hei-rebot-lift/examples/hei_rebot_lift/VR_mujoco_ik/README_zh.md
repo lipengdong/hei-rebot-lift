@@ -23,6 +23,11 @@ VR_mujoco_ik/
 
 ## 一体化环境部署
 
+以下以 `cd examples/...` 开头的命令块，均在新终端的
+`software/lerobot-hei-rebot-lift/` 目录执行。不带 `cd` 的命令默认已进入
+`VR_mujoco_ik/`。启动脚本自动激活 `hei-rebot-vr`；直接运行 Python 检查命令时
+需要手动激活。LeRobot 客户端仍使用独立的 `lerobot5` 环境。
+
 建议只保留一个 conda 环境，不再分 `VR_Telegrip` 和 `mujoco_vr` 两套。
 
 ```bash
@@ -40,6 +45,7 @@ conda env update -n hei-rebot-vr -f environment.yml --prune
 验证：
 
 ```bash
+conda activate hei-rebot-vr
 env -u LD_LIBRARY_PATH python -c "import pinocchio as pin; from pinocchio import casadi as cpin; print(pin.__version__); print('casadi binding ok')"
 ```
 
@@ -47,7 +53,7 @@ env -u LD_LIBRARY_PATH python -c "import pinocchio as pin; from pinocchio import
 
 ## 启动流程
 
-根据需要打开两到三个终端。
+纯仿真通常两个终端；真机还需机器人 host 和一个电脑客户端，共四个终端。
 
 ### 1. 启动 Telegrip
 
@@ -118,9 +124,10 @@ cd examples/hei_rebot_lift/VR_mujoco_ik
 底盘与升降操作步骤：
 
 1. 右侧 `grip` 是底盘使能键。保持右侧 `grip`，使用右摇杆控制前后与横移；使用
-   右手 `B` 或左手 `Y` 控制旋转。松开右侧 `grip` 后底盘立即停止。
+   右手 `B` 或左手 `Y` 控制旋转。松开右侧 `grip` 立即清除运动请求；实机减速
+   仍受 host 加减速限制和硬件响应影响，不代表瞬间机械停止。
 2. 左侧 `grip` 是升降使能键。保持左侧 `grip`，前后推动左摇杆控制上升和下降；
-   松开左侧 `grip` 后升降停止并保持当前目标高度。
+   松开左侧 `grip` 后停止升降请求；真机客户端以最新反馈高度作为保持目标。
 3. 控制机械臂但不希望底盘或升降运动时，保持相应摇杆处于中心位置。
 
 真机首次使用与恢复：
@@ -162,7 +169,16 @@ cd examples/hei_rebot_lift/VR_mujoco_ik
 真机模式只加载完整机器人 URDF，用于逆解计算和实机状态显示；不会加载仿真地面、
 桌子、可抓取物体及其他调试场景元素。真机模式的升降显示速度默认为约
 `0.0286 m/s`，对应当前 `18 rad/s` 电机限速和 `10 mm/rev` 丝杆导程；硬件参数
-变化后可用 `--lift-speed-m-s VALUE` 覆盖。单独仿真仍保留原来的 `0.20 m/s` 默认值。
+对应的是**满摇杆时的理论最高速**，不是全过程实测同步。硬件参数变化后可用
+`--lift-speed-m-s VALUE` 覆盖显示速度；这个参数不会改变电机转速。
+单独仿真仍保留原来的 `0.20 m/s` 默认值。
+
+真机桥接发布的是 `height_axis`，不是仿真高度。LeRobot 客户端结合机器人反馈
+高度生成毫米单位的 `action["height.pos"]`，host 再根据高度误差控制电机速度。
+解锁后，viewer 主要按摇杆积分显示，不会持续用实测高度校正，因此半摇杆响应、
+加减速、网络延迟和负载都会造成显示与实机不一致。它是控制可视化，不是全过程
+同步的数字孪生。单位和丝杆换算详见
+[机器人驱动说明](../../../src/lerobot/robots/hei_rebot_lift/README_zh.md)。
 
 程序同时收到新鲜的实机反馈，以及一帧“两个 grip 都已松开”的新鲜 Telegrip
 数据后，才会解锁真机发布。解锁前，MuJoCo 会先同步实测的双臂、夹爪和升降位置，
@@ -173,7 +189,7 @@ VR 数据或实机反馈任意一路超时，程序都会先发送底盘/升降�
 连接恢复后，必须重新松开左右两个 grip，完成同步后才能再次解锁。终端日志中的
 `feedback=<延迟>` 和 `bridge=locked/armed` 可用于判断当前阶段。
 
-`--allow-no-feedback` 只用于兼容旧流程，它会跳过实机姿态同步，解锁后机械臂可能
+`--allow-no-feedback` 只用于兼容旧流程，它会跳过实机姿态同步和反馈新鲜度检查，解锁后机械臂可能
 直接追向仿真启动姿态，因此不建议在真实硬件上使用。
 
 首次实机测试建议架起底盘轮子，让升降远离上下限位，每次只测一条手臂且减小动作幅度。
@@ -181,6 +197,11 @@ VR 数据或实机反馈任意一路超时，程序都会先发送底盘/升降�
 实机反馈超时时，底盘和升降会停止，机械臂保持最后关节目标。
 
 ### 2C. 启动原有双臂实机 MuJoCo IK 链路
+
+此入口与完整模型真机桥接**二选一**，不能同时发布到 `6558`。
+`teleoperate.py` 与 `record.py` 也只能运行一个，因为它们都在 `6559` 发布反馈。
+录制前停止遥操作；反馈恢复后松开两侧 grip 重新解锁。回放或策略推理前，应停止
+VR 真机发布及其他电脑端机器人控制程序。
 
 同一台电脑另一个终端：
 
@@ -198,6 +219,7 @@ cd examples/hei_rebot_lift/VR_mujoco_ik
 5567  Telegrip 发布 VR 数据，MuJoCo IK 订阅
 6558  MuJoCo IK 发布动作，LeRobot record 订阅
 6559  teleoperate.py/record.py 发布实机状态，供启动姿态同步
+6555  LeRobot 客户端向 host 发送机器人控制命令
 6556  机器人图像流，Telegrip 可选订阅显示
 ```
 
@@ -217,6 +239,13 @@ vr_images:
   endpoint: tcp://机器人IP:6556
 ```
 
+LeRobot 脚本的 `--remote-ip` 不会自动更新此 YAML 地址，机器人换 IP 时两处都要
+检查。`6556` 是 host 的观测/图像通道，不是 Telegrip 的 `5567` VR 位姿通道。
+
+真机桥接默认 VR 超时和反馈超时均为 `1.0 s`；host 另有 `1000 ms` 命令看门狗。
+它们保护不同链路，不能代替急停。IK 工作空间投影与关节限位也不等于碰撞检测或
+过载保护。
+
 三路图像 key 默认是：
 
 ```text
@@ -232,6 +261,7 @@ right_wrist
 优先用下面命令验证：
 
 ```bash
+conda activate hei-rebot-vr
 env -u LD_LIBRARY_PATH python -c "import pinocchio as pin; from pinocchio import casadi as cpin; print(pin.__version__)"
 ```
 
@@ -252,10 +282,38 @@ https://电脑IP:8443
 常见是旧的 Telegrip 或 MuJoCo IK 没关。查端口：
 
 ```bash
-ss -ltnp | grep -E '8443|8442|5567|6558'
+ss -ltnp | rg ':(8443|8442|5567|6555|6556|6558|6559)\b'
 ```
 
 关掉旧进程后重新启动。
+
+### 真机发布锁定
+
+`Real command publishing is locked` 表示缺少明确的安全确认参数。检查工作区与
+急停后，用 `./run_hei_robot_vr_real.sh --enable-real-publish` 启动。
+如果窗口已打开但显示 `bridge=locked`，检查 Telegrip、host，以及一个已运行的
+客户端（`teleoperate.py` 或 `record.py`），再同时松开两侧 grip。不要通过跳过
+反馈检查解决网络连接问题。
+
+### 自检与参数位置
+
+在 `VR_mujoco_ik/` 目录执行，以下检查不发布真机命令：
+
+```bash
+./run_hei_robot_vr_sim.sh --headless-check
+./run_hei_robot_vr_real.sh --headless-check
+conda run --no-capture-output -n hei-rebot-vr python -m unittest discover -s mujoco_ik/tests -p 'test_*.py' -v
+```
+
+| 参数 | 所在文件 | 生效范围 |
+| --- | --- | --- |
+| 电机增益/限速、丝杆导程/加速度、相机 | 软件根目录下 `src/lerobot/robots/hei_rebot_lift/config_hei_rebot_lift.py` | 机器人 host；修改后重启 host |
+| 完整模型 IK 判断与工作空间投影 | `mujoco_ik/hei_robot_vr_mujoco_sim.py` | 完整模型仿真与真机桥接共用 |
+| 实机反馈/VR 超时、升降显示速度 | `mujoco_ik/hei_robot_vr_mujoco_real.py` 及命令行选项 | 电脑端真机桥接 |
+| VR 相机地址与图像显示 | `telegrip/config.yaml` | Telegrip；与机器人相机采集配置分开 |
+
+`IK_TARGET_MAX_POSITION_ERROR_M` 当前为 `0.100 m`，是接受 IK 解的误差阈值，
+不表示末端控制精度能达到该值；调大后，请求目标与实际执行目标可能相差更多。
 
 ### LeRobot 录制没有动作
 

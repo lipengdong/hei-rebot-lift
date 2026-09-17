@@ -119,6 +119,36 @@ lift_max_height_mm = 0.0
 
 也就是上限位为 `0`，向下为负值。
 
+`height.pos` 的单位是**毫米**。电机底层使用 `VEL` 速度模式，由 host 在软件中
+实现外层位置闭环：高度误差转换成速度，再限速、限加速度并检查 IO 限位。
+这不是电机自身的位置模式。高度来自回零后电机位置反馈，不是靠摇杆时间估算。
+
+### 速度单位与 1610 丝杆
+
+配置文件：[config_hei_rebot_lift.py](config_hei_rebot_lift.py)。当前 1610 丝杆
+导程为 `10 mm/rev`。以下换算假设电机输出轴与丝杆 1:1 连接；若增加传动比，
+需要额外换算。
+
+```text
+转速 rpm = 角速度 rad/s * 60 / (2 * pi)
+线速度 mm/s = 角速度 rad/s * 导程 mm/rev / (2 * pi)
+18 rad/s = 171.89 rpm = 28.65 mm/s（导程 10 mm/rev）
+200 rpm = 20.94 rad/s = 33.33 mm/s（仅单位换算，不是推荐设置）
+```
+
+| 参数 | 当前默认值 | 含义 |
+| --- | --- | --- |
+| `lift_lead_mm_per_rev` | `10.0` | 电机输出轴每转对应的毫米数 |
+| `lift_max_speed_rad_s` | `18.0` | 电机角速度上限，单位 rad/s |
+| `lift_max_accel_rad_s2` | `30.0` | 电机角加速度限制 |
+| `lift_position_kp_rad_s_per_mm` | `0.45` | 每毫米高度误差对应的速度请求 |
+| `lift_position_tolerance_mm` | `1.0` | 高度误差死区 |
+
+这些参数在**机器人端**生效，修改后重启 host。电机空载最高转速不等于带载持续
+工作转速，提高限速前要验证负载、温度、供电和限位停止行为。真机 VR 程序中的
+`--lift-speed-m-s` 只改显示速度，具体限制见
+[VR 说明](../../../../examples/hei_rebot_lift/VR_mujoco_ik/README_zh.md)。
+
 ## 机器人端 host
 
 机器人端启动：
@@ -166,10 +196,29 @@ gripper_current
 
 机械臂软件限位：
 
+关节 1-6 使用 `POS_VEL` 模式，连接时尝试写入 `KP_APR`、`ACC` 和 `DEC`。
+六元素元组依次对应关节 1-6，左右臂共用。`arm_velocity_limit_rad_s` 是位置/速度
+命令的速度限制，`arm_kp_apr` 是电机位置环增益，不是 IK 权重或 MIT 模式刚度。
+这里并没有设置完整的位置 PID（未配置 I/D 项）。当前固件的 `arm_dec` 必须为
+负数；写入失败意味着期望配置可能未生效，测试前应检查启动警告。
+
 ```python
 right_arm_min_rad / right_arm_max_rad
 left_arm_min_rad / left_arm_max_rad
 ```
+
+当前值如下，部署时以配置文件为准：
+
+```python
+arm_velocity_limit_rad_s = (3.0, 3.0, 3.0, 1.8, 2.5, 2.5)
+arm_kp_apr = (150.0, 200.0, 200.0, 45.0, 50.0, 50.0)
+arm_acc = (2.0, 2.0, 2.0, 2.0, 2.0, 2.0)
+arm_dec = (-2.0, -2.0, -2.0, -2.0, -2.0, -2.0)
+```
+
+这组参数不作用于第七个夹爪电机；夹爪使用 `Torque_Pos` 和独立的
+`gripper_force_velocity` / `gripper_current` 命令。增益和电流不是越大越好，
+调参先空载小幅测试。
 
 ## 相关目录
 

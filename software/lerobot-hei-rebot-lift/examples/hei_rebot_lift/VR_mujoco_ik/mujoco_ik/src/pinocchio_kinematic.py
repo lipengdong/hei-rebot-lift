@@ -236,7 +236,6 @@ class Kinematics:
         self.param_tf = self.opti.parameter(4, 4)
         self.translational_cost = casadi.sumsqr(self.translational_error(self.var_q, self.param_tf))
         self.rotation_cost = casadi.sumsqr(self.rotational_error(self.var_q, self.param_tf))
-        self.regularization_cost = casadi.sumsqr(self.var_q)
         smooth_weight_matrix = casadi.diag(casadi.DM(self._smooth_weights()))
         weighted_smooth_error = casadi.mtimes(
             smooth_weight_matrix,
@@ -253,7 +252,6 @@ class Kinematics:
         self.opti.minimize(
             20.0 * self.translational_cost
             + 0.01 * self.rotation_cost
-            + 0.00 * self.regularization_cost
             + _env_float("IK_SMOOTH_COST_WEIGHT", IK_SMOOTH_COST_WEIGHT) * self.smooth_cost
         )
 
@@ -286,6 +284,8 @@ class Kinematics:
         return tf
       
     def ik(self, T , current_arm_motor_q = None, current_arm_motor_dq = None):
+        # 当前遥操作只发送位置目标；保留速度参数和零力矩字段以兼容旧调用接口。
+        # sol_tauff 不代表重力补偿力矩，此处不执行 RNEA 动力学计算。
         fallback_q = current_arm_motor_q
         if current_arm_motor_q is not None:
             self.init_data = self._to_model_q(current_arm_motor_q)
@@ -296,27 +296,15 @@ class Kinematics:
         self.opti.set_value(self.var_q_last, self.init_data) # for smooth
 
         try:
-            sol = self.opti.solve()
-            # sol = self.opti.solve_limited()
+            self.opti.solve()
 
             raw_sol_q = self.opti.value(self.var_q)
             sol_q, clamped = self._limit_joint_step(raw_sol_q, current_model_q)
-            # self.smooth_filter.add_data(sol_q)
-            # sol_q = self.smooth_filter.filtered_data
-
-            if current_arm_motor_dq is not None:
-                v = self._to_model_q(current_arm_motor_dq) * 0.0
-            else:
-                v = (sol_q - self.init_data) * 0.0
-
             self.init_data = sol_q
-
-            sol_tauff = pin.rnea(self.model, self.data, sol_q, v, np.zeros(self.model.nv))
-            sol_tauff = np.concatenate([sol_tauff, np.zeros(self.model.nq - sol_tauff.shape[0])], axis=0)
             
             # 返回裁剪前的解，避免上层把一次大幅换解误判为连续的多个小步。
             info = {
-                "sol_tauff": sol_tauff,
+                "sol_tauff": np.zeros(self.model.nq),
                 "success": True,
                 "clamped": clamped,
                 "raw_solution": self._to_full_q(raw_sol_q, fallback_q),
@@ -329,25 +317,12 @@ class Kinematics:
             print(f"ERROR in convergence, plotting debug info.{e}")
 
             sol_q = self.opti.debug.value(self.var_q)
-            # self.smooth_filter.add_data(sol_q)
-            # sol_q = self.smooth_filter.filtered_data
-
-            if current_arm_motor_dq is not None:
-                v = self._to_model_q(current_arm_motor_dq) * 0.0
-            else:
-                v = (sol_q - self.init_data) * 0.0
-
             self.init_data = sol_q
-
-            sol_tauff = pin.rnea(self.model, self.data, sol_q, v, np.zeros(self.model.nv))
-            # import ipdb; ipdb.set_trace()
-            sol_tauff = np.concatenate([sol_tauff, np.zeros(self.model.nq - sol_tauff.shape[0])], axis=0)
 
             print(f"sol_q:{sol_q} \nmotorstate: \n{current_arm_motor_q} \ntarget_pose: \n{T}")
 
-            info = {"sol_tauff": sol_tauff * 0.0, "success": False, "clamped": False}
+            info = {"sol_tauff": np.zeros(self.model.nq), "success": False, "clamped": False}
 
-            dof = np.zeros(self.model.nq)
             if current_arm_motor_q is not None:
                 dof = self._to_full_q(self._to_model_q(current_arm_motor_q), current_arm_motor_q)
                 self.init_data = self._to_model_q(current_arm_motor_q)

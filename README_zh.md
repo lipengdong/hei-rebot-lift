@@ -96,7 +96,8 @@ hei-rebot-lift/
 software/lerobot-hei-rebot-lift/
 ```
 
-后续所有运行命令默认先进入这个目录：
+快速部署从项目根目录开始；后续各章节的命令块均在新终端、项目根目录执行，
+每段自行进入对应目录。软件目录为：
 
 ```bash
 cd software/lerobot-hei-rebot-lift
@@ -188,8 +189,10 @@ pip install -e ".[hardware,pyzmq-dep]"
 
 创建 VR/MuJoCo IK 环境：
 
+接着上一段，当前目录应为 `software/lerobot-hei-rebot-lift/`，不要再次进入软件目录。
+
 ```bash
-cd software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik
+cd examples/hei_rebot_lift/VR_mujoco_ik
 conda env create -f environment.yml
 ```
 
@@ -229,6 +232,10 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 lerobot-find-cameras
 
 ## 🎮 启动流程
 
+以下每个启动命令块都在**新终端、项目根目录**执行。`192.168.31.127` 是机器人
+IP 示例，请替换为实际地址；头显访问的是电脑 IP。先清空工作区并确认急停可用，
+因为 host 启动后升降会自动上行归零，归零完成后再操作。
+
 机器人端启动 host：
 
 ```bash
@@ -249,23 +256,30 @@ VR 头显访问：
 https://电脑IP:8443
 ```
 
-电脑端启动完整模型 MuJoCo IK 真机桥接：
+电脑端先启动遥操作客户端，提供实机反馈（它会等待 VR 动作）：
+
+```bash
+cd software/lerobot-hei-rebot-lift
+PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/teleoperate.py --remote-ip 192.168.31.127
+```
+
+再用新终端启动完整模型 MuJoCo IK 真机桥接：
 
 ```bash
 cd software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik
 ./run_hei_robot_vr_real.sh --enable-real-publish
 ```
 
-左右 VR grip 都松开过一次后，真机发布才会解锁。原双臂模型仍可使用 `./run_mujoco_ik.sh`。
-
-遥操作测试：
-
-```bash
-cd software/lerobot-hei-rebot-lift
-PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/teleoperate.py   --remote-ip 192.168.31.127
-```
+收到新鲜实机反馈和 VR 数据后，**同时松开左右 grip**，等待终端出现
+`command bridge ARMED`。`--enable-real-publish` 只是确认允许发布真机命令，
+不会跳过同步检查。纯仿真用 `./run_hei_robot_vr_sim.sh`；原双臂入口仍为
+`./run_mujoco_ik.sh`。手柄用法、恢复流程及升降显示限制见
+[VR 使用教程](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/README_zh.md)。
 
 ## 📷 录制数据
+
+先停止 `teleoperate.py`，再运行 `record.py`：两者都接收动作并发布实机反馈，
+**不能同时运行**。host 和 Telegrip 保持运行；反馈重连后松开两侧 grip 重新解锁。
 
 ```bash
 cd software/lerobot-hei-rebot-lift
@@ -283,12 +297,25 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 lerobot-train   --datas
 
 ## ✨ 训练 SmolVLA
 
+先在项目根目录的新终端安装该策略的额外依赖：
+
+```bash
+cd software/lerobot-hei-rebot-lift
+conda run --no-capture-output -n lerobot5 python -m pip install -e ".[smolvla]"
+```
+
+通用 `training` 安装项不包含所有 VLA 策略的专用依赖。
+
 ```bash
 cd software/lerobot-hei-rebot-lift
 PYTHONPATH=src conda run --no-capture-output -n lerobot5 lerobot-train   --dataset.repo_id=HGM/hei_rebot_lift_task1   --policy.type=smolvla   --policy.device=cuda   --policy.push_to_hub=false   --output_dir=outputs/train/smolvla_hei_rebot_lift_task1   --job_name=smolvla_hei_rebot_lift_task1   --batch_size=1   --steps=1000   --save_freq=1000   --log_freq=50   --num_workers=2   --wandb.enable=false
 ```
 
 ## 🤖 实机推理
+
+保留机器人 host，但先停止 VR 真机命令发布、遥操作、录制和回放进程，
+**同一时间只保留一个机器人控制源**。确认模型目录存在、相机名称与训练数据
+一致，先在空工作区做短时间测试。
 
 ACT 推理：
 
@@ -306,12 +333,10 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_
 
 ## 📖 更多文档
 
-```text
-software/lerobot-hei-rebot-lift/README.md
-software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README.md
-software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/README.md
-software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/README.md
-```
+- [文档导航](docs/README_zh.md)
+- [录制、续录、训练与推理](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README_zh.md)
+- [机器人配置、升降单位与看门狗](software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/README_zh.md)
+- [VR 部署、手柄教程与自检](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/README_zh.md)
 
 ## 🙏 References & Acknowledgments
 

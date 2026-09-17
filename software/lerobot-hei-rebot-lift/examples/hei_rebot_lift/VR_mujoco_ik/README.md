@@ -23,6 +23,12 @@ VR_mujoco_ik/
 
 ## Environment Setup
 
+Each block beginning with `cd examples/...` starts in a new terminal at
+`software/lerobot-hei-rebot-lift/`. Commands without `cd` assume you are already
+in `VR_mujoco_ik/`. The wrappers activate `hei-rebot-vr` automatically; direct
+Python commands need explicit activation. The LeRobot client uses a separate
+`lerobot5` environment.
+
 Use one shared conda environment instead of separate `VR_Telegrip` and `mujoco_vr` environments.
 
 ```bash
@@ -39,6 +45,7 @@ conda env update -n hei-rebot-vr -f environment.yml --prune
 Verify Pinocchio + CasADi:
 
 ```bash
+conda activate hei-rebot-vr
 env -u LD_LIBRARY_PATH python -c "import pinocchio as pin; from pinocchio import casadi as cpin; print(pin.__version__); print('casadi binding ok')"
 ```
 
@@ -115,8 +122,8 @@ Arm and gripper procedure:
 
 Chassis and lift procedure:
 
-1. Right `grip` enables the chassis. Hold it while using the right stick for translation and right `B` or left `Y` for rotation. Releasing right `grip` stops the chassis immediately.
-2. Left `grip` enables the lift. Hold it while moving the left stick forward/backward to raise/lower the platform. Releasing left `grip` stops lift motion and preserves the current target height.
+1. Right `grip` enables the chassis. Hold it while using the right stick for translation and right `B` or left `Y` for rotation. Releasing right `grip` immediately clears the motion request; physical braking still depends on host acceleration limits and hardware.
+2. Left `grip` enables the lift. Hold it while moving the left stick forward/backward to raise/lower the platform. Releasing left `grip` stops the lift request; the real client holds the latest reported height.
 3. Keep the corresponding stick centered when moving an arm without intending to move the chassis or lift.
 
 First real-robot use and recovery:
@@ -158,8 +165,20 @@ Real-robot mode loads only the complete robot URDF for IK and state
 visualization. It does not load the simulation floor, table, graspable objects,
 or other debug-scene elements. Its lift visualization defaults to about
 `0.0286 m/s`, matching the current `18 rad/s` motor limit and `10 mm/rev` lead
-screw. Override it with `--lift-speed-m-s VALUE` after changing the physical
-lift parameters. Standalone simulation keeps its original `0.20 m/s` default.
+screw's **theoretical full-stick speed cap**, not continuous measured motion.
+Override the viewer with `--lift-speed-m-s VALUE` after changing the physical
+lift parameters; this flag does not change motor speed. Standalone simulation
+keeps its original `0.20 m/s` default.
+
+The real bridge publishes `height_axis`, not the simulated lift height. The
+LeRobot client combines that axis with reported robot height to produce
+`action["height.pos"]` in millimeters; the host then regulates motor velocity.
+After arming, the viewer integrates joystick input rather than continuously
+correcting to measured lift height. Partial-stick response, acceleration,
+latency, and load can therefore differ from the physical lift. The model is a
+control visualization, not a continuously synchronized digital twin. See the
+[driver guide](../../../src/lerobot/robots/hei_rebot_lift/README.md) for units and
+the lead-screw conversion.
 
 Real publishing remains locked until it receives fresh robot feedback and a
 fresh Telegrip frame with both grip buttons released. The MuJoCo model is first
@@ -173,7 +192,8 @@ chassis/lift packet and returns to the locked state. After the connection
 recovers, release both grip buttons to synchronize and arm again. The console
 shows `feedback=<age>` and `bridge=locked/armed` for diagnosis.
 
-For compatibility only, `--allow-no-feedback` bypasses startup synchronization.
+For compatibility only, `--allow-no-feedback` bypasses startup synchronization
+and robot-feedback freshness checks.
 This mode can move the arms toward the simulated startup pose as soon as the
 bridge is armed and is not recommended for hardware operation.
 
@@ -184,6 +204,13 @@ the viewer or losing either safety stream stops chassis/lift commands; the arms
 hold their latest joint targets.
 
 ### 2C. Start the Existing Dual-Arm Real-Robot Pipeline
+
+Use this **instead of**, not alongside, the complete-model real bridge.
+Only one process may publish actions on `6558`, and only one of
+`teleoperate.py` / `record.py` may publish feedback on `6559`. Stop
+`teleoperate.py` before recording; after feedback reconnects, release both grips
+to re-arm. For replay or policy rollout, stop VR command publishing and all
+other computer-side robot controllers first.
 
 ```bash
 cd examples/hei_rebot_lift/VR_mujoco_ik
@@ -198,6 +225,7 @@ cd examples/hei_rebot_lift/VR_mujoco_ik
 5567  Telegrip publishes VR data, MuJoCo IK subscribes
 6558  MuJoCo IK publishes actions, LeRobot record subscribes
 6559  teleoperate.py/record.py publishes real robot state for startup synchronization
+6555  LeRobot client sends robot commands to the host
 6556  Robot image stream, optionally displayed in Telegrip
 ```
 
@@ -217,6 +245,15 @@ vr_images:
   endpoint: tcp://ROBOT_IP:6556
 ```
 
+`--remote-ip` on the LeRobot scripts does not update this YAML endpoint. Set both
+when the robot IP changes. Port `6556` carries host observations and images;
+it is not the Telegrip VR pose publisher on `5567`.
+
+The real bridge defaults to a `1.0 s` VR timeout and a `1.0 s` feedback timeout;
+the robot host separately uses a `1000 ms` command watchdog. These check different
+links and do not replace the emergency stop. IK workspace projection and joint
+limits are not collision avoidance or overload protection.
+
 Default image keys:
 
 ```text
@@ -230,6 +267,7 @@ right_wrist
 ### MuJoCo/Pinocchio Import Failure
 
 ```bash
+conda activate hei-rebot-vr
 env -u LD_LIBRARY_PATH python -c "import pinocchio as pin; from pinocchio import casadi as cpin; print(pin.__version__)"
 ```
 
@@ -248,10 +286,40 @@ Do not use `http`.
 ### Port Already in Use
 
 ```bash
-ss -ltnp | grep -E '8443|8442|5567|6558'
+ss -ltnp | rg ':(8443|8442|5567|6555|6556|6558|6559)\b'
 ```
 
 Stop old Telegrip/MuJoCo IK processes and restart.
+
+### Real Publishing Is Locked
+
+`Real command publishing is locked` means the explicit safety flag is missing.
+After checking the workspace and emergency stop, use
+`./run_hei_robot_vr_real.sh --enable-real-publish`. If the viewer starts but shows
+`bridge=locked`, check Telegrip data, the host, and one running client
+(`teleoperate.py` or `record.py`), then release both grips together. Do not bypass
+feedback checks to solve a connection problem.
+
+### Self-Checks and Parameter Locations
+
+Run these from `VR_mujoco_ik/`; they do not publish real commands:
+
+```bash
+./run_hei_robot_vr_sim.sh --headless-check
+./run_hei_robot_vr_real.sh --headless-check
+conda run --no-capture-output -n hei-rebot-vr python -m unittest discover -s mujoco_ik/tests -p 'test_*.py' -v
+```
+
+| Setting | Location | Scope |
+| --- | --- | --- |
+| Motor gains, velocity limits, lift lead and acceleration, cameras | `src/lerobot/robots/hei_rebot_lift/config_hei_rebot_lift.py` (software root) | Robot host; restart host after changes |
+| Shared complete-model IK guard and workspace projection | `mujoco_ik/hei_robot_vr_mujoco_sim.py` | Complete-model simulation and real bridge |
+| Real feedback/VR timeout and lift viewer speed | `mujoco_ik/hei_robot_vr_mujoco_real.py` / its CLI options | Computer-side real bridge |
+| VR camera endpoint and image streaming | `telegrip/config.yaml` | Telegrip; separate from host camera capture settings |
+
+`IK_TARGET_MAX_POSITION_ERROR_M` currently allows `0.100 m` position error.
+This is a solution-acceptance tolerance, not a TCP accuracy guarantee. Raising
+it can permit a larger gap between requested and executed targets.
 
 ### LeRobot Recording Has No Actions
 
