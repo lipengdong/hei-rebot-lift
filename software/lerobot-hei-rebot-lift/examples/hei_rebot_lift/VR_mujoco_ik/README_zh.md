@@ -74,6 +74,10 @@ https://电脑IP:8443
 
 ### 2A. 先用完整模型测试 VR 仿真
 
+<p align="center">
+  <img src="../../../../../media/robot-mujoco.png" alt="HEI ReBot Lift MuJoCo VR 仿真场景" width="85%">
+</p>
+
 先启动 Telegrip，然后在另一个终端执行：
 
 ```bash

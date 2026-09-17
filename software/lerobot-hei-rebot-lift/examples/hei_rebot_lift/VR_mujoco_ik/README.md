@@ -68,6 +68,10 @@ For the first visit to the self-signed HTTPS page, manually continue in the brow
 
 ### 2A. Test VR With the Complete Robot Model
 
+<p align="center">
+  <img src="../../../../../media/robot-mujoco.png" alt="HEI ReBot Lift VR simulation in MuJoCo" width="85%">
+</p>
+
 Start Telegrip first, then open another terminal:
 
 ```bash

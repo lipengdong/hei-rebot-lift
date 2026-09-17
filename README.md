@@ -224,8 +224,6 @@ python -m pip show pyzmq rerun-sdk pynput datasets accelerate
 This includes dataset recording/editing, Rerun visualization, keyboard input,
 ZMQ, and general training dependencies. Install SmolVLA-specific dependencies
 in its training section below. Skip creation if `lerobot5` already exists.
-The module is imported as `zmq`, but the package name is `pyzmq`; do not install
-the unrelated `zmq` package.
 
 ### 3. Your Computer: VR/MuJoCo IK
 
@@ -342,6 +340,10 @@ robot to the same mutually reachable LAN. **Run each block in a new terminal at
 the repository root on the specified machine.** Keep long-running processes open.
 
 ### 0. Beginner Practice: Computer-Side Pure Simulation (No Hardware)
+
+<p align="center">
+  <img src="media/robot-mujoco.png" alt="HEI ReBot Lift VR simulation in MuJoCo" width="85%">
+</p>
 
 Install `hei-rebot-vr` first. **Do not start the robot host, `teleoperate.py`,
 `record.py`, or the real bridge during practice; stop them if already running.**

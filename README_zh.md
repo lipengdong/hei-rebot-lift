@@ -216,7 +216,6 @@ python -m pip show pyzmq rerun-sdk pynput datasets accelerate
 
 该安装包含数据集录制/编辑、Rerun 可视化、键盘输入、ZMQ 和通用策略训练依赖。
 SmolVLA 专用依赖在后面的训练章节另行安装。已有 `lerobot5` 时跳过创建步骤。
-Python 中使用 `import zmq`，正确安装包名是 `pyzmq`，不要安装无关的 `zmq` 占位包。
 
 ### 3. 自己的电脑：VR/MuJoCo IK 安装
 
@@ -324,6 +323,10 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 lerobot-find-cameras
 **每个命令块都在指定机器的新终端、项目根目录执行**；长时间运行的进程不要关闭。
 
 ### 0. 新手先练习：电脑端纯仿真（不连接真机）
+
+<p align="center">
+  <img src="media/robot-mujoco.png" alt="HEI ReBot Lift MuJoCo VR 仿真场景" width="85%">
+</p>
 
 先完成 `hei-rebot-vr` 环境安装。**这一阶段不要启动机器人 host、
 `teleoperate.py`、`record.py` 或真机桥接程序**；若它们已运行，先停止。
