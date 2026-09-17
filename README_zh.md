@@ -280,13 +280,120 @@ ls -l /dev/hei_right_arm /dev/hei_left_arm /dev/hei_chassis /dev/hei_lift /dev/h
 ```
 
 若软链接未生效，保持 USB 插口不变，重新插拔对应 USB 设备并检查。
-验证完成后，断电恢复右臂 ID 4-7 接线，再上电启动 host。规则按 USB 物理位置
+验证完成后，断电恢复右臂 ID 4-7 接线，再上电进行下面的独立硬件测试。规则按 USB 物理位置
 绑定，后续应保持驱动板连接原插口；更换插口或 USB 集线器后需重新绑定。
 
 若提示设备缺失、识别有歧义、串口忙或 IO 帧无效，先检查上电、USB/CAN 接线、
 电机 ID、串口占用及 IO 波特率，不要在未确认时强行接受映射。
 权限不足时检查用户是否具有串口访问权限（通常为 `dialout` 组）。
 首次部署使用交互模式；`--yes --install` 仅适用于接线已验证且扫描无歧义的重复绑定。
+
+### 绑定后：机械臂零位与独立硬件测试
+
+**以下全部在机器人端 Jetson 执行，不需要 VR 或电脑客户端。** 每次只运行一个
+调试程序，保持 host 和其他串口程序关闭；每个命令块从项目根目录的新终端开始。
+键盘调试建议先 `conda activate lerobot5` 再直接运行 Python，需要交互终端；
+SSH 连接时分配 TTY（如 `ssh -t 用户名@机器人IP`）。各程序使用固定位置刷新的
+状态表，便于观察，不需要滚动查找日志。准备好物理急停，软件停止键不能替代急停。
+
+#### 1. 按设计零位摆放机械臂，再写入零位
+
+**警告：`Arm_Zero_Status_Test.py` 一启动就会失能并对该臂 ID 1-7 全部写零位，
+没有确认步骤，也没有只读模式。不要在任意姿态下启动，不要把它作为日常查看
+状态的工具。** 电机失能后机械臂可能因重力下落，先支撑好双臂并清空周围空间。
+
+按装配设计与 [完整 URDF 模型](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/mujoco_ik/model/HEI_robot_urdf/)
+的关节零位定义，将待标定机械臂摆到正确的机械零位；它不是 VR 程序的默认工作
+姿态。夹爪物理零位约定为闭合（`0 rad`），不要强压夹爪。程序无法判断你摆放的
+姿态是否正确；不确定设计零位时，先核对装配资料，不要尝试写入。
+
+右臂写零位：
+
+```bash
+cd software/lerobot-hei-rebot-lift
+conda activate lerobot5
+PYTHONPATH=src python -u examples/hei_rebot_lift/debug/Arm_Zero_Status_Test.py \
+  --port /dev/hei_right_arm
+```
+
+右臂确认后按 `Ctrl+C` 退出，再摆好左臂并执行：
+
+```bash
+cd software/lerobot-hei-rebot-lift
+conda activate lerobot5
+PYTHONPATH=src python -u examples/hei_rebot_lift/debug/Arm_Zero_Status_Test.py \
+  --port /dev/hei_left_arm
+```
+
+写入后程序保持电机失能，刷新 `POS/VEL/TORQUE/ERROR`。确认 7 个电机接线及反馈
+正常，再检查零位附近的 `POS`；不能仅凭表格显示 `0` 判断电机在线或标定成功。
+`ERROR` 是驱动反馈状态码，需按对应电机协议解释，不要把所有非零值都当成故障。
+标定完成后退出程序；零位只应在装配/维修后需要重新标定时写入。
+
+#### 2. 底盘独立测试：方向、档位与四轮反馈
+
+先架起并稳固底盘，让轮子离地，确认周围没有线缆或人员。此程序只连接底盘，
+不初始化双臂、升降和相机；**四轮按底盘运动学联动，不是单个轮子点动**。
+
+```bash
+cd software/lerobot-hei-rebot-lift
+conda activate lerobot5
+PYTHONPATH=src python -u examples/hei_rebot_lift/debug/Chassis_Status_Test.py \
+  --port /dev/hei_chassis
+```
+
+| 按键 | 功能 |
+| --- | --- |
+| `1 / 2 / 3` | 低 / 中 / 高档，首次测试使用 `1` 低档 |
+| `W / S` | 前进 / 后退 |
+| `A / D` | 左移 / 右移 |
+| `Q / E` | 左转 / 右转 |
+| `Space` | 软件发送四轮零速 |
+| `X` 或 `Ctrl+C` | 退出并停止底盘 |
+
+按住或重复方向键维持运动；默认 `0.65 s` 未收到新的方向按键会清除运动请求。
+依次短按测试各方向，观察请求/反馈底盘速度、每轮目标和反馈角速度、位置、力矩
+及状态码。界面底盘速度使用驱动命令单位，不应直接当作实测 `m/s`。
+
+| 电机 ID | 轮子位置 | 面板名称 |
+| --- | --- | --- |
+| `1` | 右前 | `RF` |
+| `2` | 右后 | `RR` |
+| `3` | 左后 | `LR` |
+| `4` | 左前 | `LF` |
+
+若某轮不转、映射不符、反馈缺失或出现异常抖动，先停止并检查电机 ID、接线与
+配置，不要通过加大速度掩盖问题。离地检查通过后，再在空场地低档测试实际方向。
+需要单轮点动时应另加专用测试模式，现有程序没有该功能，不要用机械臂零位脚本
+连接底盘来代替。
+
+#### 3. 升降独立测试：回零、高度与 IO 限位
+
+**程序启动会自动向上回零。** 先确认上下限位 IO 接线正确、升降路径无障碍，
+支撑好可能在失能后下落的结构；首次测试保持急停可用。控制逻辑复用正式驱动，
+只连接升降电机和限位 IO。
+
+```bash
+cd software/lerobot-hei-rebot-lift
+conda activate lerobot5
+PYTHONPATH=src python -u examples/hei_rebot_lift/debug/Lift_Status_Test.py \
+  --motor-port /dev/hei_lift --io-port /dev/hei_lift_io --height-step-mm 5
+```
+
+| 按键 | 功能 |
+| --- | --- |
+| `I / K` | 目标高度上升 / 下降，示例每次按键改变 `5 mm` |
+| `Space` | 发送停止并以当前反馈高度作为保持目标 |
+| `H` | 重新向上回零，只在路径安全时使用 |
+| `X` 或 `Ctrl+C` | 退出，停止并失能 |
+
+上限位回零后高度为 `0 mm`，向下为负，范围 `-800～0 mm`。先小步下降再上升，
+观察当前/目标高度、误差、反馈速度、电机命令速度、IO 在线状态和上下限位。
+到达已知限位时确认对应 IO 状态正确；IO 离线、两个限位同时触发或状态不符时
+停止测试，先排查，不要靠反复撞限位确认接线。
+
+**独立测试全部完成并退出调试程序后**，再进行下面的新手仿真练习与真机启动；
+不要让调试程序与 host 同时占用串口。
 
 ### 相机映射
 

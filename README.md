@@ -294,7 +294,7 @@ ls -l /dev/hei_right_arm /dev/hei_left_arm /dev/hei_chassis /dev/hei_lift /dev/h
 
 If a symlink is missing, reconnect that USB device to the same socket and check
 again. After verification, power down, reconnect right-arm IDs 4-7, and power up
-before starting the host. Rules follow physical USB topology: keep each adapter
+before independent hardware tests below. Rules follow physical USB topology: keep each adapter
 in its original socket, and rebind after changing sockets or hubs.
 
 For missing/ambiguous devices, busy ports, or invalid IO frames, check power,
@@ -302,6 +302,127 @@ USB/CAN wiring, motor IDs, competing processes, and the IO baud rate before
 accepting any mapping. For permission errors, check serial access (usually the
 `dialout` group). Use interactive mode for first deployment; `--yes --install`
 is only for repeat binding with verified wiring and an unambiguous scan.
+
+### After Binding: Arm Zeros and Independent Hardware Tests
+
+**Run all tests on the robot-side Jetson; no VR or computer client is needed.**
+Run one debug tool at a time with the host and other serial programs stopped.
+Each block starts in a new terminal at the repository root. For keyboard tools,
+activate `lerobot5` and run Python directly in an interactive terminal; allocate
+a TTY for SSH (for example, `ssh -t USER@ROBOT_IP`). Dashboards refresh in place.
+Keep the physical emergency stop reachable; software stop keys do not replace it.
+
+#### 1. Position the Arm at Its Designed Mechanical Zero Before Writing
+
+**Warning: `Arm_Zero_Status_Test.py` immediately disables and writes zeros to
+all seven motors (IDs 1-7) on that arm. It has no confirmation or read-only mode.
+Do not start it at an arbitrary pose or use it for routine status inspection.**
+Support the arms before disabling motors, as they can fall under gravity.
+
+Use the assembly design and joint-zero definitions in the
+[complete URDF model](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/mujoco_ik/model/HEI_robot_urdf/)
+to position the arm at its mechanical zero, not the VR controller's default
+working pose. The physical gripper zero is closed (`0 rad`); do not force it
+against its stop. The script cannot verify the pose. If the designed zero is
+unclear, check the assembly references before writing anything.
+
+Write the right-arm zeros:
+
+```bash
+cd software/lerobot-hei-rebot-lift
+conda activate lerobot5
+PYTHONPATH=src python -u examples/hei_rebot_lift/debug/Arm_Zero_Status_Test.py \
+  --port /dev/hei_right_arm
+```
+
+Exit with `Ctrl+C`, correctly position the left arm, and then run:
+
+```bash
+cd software/lerobot-hei-rebot-lift
+conda activate lerobot5
+PYTHONPATH=src python -u examples/hei_rebot_lift/debug/Arm_Zero_Status_Test.py \
+  --port /dev/hei_left_arm
+```
+
+The script keeps motors disabled after writing and refreshes
+`POS/VEL/TORQUE/ERROR`. Verify all seven motors are connected and responding
+before checking positions near zero. A displayed zero alone does not establish
+connectivity or successful calibration. Interpret `ERROR` according to the motor
+protocol; not every nonzero state is a fault. Exit after calibration; rewrite
+zeros only when assembly or maintenance requires recalibration.
+
+#### 2. Independent Chassis Test: Directions, Gears, and Wheel Feedback
+
+Secure the chassis with wheels off the ground, clear of cables and people.
+This tool connects only the chassis, not the arms, lift, or cameras.
+**All four wheels move through chassis kinematics; this is not single-wheel jog.**
+
+```bash
+cd software/lerobot-hei-rebot-lift
+conda activate lerobot5
+PYTHONPATH=src python -u examples/hei_rebot_lift/debug/Chassis_Status_Test.py \
+  --port /dev/hei_chassis
+```
+
+| Key | Function |
+| --- | --- |
+| `1 / 2 / 3` | Low / medium / high gear; begin with low gear `1` |
+| `W / S` | Forward / backward |
+| `A / D` | Strafe left / right |
+| `Q / E` | Rotate left / right |
+| `Space` | Software command for zero speed on all wheels |
+| `X` or `Ctrl+C` | Exit and stop the chassis |
+
+Hold or repeat a direction key to maintain motion; the default key watchdog
+clears the request after `0.65 s` without another direction event. Test each
+direction briefly while observing requested/reconstructed body velocity and
+each wheel's target/measured angular velocity, position, torque, and state code.
+Body velocities use driver command units, not directly measured meters/second.
+
+| Motor ID | Wheel position | Dashboard label |
+| --- | --- | --- |
+| `1` | Right front | `RF` |
+| `2` | Right rear | `RR` |
+| `3` | Left rear | `LR` |
+| `4` | Left front | `LF` |
+
+Stop for a stationary wheel, incorrect mapping, missing feedback, or abnormal
+shaking; check IDs, wiring, and configuration rather than increasing speed.
+After the suspended test passes, verify physical directions at low gear in a
+clear area. Single-wheel jogging needs a separate mode not provided by this
+tool; never substitute the arm zero-writing script on the chassis port.
+
+#### 3. Independent Lift Test: Homing, Height, and Limit IO
+
+**Startup automatically homes upward.** Check both limit-switch connections and
+clear the travel path first. Support structures that could fall when disabled
+and keep the emergency stop ready. This tool reuses production lift logic and
+opens only the lift motor and limit IO ports.
+
+```bash
+cd software/lerobot-hei-rebot-lift
+conda activate lerobot5
+PYTHONPATH=src python -u examples/hei_rebot_lift/debug/Lift_Status_Test.py \
+  --motor-port /dev/hei_lift --io-port /dev/hei_lift_io --height-step-mm 5
+```
+
+| Key | Function |
+| --- | --- |
+| `I / K` | Raise / lower target height; this example changes it by `5 mm` per key event |
+| `Space` | Stop and use current reported height as the hold target |
+| `H` | Home upward again, only with a safe travel path |
+| `X` or `Ctrl+C` | Exit, stop, and disable |
+
+Upper-limit homing defines `0 mm`; downward heights are negative, within
+`-800..0 mm`. Move down and up in small steps while checking current/target
+height, error, measured speed, motor command speed, IO freshness, and limits.
+Confirm the relevant IO state at a known limit. Stop for offline IO, both limits
+active, or incorrect states; investigate before retrying rather than repeatedly
+driving into end stops.
+
+**Finish all independent tests and exit the debug tools** before the simulation
+practice and real startup below. Never let a debug tool compete with the host
+for a serial port.
 
 ### Camera Mapping
 
