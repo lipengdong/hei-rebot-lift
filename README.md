@@ -497,6 +497,26 @@ set `vr_images.enabled: false` in `telegrip/config.yaml` and restart Telegrip.
 
 #### 0.3 Practice Controller Inputs in Order
 
+<table align="center">
+  <tr>
+    <td align="center"><a href="media/META-QUEST-BUTTON.jpg"><img src="media/META-QUEST-BUTTON.jpg" alt="Meta Quest system button on the right controller" width="200"></a><br><b>Meta Quest System Button</b></td>
+    <td align="center"><a href="media/META-GRIP-BUTTON.jpg"><img src="media/META-GRIP-BUTTON.jpg" alt="Side grip button location" width="200"></a><br><b>Grip: Side Button</b></td>
+    <td align="center"><a href="media/META-FRONT-TRIGGER.jpg"><img src="media/META-FRONT-TRIGGER.jpg" alt="Front trigger location" width="200"></a><br><b>Trigger: Front Trigger</b></td>
+  </tr>
+</table>
+
+Click an image to view it at full size.
+
+> [!IMPORTANT]
+> **Calibrate the VR origin before control: hold the right controller's META QUEST BUTTON for about 3 seconds to recenter using the headset's current position and heading as the VR reference origin for this session.**
+> **Recalibrate after changing your standing/seated position or operating direction. If controller motion and arm motion point in different directions or directional tracking feels wrong, stop control and recalibrate before continuing.**
+> Sequence: **release both `grip` buttons → center the sticks → face the intended forward direction from your new position → hold the Meta Quest button for about 3 seconds → let tracking settle and hold `grip` again**. Verify direction with a small movement first.
+
+The Meta Quest button recenters the **headset/VR reference frame**; `grip`
+captures each arm's relative control origin. These are different operations.
+Neither writes motor zeros nor replaces lift homing. Follow the calibration
+procedure for both simulated and real VR control.
+
 | Exercise | Procedure |
 | --- | --- |
 | Single-arm translation and rotation | Hold that side's `grip` to capture a relative origin; make small XYZ translations and rotations while observing the TCP. Practice each arm separately |
@@ -515,6 +535,7 @@ for complete instructions.
 #### 0.4 Move to Hardware Only After Practice
 
 - Control each arm's translation/rotation and confidently release/recapture the relative origin with `grip`.
+- Recenter with the Meta Quest button and know to recalibrate after moving, changing heading, or observing a direction mismatch.
 - Complete a pick-and-place exercise and understand that gripper state persists after releasing `grip`.
 - Control chassis/lift directions, stop their requests, and keep sticks centered.
 - Distinguish simulation and real launch scripts, locate the emergency stop, and understand real workspace hazards.

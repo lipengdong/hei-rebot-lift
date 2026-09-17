@@ -463,6 +463,25 @@ cd software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik
 
 #### 0.3 按顺序练习手柄操作
 
+<table align="center">
+  <tr>
+    <td align="center"><a href="media/META-QUEST-BUTTON.jpg"><img src="media/META-QUEST-BUTTON.jpg" alt="右手柄 Meta Quest 系统按钮位置" width="200"></a><br><b>Meta Quest 系统按钮</b></td>
+    <td align="center"><a href="media/META-GRIP-BUTTON.jpg"><img src="media/META-GRIP-BUTTON.jpg" alt="侧面 grip 握把按钮位置" width="200"></a><br><b>Grip：侧面握把</b></td>
+    <td align="center"><a href="media/META-FRONT-TRIGGER.jpg"><img src="media/META-FRONT-TRIGGER.jpg" alt="前方 trigger 扳机位置" width="200"></a><br><b>Trigger：前扳机</b></td>
+  </tr>
+</table>
+
+点击图片可查看大图。
+
+> [!IMPORTANT]
+> **控制前先校准 VR 原点：长按右手柄的 META QUEST BUTTON 约 3 秒，以当前头显位置和朝向重新居中，作为本次操作的 VR 参考原点。**
+> **换了站立/坐姿位置或操作朝向，都需要重新长按约 3 秒校准。发现手柄与机械臂运动方向不一致、方向不跟手时，也要先停止控制并重新校准，不要继续强行操作。**
+> 校准顺序：**松开左右两侧 `grip` → 摇杆回中 → 在新的操作位置面向期望的前方 → 长按 Meta Quest 按钮约 3 秒 → 稳定后重新按住 `grip`**，先小幅移动确认方向。
+
+Meta Quest 按钮校准的是**头显/VR 参考坐标**；`grip` 建立的是每条臂的相对控制
+原点，两者不是一回事。这也不是给机械臂电机写零位，更不会代替升降回零；
+仿真和真机 VR 操作都要遵守上述校准步骤。
+
 | 练习 | 操作与观察 |
 | --- | --- |
 | 单臂平移与旋转 | 按住对应侧 `grip` 建立相对控制原点，小幅移动 XYZ、旋转手柄，观察 TCP；先练一条臂，再练另一条 |
@@ -479,6 +498,7 @@ cd software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik
 #### 0.4 练熟后再进入真机
 
 - 能分别控制左右臂平移、旋转，并熟练松开/重新按住 `grip` 建立新原点。
+- 能长按 Meta Quest 按钮校准 VR 原点，知道换位置、换朝向或方向不一致时要重新校准。
 - 能完成一次夹爪取放，理解松开 `grip` 后夹爪保持最后状态。
 - 能控制底盘、升降方向，知道如何停止请求并保持摇杆回中。
 - 能区分纯仿真与真机启动入口，并清楚急停位置和真实工作区风险。
