@@ -126,6 +126,8 @@ We will continue improving HEI ReBot Lift across hardware materials, software in
 | Module | Status | Current Progress | Related DOC |
 | --- | --- | --- | --- |
 | Robot body | ✅ First version completed | Dual arms, lift platform, and four-wheel O-type omnidirectional base are integrated and tested as a complete system | [Hardware](hardware/README.md) |
+| Complete robot URDF | ✅ Completed | Full robot model includes the chassis, wheels, lift, dual arms, parallel grippers, and TCP frames for simulation and real-robot IK | [URDF Model](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/mujoco_ik/model/HEI_robot_urdf/) |
+| MuJoCo simulation testing | ✅ Completed | VR control of both arms, grippers, lift, and chassis has been tested; includes wheel animations, workspace projection, and stable-grasp pick-and-place demonstrations | [Simulation Guide](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/README.md) |
 | Damiao motor driver | ✅ First version completed | `damiao_u2can` is implemented for dual arms, grippers, chassis, and lift motor control | [Damiao U2CAN](software/lerobot-hei-rebot-lift/src/lerobot/motors/damiao_u2can/) |
 | Lift platform | ✅ First version completed | Supports upper-limit homing on startup and `height.pos` position-target control | [Robot Driver](software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/README.md) |
 | Omnidirectional base | ✅ First version completed | Supports `x.vel`, `y.vel`, and `theta.vel` commands with basic acceleration smoothing | [Robot Driver](software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/README.md) |
@@ -135,7 +137,7 @@ We will continue improving HEI ReBot Lift across hardware materials, software in
 | Data collection | ✅ First version completed | Supports LeRobotDataset recording, resume recording, visualization, and bad-episode cleanup | [Record Guide](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README.md) |
 | ACT training and rollout | ✅ Verified | Supports ACT training and real-robot rollout | [Examples](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README.md) |
 | SmolVLA / VLA | ✅ Initial support | Supports SmolVLA training and real-robot rollout entry points | [Examples](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README.md) |
-| Open hardware materials | 🚧 In progress | `hardware/`, `media/`, `docs/`, and `community/` project structure is prepared | [Hardware](hardware/README.md) |
+| Open hardware materials | ✅ Completed | Overall BOM, full robot STEP assembly, printed-part STL files, metal parts list, and STEP/DWG manufacturing files are available | [Hardware](hardware/README.md) |
 | Community and reproduction | 🚧 Ongoing | WeChat group, email contact, and GitHub project entry are available | [Community](community/README.md) |
 | Other mainstream VLA deployment reproduction | ⏳ Coming soon | Plan to reproduce and test more mainstream VLA policies for training, inference, and real-robot deployment on HEI ReBot Lift | Not completed |
 
@@ -172,41 +174,77 @@ software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/     VR + M
 
 ## ⚡ Quick Setup
 
-Create the LeRobot environment:
+Both machines need this project's code, but their dependencies and roles differ.
+**Start each subsection at the repository root on the specified machine. Do not
+execute robot-side and computer-side steps consecutively on one machine.**
+
+| Machine | Environment | Purpose |
+| --- | --- | --- |
+| Robot-side Jetson | `lerobot5` | Hardware drivers, serial binding, robot host; no VR/IK environment needed |
+| Your computer: control/training | `lerobot5` | Teleoperation client, dataset recording/editing, visualization, training, policy inference |
+| Your computer: VR/simulation | `hei-rebot-vr` | Telegrip, MuJoCo, Pinocchio/CasADi FK/IK |
+
+### 1. Robot-Side Jetson Installation
+
+**Run only on the robot.** Install the hardware extras without the computer-side
+dataset visualization and training extras. This still includes the project's
+base dependencies; it is not a standalone driver package without PyTorch.
 
 ```bash
 cd software/lerobot-hei-rebot-lift
 conda create -n lerobot5 python=3.12 -y
 conda activate lerobot5
-pip install -e ".[core_scripts,training,pyzmq-dep]"
+python -m pip install -e ".[hardware,pyzmq-dep]"
+python -c "import serial, zmq, cv2; print('robot dependencies ok')"
 ```
 
-This full installation includes dataset recording/editing, Rerun visualization,
-keyboard input, ZMQ communication, and policy training. The Python module is
-imported as `zmq`, but its correct package name is `pyzmq`; do not install the
-unrelated `zmq` package.
+If a working `lerobot5` environment already exists, skip creation and activate
+it before installation. For Jetson PyTorch/torchvision platform or version
+conflicts, account for the installed JetPack and this project's version
+constraints. Do not copy desktop CUDA wheels or bypass all dependencies with
+`--no-deps`.
 
-For a Jetson that only runs the robot-side host, use the lighter installation:
+Next, follow Device Mapping below, verify limit switches and cameras, then start
+`hei-rebot-lift-host` using Startup Flow. Do not create `hei-rebot-vr` on the robot.
+
+### 2. Your Computer: Control, Recording, and Training
+
+**Run only on your computer.** This environment runs `teleoperate.py`,
+`record.py`, training, replay, and policy inference; it does not directly open
+the robot's motor serial ports.
 
 ```bash
-pip install -e ".[hardware,pyzmq-dep]"
+cd software/lerobot-hei-rebot-lift
+conda create -n lerobot5 python=3.12 -y
+conda activate lerobot5
+python -m pip install -e ".[core_scripts,training,pyzmq-dep]"
+python -m pip show pyzmq rerun-sdk pynput datasets accelerate
 ```
 
-Create the VR/MuJoCo IK environment:
+This includes dataset recording/editing, Rerun visualization, keyboard input,
+ZMQ, and general training dependencies. Install SmolVLA-specific dependencies
+in its training section below. Skip creation if `lerobot5` already exists.
+The module is imported as `zmq`, but the package name is `pyzmq`; do not install
+the unrelated `zmq` package.
 
-Continue from the software directory entered above:
+### 3. Your Computer: VR/MuJoCo IK
+
+On your computer, **open another terminal at the repository root**. Telegrip and
+MuJoCo IK share `hei-rebot-vr`; do not mix these dependencies into `lerobot5`.
+Use the conda-forge versions in `environment.yml` for FK/IK; do not separately
+install `pin` with pip.
 
 ```bash
-cd examples/hei_rebot_lift/VR_mujoco_ik
+cd software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik
 conda env create -f environment.yml
-```
-
-Verify Pinocchio + CasADi:
-
-```bash
 conda activate hei-rebot-vr
 env -u LD_LIBRARY_PATH python -c "import pinocchio as pin; from pinocchio import casadi as cpin; print(pin.__version__); print('casadi binding ok')"
 ```
+
+For an existing environment, replace creation with
+`conda env update -n hei-rebot-vr -f environment.yml --prune`. Launch wrappers
+activate it automatically. Test pure simulation before connecting real hardware;
+see the [VR deployment guide](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/README.md).
 
 ## 🔌 Device Mapping
 
@@ -219,6 +257,55 @@ Stable udev device names are used by default:
 /dev/hei_lift        Lift motor U2CAN
 /dev/hei_lift_io     Lift limit-switch serial port
 ```
+
+### Serial Port Discovery and Binding Wizard
+
+Run [Port_Binding_Wizard.py](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/debug/Port_Binding_Wizard.py)
+on the **robot-side Jetson**. It scans `ttyACM*` / `ttyUSB*`, identifies adapters
+from responding motor IDs and valid limit-switch IO frames, and generates stable
+device mappings after confirmation. It does not enable motors, write zeros, or
+send movement commands.
+
+**Prepare the hardware:**
+
+1. Stop `hei-rebot-lift-host` and all motor/serial debug programs so the ports are free.
+2. Power down and support the arms before changing wiring. Temporarily disconnect **right-arm IDs 4-7**, leaving IDs 1-3 connected; keep the left arm fully connected on IDs 1-7.
+3. Check chassis IDs 1-4, lift ID 1, and the lift limit-switch IO wiring. Power the four U2CAN boards, IO board, and motors needed for discovery.
+4. Keep USB sockets unchanged throughout scanning and rule installation.
+
+Start the interactive wizard from the repository root:
+
+```bash
+cd software/lerobot-hei-rebot-lift
+PYTHONPATH=src conda run --no-capture-output -n lerobot5 \
+  python -u examples/hei_rebot_lift/debug/Port_Binding_Wizard.py
+```
+
+Review the scan, confirm the arm/chassis/lift/IO mapping, and choose whether to
+install the system rules. The default output is
+`examples/hei_rebot_lift/rules/99-nx-robot.rules`, with an existing-file backup.
+Installation into `/etc/udev/rules.d/` requires `sudo`; the wizard reloads rules
+and checks symlinks. Existing lidar and IMU rules are preserved; those devices
+are not identified by this scan.
+
+**Verify the bindings:**
+
+```bash
+ls -l /dev/hei_right_arm /dev/hei_left_arm /dev/hei_chassis /dev/hei_lift /dev/hei_lift_io
+```
+
+If a symlink is missing, reconnect that USB device to the same socket and check
+again. After verification, power down, reconnect right-arm IDs 4-7, and power up
+before starting the host. Rules follow physical USB topology: keep each adapter
+in its original socket, and rebind after changing sockets or hubs.
+
+For missing/ambiguous devices, busy ports, or invalid IO frames, check power,
+USB/CAN wiring, motor IDs, competing processes, and the IO baud rate before
+accepting any mapping. For permission errors, check serial access (usually the
+`dialout` group). Use interactive mode for first deployment; `--yes --install`
+is only for repeat binding with verified wiring and an unambiguous scan.
+
+### Camera Mapping
 
 Default cameras:
 
@@ -237,37 +324,147 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 lerobot-find-cameras
 
 ## 🎮 Startup Flow
 
-Use separate terminals. Clear the workspace and keep the emergency stop
-reachable: startup moves the lift to its upper limit. Wait for homing to finish.
+### Identify the Computer and Robot IPs First
 
-Start the robot-side host:
+The examples use your computer IP `192.168.31.245` and example robot IP
+`192.168.31.127`. **If the robot address differs, replace robot addresses only;
+do not replace the computer address used by the headset.**
 
-```bash
-cd software/lerobot-hei-rebot-lift
-PYTHONPATH=src conda run --no-capture-output -n lerobot5 hei-rebot-lift-host
-```
+| Address | Owner | Used for |
+| --- | --- | --- |
+| `192.168.31.245` | Your control computer running Telegrip and MuJoCo IK | Headset browser: `https://192.168.31.245:8443` |
+| `192.168.31.127` | Robot Jetson running the host | Client: `--remote-ip 192.168.31.127`; VR camera endpoint: `tcp://192.168.31.127:6556` |
+| `localhost` / `127.0.0.1` | The machine running that program, not the remote robot | Local VR, action, and feedback connections when Telegrip, MuJoCo IK, and the client share one computer |
 
-Start Telegrip on the computer:
+Practice in pure simulation below before real control. Simulation only needs
+the computer and headset to communicate; for real control, also connect the
+robot to the same mutually reachable LAN. **Run each block in a new terminal at
+the repository root on the specified machine.** Keep long-running processes open.
+
+### 0. Beginner Practice: Computer-Side Pure Simulation (No Hardware)
+
+Install `hei-rebot-vr` first. **Do not start the robot host, `teleoperate.py`,
+`record.py`, or the real bridge during practice; stop them if already running.**
+Pure simulation requires no motors, device bindings, or robot feedback and does
+not publish real actions on `6558`.
+
+#### 0.1 Computer Practice Terminal A: Start Telegrip
 
 ```bash
 cd software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik
 ./run_telegrip.sh
 ```
 
-Open this URL in the VR headset browser:
+Connect the headset and computer to the same LAN. In the headset browser, open
+`https://192.168.31.245:8443` (computer IP), verify the self-signed certificate
+warning, and enter VR.
 
-```text
-https://COMPUTER_IP:8443
+#### 0.2 Computer Practice Terminal B: Start the Complete Robot Simulation
+
+```bash
+cd software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik
+./run_hei_robot_vr_sim.sh
 ```
 
-Start the computer-side client to supply robot feedback (it waits for VR actions):
+Observe the robot in the **MuJoCo window on your computer**. The scene includes
+both arms, parallel grippers, lift, four-wheel omnidirectional chassis, a table,
+cubes, and a banana for pick-and-place practice. Without a physical robot, no
+real camera feed will appear in the headset; simulation still works. Optionally
+set `vr_images.enabled: false` in `telegrip/config.yaml` and restart Telegrip.
+
+#### 0.3 Practice Controller Inputs in Order
+
+| Exercise | Procedure |
+| --- | --- |
+| Single-arm translation and rotation | Hold that side's `grip` to capture a relative origin; make small XYZ translations and rotations while observing the TCP. Practice each arm separately |
+| Release and recapture the origin | Release `grip` to stop tracking, reposition the controller comfortably, then hold it again; the arm need not follow the controller back to its origin |
+| Gripper pick and place | Grippers start closed. While holding `grip`, press `trigger` to open and release it to close; close near an object for stable-grasp practice, then open to place it |
+| Lift | Left `grip` + left stick vertical; releasing left `grip` stops the lift request |
+| Chassis | Right `grip` + right stick for forward/backward and strafing; right `B` rotates clockwise, left `Y` counterclockwise; releasing right `grip` stops the request |
+| Reset | With the corresponding `grip` released, right `A` / left `X` gradually resets that arm. Focus the computer's MuJoCo window and press `R` to reset the robot and objects, in pure simulation only |
+
+Keep sticks centered when practicing arm motion to avoid unintended chassis or
+lift movement. At joint/workspace boundaries, reduce motion and return to the
+reachable area instead of pushing farther out. See the
+[controller tutorial](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/README.md)
+for complete instructions.
+
+#### 0.4 Move to Hardware Only After Practice
+
+- Control each arm's translation/rotation and confidently release/recapture the relative origin with `grip`.
+- Complete a pick-and-place exercise and understand that gripper state persists after releasing `grip`.
+- Control chassis/lift directions, stop their requests, and keep sticks centered.
+- Distinguish simulation and real launch scripts, locate the emergency stop, and understand real workspace hazards.
+
+Close the pure-simulation viewer or stop it with `Ctrl+C`, then follow sections
+1 and 2 below. Telegrip may stay running. If camera streaming was disabled,
+restore `vr_images.enabled: true`, check the robot camera IP, and restart
+Telegrip when real camera display is needed; do not launch duplicate instances.
+**Simulation practice does not replace hardware safety checks.** Stable grasping
+is a kinematic demonstration, not contact-physics validation. Motor directions,
+zeros, limits, and load capacity still require independent verification, and
+simulation lift speed can differ from real hardware.
+
+### 1. Robot-Side Jetson: Start the Host (Terminal 1)
+
+Run only on the robot. Complete device mapping, clear the workspace, and keep
+the emergency stop reachable. Startup moves the lift upward to home;
+**wait for homing to finish** before proceeding. The host runs on the robot;
+it does not need the computer IP and is not the computer-side client.
+
+```bash
+cd software/lerobot-hei-rebot-lift
+PYTHONPATH=src conda run --no-capture-output -n lerobot5 hei-rebot-lift-host
+```
+
+Keep this robot terminal running. Do not start Telegrip or MuJoCo IK on Jetson.
+
+### 2. Your Computer: Start the Control Programs
+
+Run all three programs below on **your computer** at `192.168.31.245`, not on Jetson.
+
+#### 2.1 Start Telegrip (Computer Terminal 2)
+
+```bash
+cd software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik
+./run_telegrip.sh
+```
+
+#### 2.2 Headset Browser: Open the Computer's Page
+
+For example, if the computer running Telegrip has LAN IP `192.168.31.245`, enter
+this address in the **VR headset browser**:
+
+```text
+https://192.168.31.245:8443
+```
+
+Connect the headset and computer to the same LAN and start `run_telegrip.sh`
+before opening the page. Use the **computer IP, not the robot IP**, and use
+`https`. On the first visit, verify that the address belongs to your computer
+before continuing past the self-signed certificate warning, then enter VR using
+the page controls.
+
+For robot camera display in VR, set
+`vr_images.endpoint: tcp://192.168.31.127:6556` in the computer's
+`software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/telegrip/config.yaml`.
+This must use the **robot IP**. Restart Telegrip after editing it; the client's
+`--remote-ip` does not update this configuration.
+
+#### 2.3 Start the Teleoperation Client (Computer Terminal 3)
+
+Set `--remote-ip` to the **robot Jetson IP**, not the computer's `192.168.31.245`.
+The client supplies robot feedback and waits for MuJoCo IK actions:
 
 ```bash
 cd software/lerobot-hei-rebot-lift
 PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/teleoperate.py --remote-ip 192.168.31.127
 ```
 
-Then start the complete-model MuJoCo IK real-robot bridge on the computer:
+#### 2.4 Start the Complete-Model Real Bridge (Computer Terminal 4)
+
+Run on the same computer as Telegrip and the client. Default internal
+connections stay local; do not replace their addresses with the robot IP:
 
 ```bash
 cd software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik
@@ -280,6 +477,10 @@ it does not bypass synchronization. For simulation only, use
 `./run_hei_robot_vr_sim.sh`; the legacy dual-arm entry is `./run_mujoco_ik.sh`.
 See the [VR guide](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/README.md)
 for controller inputs, recovery, and lift visualization limitations.
+
+Keep **one robot-side host and three computer-side programs** running. To record
+data, replace `teleoperate.py` in computer terminal 3 with `record.py`; never run
+both together.
 
 ## 📷 Record Data
 
