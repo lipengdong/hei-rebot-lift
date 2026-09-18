@@ -19,6 +19,7 @@ and keep the emergency stop reachable.
 | Debugging and data collection | [Examples guide](../software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README.md) | Port binding, lift/chassis tests, recording, resume, cleanup |
 | Training and inference | [Examples guide](../software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README.md) | ACT/SmolVLA, checkpoint paths, replay, evaluate, rollout |
 | Reproduction and collaboration | [Community](../community/README.md) | WeChat group, contact details, QR code |
+| Jetson system icon troubleshooting | [Missing-icon repair record](jetson_system_icons.md) | SVG decoding, interrupted dpkg configuration, recovery and prevention |
 
 ## README Map and Maintenance
 
