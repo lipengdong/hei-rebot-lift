@@ -94,6 +94,12 @@ right_wrist /dev/video4
 
 Cameras use `MJPG` by default for better stability with multiple USB cameras.
 
+After discovery, edit [config_hei_rebot_lift.py](../../src/lerobot/robots/hei_rebot_lift/config_hei_rebot_lift.py)
+on the **robot Jetson**: replace the three `index_or_path` values inside
+`hei_rebot_lift_cameras_config()` with the actual front/left-wrist/right-wrist
+device paths. Keep the camera keys and other settings unchanged, stop discovery,
+then restart the host. See the [configuration example](../../src/lerobot/robots/hei_rebot_lift/README.md#where-to-change-camera-ids).
+
 ### Serial port binding wizard
 
 Run on the **robot-side Jetson**, with the host and all serial debug tools stopped.

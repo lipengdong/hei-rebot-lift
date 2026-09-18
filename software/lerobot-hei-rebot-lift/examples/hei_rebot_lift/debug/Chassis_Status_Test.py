@@ -156,7 +156,14 @@ def main() -> None:
 
     # 只创建底盘运行时，不初始化双臂、升降或相机。
     # 运动学、限速和加减速均复用正式驱动。
-    config = HeiRebotLiftConfig(cameras={}, chassis_port=args.port)
+    # 正式配置的 X/Y 负号用于 VR 输入方向；键盘 W/A 已定义为前进/左移，
+    # 此处使用正号，避免平移反向，并让反馈表与按键方向一致。转向沿用正式配置。
+    config = HeiRebotLiftConfig(
+        cameras={},
+        chassis_port=args.port,
+        chassis_x_sign=1.0,
+        chassis_y_sign=1.0,
+    )
     chassis = _ChassisRuntime(config.chassis_port, config.u2can_baud, config)
     control_period_s = 1.0 / args.control_hz
     display_period_s = 1.0 / args.display_hz

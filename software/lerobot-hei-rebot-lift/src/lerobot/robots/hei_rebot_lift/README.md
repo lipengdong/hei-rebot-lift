@@ -86,6 +86,35 @@ List supported formats:
 v4l2-ctl --device=/dev/video2 --list-formats-ext
 ```
 
+### Where to Change Camera IDs
+
+On the **robot-side Jetson**, stop the host and camera discovery tool, then edit
+[config_hei_rebot_lift.py](config_hei_rebot_lift.py), in
+`hei_rebot_lift_cameras_config()`. From the software directory, the path is
+`src/lerobot/robots/hei_rebot_lift/config_hei_rebot_lift.py`.
+
+Use the captured images in `outputs/captured_images` to identify the front,
+left wrist, and right wrist cameras. Replace each camera's `index_or_path`
+with its actual device path; the following values are examples, not fixed IDs:
+
+```python
+def hei_rebot_lift_cameras_config() -> dict[str, CameraConfig]:
+    return {
+        "front": OpenCVCameraConfig(index_or_path="/dev/video0", fps=30, width=640, height=480, fourcc="MJPG"),
+        "left_wrist": OpenCVCameraConfig(index_or_path="/dev/video2", fps=30, width=640, height=480, fourcc="MJPG"),
+        "right_wrist": OpenCVCameraConfig(index_or_path="/dev/video4", fps=30, width=640, height=480, fourcc="MJPG"),
+    }
+```
+
+Keep the names `front`, `left_wrist`, and `right_wrist` unchanged: datasets,
+policies, and clients use these keys. Leave the other settings intact when
+only changing IDs; do not edit `camera_opencv.py` or the VR YAML for USB IDs.
+Restart `hei-rebot-lift-host` after saving. If the client runs on another
+computer, keep the same camera keys and image dimensions in its configuration;
+the hardware device paths are opened by the robot host, not the client.
+Device numbers can change after reconnecting USB cameras; check again or use
+a verified stable device path such as `/dev/v4l/by-id/...`.
+
 Serial binding and independent lift/chassis tests are documented in the
 [examples hardware guide](../../../../examples/hei_rebot_lift/README.md#1-hardware-check).
 Do not run the host while debug tools own these ports. The arm zero tool writes

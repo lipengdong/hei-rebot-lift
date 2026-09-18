@@ -235,6 +235,17 @@ Vérifier sur le **robot**: `front=/dev/video0`, `left_wrist=/dev/video2`,
 Les noms de périphériques peuvent varier. Lancer `lerobot-find-cameras` sur le
 robot. Le flux vidéo VR est actuellement désactivé, pas la capture du host.
 
+Sur le **Jetson du robot**, arrêter le host et l'outil de recherche, puis modifier
+[config_hei_rebot_lift.py](software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/config_hei_rebot_lift.py), fonction
+`hei_rebot_lift_cameras_config()`. Identifier les caméras avec les images de
+`outputs/captured_images` et remplacer les trois valeurs `index_or_path`.
+Conserver les clés `front`, `left_wrist`, `right_wrist` et les autres réglages;
+ne pas modifier `camera_opencv.py` ni le YAML VR pour ces IDs USB.
+Enregistrer et redémarrer `hei-rebot-lift-host`. Sur l'ordinateur client,
+conserver les mêmes clés et dimensions; les périphériques USB sont ouverts
+sur le robot. Après reconnexion USB, vérifier les IDs à nouveau.
+[Exemple de configuration](software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/README.md#where-to-change-camera-ids).
+
 ## 🎮 Démarrage
 
 | Adresse d'exemple | Machine | Usage |

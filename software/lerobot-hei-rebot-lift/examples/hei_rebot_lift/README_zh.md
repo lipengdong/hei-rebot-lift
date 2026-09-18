@@ -94,6 +94,12 @@ right_wrist /dev/video4
 
 相机默认使用 `MJPG`，这样多个 USB 相机同时跑时更稳。
 
+查找后，在**机器人 Jetson** 上编辑
+[config_hei_rebot_lift.py](../../src/lerobot/robots/hei_rebot_lift/config_hei_rebot_lift.py)
+的 `hei_rebot_lift_cameras_config()`，将三路 `index_or_path` 分别改为头部、
+左腕、右腕的实际设备路径。相机名称和其他参数保持不变，停止查找程序后重启
+host。完整示例见 [相机 ID 修改说明](../../src/lerobot/robots/hei_rebot_lift/README_zh.md#在哪里修改相机-id)。
+
 ### 串口绑定向导
 
 在**机器人 Jetson** 上执行，先停止 host 和所有串口调试程序。改接线前断电并
