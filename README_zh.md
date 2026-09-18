@@ -383,12 +383,12 @@ PYTHONPATH=src python -u examples/hei_rebot_lift/debug/Chassis_Status_Test.py \
 cd software/lerobot-hei-rebot-lift
 conda activate lerobot5
 PYTHONPATH=src python -u examples/hei_rebot_lift/debug/Lift_Status_Test.py \
-  --motor-port /dev/hei_lift --io-port /dev/hei_lift_io --height-step-mm 5
+  --motor-port /dev/hei_lift --io-port /dev/hei_lift_io --height-step-mm 2
 ```
 
 | 按键 | 功能 |
 | --- | --- |
-| `I / K` | 目标高度上升 / 下降，示例每次按键改变 `5 mm` |
+| `I / K` | 目标高度上升 / 下降，示例每次按键改变 `2 mm` |
 | `Space` | 发送停止并以当前反馈高度作为保持目标 |
 | `H` | 重新向上回零，只在路径安全时使用 |
 | `X` 或 `Ctrl+C` | 退出，停止并失能 |

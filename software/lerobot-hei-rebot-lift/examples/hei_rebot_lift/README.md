@@ -164,11 +164,12 @@ The tool reuses production homing, feedback-based height control, and limits.
 ```bash
 conda activate lerobot5
 PYTHONPATH=src python -u examples/hei_rebot_lift/debug/Lift_Status_Test.py \
-  --motor-port /dev/hei_lift --io-port /dev/hei_lift_io --height-step-mm 5
+  --motor-port /dev/hei_lift --io-port /dev/hei_lift_io --height-step-mm 2
 ```
 
-`I/K` raises/lowers the target by 5 mm per key event in this example
-(the program default is 10 mm). `Space` stops and holds the reported height,
+`I/K` raises/lowers the target by 2 mm per key event in this example
+(the program default is also 2 mm). Use `--height-step-mm 1` for finer steps.
+`Space` stops and holds the reported height,
 `H` homes again, and `X` or `Ctrl+C` exits and disables.
 Check height `-800..0 mm`, IO freshness, both limits, and motor state.
 Stop for offline IO or inconsistent limits; software stop keys are not an

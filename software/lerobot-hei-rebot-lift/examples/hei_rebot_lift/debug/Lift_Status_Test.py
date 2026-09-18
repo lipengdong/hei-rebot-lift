@@ -16,7 +16,8 @@ from lerobot.robots.hei_rebot_lift.config_hei_rebot_lift import HeiRebotLiftConf
 from lerobot.robots.hei_rebot_lift.hei_rebot_lift import _LiftRuntime
 
 
-DEFAULT_HEIGHT_STEP_MM = 10.0
+# 每次 I/K 按键只推进 2 mm，减小长按重复事件造成的目标高度累积。
+DEFAULT_HEIGHT_STEP_MM = 2.0
 DEFAULT_CONTROL_HZ = 30.0
 DEFAULT_DISPLAY_HZ = 10.0
 

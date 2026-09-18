@@ -409,12 +409,12 @@ opens only the lift motor and limit IO ports.
 cd software/lerobot-hei-rebot-lift
 conda activate lerobot5
 PYTHONPATH=src python -u examples/hei_rebot_lift/debug/Lift_Status_Test.py \
-  --motor-port /dev/hei_lift --io-port /dev/hei_lift_io --height-step-mm 5
+  --motor-port /dev/hei_lift --io-port /dev/hei_lift_io --height-step-mm 2
 ```
 
 | Key | Function |
 | --- | --- |
-| `I / K` | Raise / lower target height; this example changes it by `5 mm` per key event |
+| `I / K` | Raise / lower target height; this example changes it by `2 mm` per key event |
 | `Space` | Stop and use current reported height as the hold target |
 | `H` | Home upward again, only with a safe travel path |
 | `X` or `Ctrl+C` | Exit, stop, and disable |

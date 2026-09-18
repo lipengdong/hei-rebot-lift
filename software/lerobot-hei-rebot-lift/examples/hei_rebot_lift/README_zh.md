@@ -156,10 +156,11 @@ PYTHONPATH=src python -u examples/hei_rebot_lift/debug/Arm_Zero_Status_Test.py \
 ```bash
 conda activate lerobot5
 PYTHONPATH=src python -u examples/hei_rebot_lift/debug/Lift_Status_Test.py \
-  --motor-port /dev/hei_lift --io-port /dev/hei_lift_io --height-step-mm 5
+  --motor-port /dev/hei_lift --io-port /dev/hei_lift_io --height-step-mm 2
 ```
 
-`I/K` 每次提高/降低目标 5 mm（本例；程序默认 10 mm），`Space` 停止并保持
+`I/K` 每次提高/降低目标 2 mm（本例与程序默认一致），需要更细可用
+`--height-step-mm 1`。`Space` 停止并保持
 反馈高度，`H` 再次上行回零，`X` 或 `Ctrl+C` 退出并失能。检查
 `-800..0 mm` 高度、IO 新鲜度、上下限位和电机状态。IO 离线或限位状态异常时
 停止排查；软件停止键不能代替急停。
