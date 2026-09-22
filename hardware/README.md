@@ -10,9 +10,9 @@ The goal of this hardware folder is to make the robot easier to reproduce: not o
 
 ### 2026-09-21
 
-The BOM was upgraded to V1.1, and the full robot assembly and four printed parts
-were updated. Existing repository paths were retained so documentation links
-and downstream references remain valid:
+The BOM was upgraded to V1.1, the full robot assembly was updated, and the
+printed-part release was reorganized. Most repository paths were retained;
+the chassis copies listed below use their current names:
 
 | Updated file | Change |
 | --- | --- |
@@ -21,7 +21,13 @@ and downstream references remain valid:
 | [part_dianchi_ke_1.STL](3D_Printed_Parts/part_dianchi_ke_1.STL) | Updated battery enclosure part 1 |
 | [part_dianchi_ke_2.STL](3D_Printed_Parts/part_dianchi_ke_2.STL) | Updated battery enclosure part 2 |
 | [part_dipan_3-1.STL](3D_Printed_Parts/part_dipan_3-1.STL) | Updated chassis printed part 3-1 |
-| [part_dipan_3.STL](3D_Printed_Parts/part_dipan_3.STL) | Updated chassis printed part 3 |
+| [part_dipan_3_2.STL](3D_Printed_Parts/part_dipan_3_2.STL) | Current chassis part 3, print copy 2 |
+| [part_dipan_3_3.STL](3D_Printed_Parts/part_dipan_3_3.STL) | Current chassis part 3, print copy 3 |
+| [part_dipan_3_4.STL](3D_Printed_Parts/part_dipan_3_4.STL) | Current chassis part 3, print copy 4 |
+
+The legacy `part_dipan_3.STL` and hyphen-named `part_dipan_3-2/-3/-4.STL`
+files were removed. The three underscore-named files are identical by design
+and represent three physical copies to print, not three different geometries.
 
 Re-download these files before machining or printing. Previously printed parts
 may not match the latest assembly; verify mating surfaces and holes in the new
@@ -113,8 +119,8 @@ The chassis supports translation and rotation for mobile manipulation tasks.
 
 ## 🖨️ 3D Printed Parts
 
-Current release: **25 STL files**. Four STL files were revised on 2026-09-21;
-see [Release Updates](#release-updates).
+Current release: **24 STL files**. The revised files and chassis-copy naming are
+documented under [Release Updates](#release-updates).
 
 Typical groups include:
 

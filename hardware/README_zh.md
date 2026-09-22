@@ -10,8 +10,8 @@
 
 ### 2026-09-21
 
-本次将整机 BOM 升级到 V1.1，并更新了整机总装模型和 4 个打印件。项目内继续
-沿用原有文件名和路径，避免已有文档链接及下游引用失效：
+本次将整机 BOM 升级到 V1.1，更新整机总装模型，并重新整理打印件发布。大部分
+文件继续沿用原有路径；底盘副本使用下表中的当前名称：
 
 | 更新文件 | 变更内容 |
 | --- | --- |
@@ -20,7 +20,12 @@
 | [part_dianchi_ke_1.STL](3D_Printed_Parts/part_dianchi_ke_1.STL) | 更新电池外壳打印件 1 |
 | [part_dianchi_ke_2.STL](3D_Printed_Parts/part_dianchi_ke_2.STL) | 更新电池外壳打印件 2 |
 | [part_dipan_3-1.STL](3D_Printed_Parts/part_dipan_3-1.STL) | 更新底盘打印件 3-1 |
-| [part_dipan_3.STL](3D_Printed_Parts/part_dipan_3.STL) | 更新底盘打印件 3 |
+| [part_dipan_3_2.STL](3D_Printed_Parts/part_dipan_3_2.STL) | 当前底盘打印件 3，第 2 份 |
+| [part_dipan_3_3.STL](3D_Printed_Parts/part_dipan_3_3.STL) | 当前底盘打印件 3，第 3 份 |
+| [part_dipan_3_4.STL](3D_Printed_Parts/part_dipan_3_4.STL) | 当前底盘打印件 3，第 4 份 |
+
+旧的 `part_dipan_3.STL` 和连字符命名的 `part_dipan_3-2/-3/-4.STL` 已移除。
+三个下划线命名文件按设计具有相同模型，表示需要打印三份实体，不是三种不同结构。
 
 加工或打印前请重新下载这些文件。此前已经打印的零件不一定与最新版总装完全
 匹配，复用前应在新 STEP 模型中检查配合面、孔位和装配间隙。
@@ -110,7 +115,7 @@ hardware/
 
 ## 🖨️ 3D 打印件
 
-当前包含 **25 个 STL 文件**。其中 4 个 STL 已于 2026-09-21 更新，详见
+当前包含 **24 个 STL 文件**。修订文件和底盘副本命名详见
 [版本更新记录](#版本更新记录)。
 
 典型分类：
