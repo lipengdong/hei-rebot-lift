@@ -106,6 +106,13 @@ host。完整示例见 [相机 ID 修改说明](../../src/lerobot/robots/hei_reb
 支撑机械臂；暂时断开右臂 ID 4-7，只留 ID 1-3，左臂保留 ID 1-7，底盘 ID 1-4，
 升降 ID 1。扫描时给四块 U2CAN、电机及限位 IO 上电。
 
+运行向导前设置串口读写权限：
+
+```bash
+sudo chmod 666 /dev/ttyACM*
+sudo chmod 666 /dev/ttyUSB*
+```
+
 ```bash
 PYTHONPATH=src conda run --no-capture-output -n lerobot5 \
   python -u examples/hei_rebot_lift/debug/Port_Binding_Wizard.py

@@ -271,6 +271,13 @@ env -u LD_LIBRARY_PATH python -c "import pinocchio as pin; from pinocchio import
 3. 确认底盘 ID 1-4、升降 ID 1、升降限位 IO 接线正确，再给四块 U2CAN、IO 板及待识别电机上电。
 4. 扫描及安装规则期间不要更换 USB 插口。
 
+执行 Python 向导前设置串口读写权限：
+
+```bash
+sudo chmod 666 /dev/ttyACM*
+sudo chmod 666 /dev/ttyUSB*
+```
+
 从项目根目录执行交互向导：
 
 ```bash

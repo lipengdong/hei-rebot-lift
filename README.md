@@ -282,6 +282,13 @@ send movement commands.
 3. Check chassis IDs 1-4, lift ID 1, and the lift limit-switch IO wiring. Power the four U2CAN boards, IO board, and motors needed for discovery.
 4. Keep USB sockets unchanged throughout scanning and rule installation.
 
+Set serial-port read/write permissions before running the Python wizard:
+
+```bash
+sudo chmod 666 /dev/ttyACM*
+sudo chmod 666 /dev/ttyUSB*
+```
+
 Start the interactive wizard from the repository root:
 
 ```bash

@@ -107,6 +107,13 @@ Power down and support the arms before changing wiring. Temporarily disconnect
 right-arm IDs 4-7, leaving IDs 1-3; keep left-arm IDs 1-7, chassis IDs 1-4, and
 lift ID 1 connected. Power the four U2CAN boards, motors, and limit IO for scanning.
 
+Set serial-port read/write permissions before starting the wizard:
+
+```bash
+sudo chmod 666 /dev/ttyACM*
+sudo chmod 666 /dev/ttyUSB*
+```
+
 ```bash
 PYTHONPATH=src conda run --no-capture-output -n lerobot5 \
   python -u examples/hei_rebot_lift/debug/Port_Binding_Wizard.py

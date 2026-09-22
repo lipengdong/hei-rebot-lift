@@ -207,6 +207,14 @@ chasis 1-4 y elevador 1 conectados. Alimentar las cuatro U2CAN, motores e IO
 durante la detección. El asistente [Port_Binding_Wizard.py](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/debug/Port_Binding_Wizard.py) no mueve motores
 ni escribe ceros.
 
+Configurar los permisos de lectura y escritura de los puertos serie antes de
+ejecutar el asistente Python:
+
+```bash
+sudo chmod 666 /dev/ttyACM*
+sudo chmod 666 /dev/ttyUSB*
+```
+
 ```bash
 cd software/lerobot-hei-rebot-lift
 PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_rebot_lift/debug/Port_Binding_Wizard.py
