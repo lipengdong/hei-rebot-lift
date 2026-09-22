@@ -146,11 +146,22 @@ cd software/lerobot-hei-rebot-lift
 | 资料 | 文件 / 目录 | 说明 |
 | --- | --- | --- |
 | 硬件说明 | [hardware/README_zh.md](hardware/README_zh.md) | 硬件目录索引、推荐复现顺序和上电前检查清单 |
-| 整机 BOM | [hardware/HEI_ReBot_Lift_BOM.md](hardware/HEI_ReBot_Lift_BOM.md) / [xlsx](hardware/HEI_ReBot_Lift_BOM.xlsx) | 整机外购件、加工件和装配准备清单 |
+| 整机 BOM V1.1 | [hardware/HEI_ReBot_Lift_BOM.md](hardware/HEI_ReBot_Lift_BOM.md) / [xlsx](hardware/HEI_ReBot_Lift_BOM.xlsx) | 整机外购件、加工件和装配准备清单；采购前核对实时价格 |
 | 整机总装模型 | [hardware/Hei_robot_lift.STEP](hardware/Hei_robot_lift.STEP) | 用于查看整机结构、空间布局和装配关系 |
 | 3D 打印件 | [hardware/3D_Printed_Parts/](hardware/3D_Printed_Parts/) | 外壳、支架、升降、底盘、相机等相关 STL 文件 |
 | 金属件清单 | [hardware/Metal_Parts/HEI_Metal_Body_Parts_List.xlsx](hardware/Metal_Parts/HEI_Metal_Body_Parts_List.xlsx) | 金属 / CNC / 钣金件清单 |
 | 金属 CAD 文件 | [hardware/Metal_Parts/step/](hardware/Metal_Parts/step/) / [hardware/Metal_Parts/dwg/](hardware/Metal_Parts/dwg/) | 用于加工沟通的 STEP 和 DWG 文件 |
+
+### 组装与调试教程
+
+扫描二维码查看 HEI ReBot Lift 组装与调试教程。使用教程时，请同时核对仓库中的
+整机 BOM、最新版 CAD 文件和上电前安全检查清单。
+
+<p align="center">
+  <a href="media/hei-rebot-lift-assembly-debugging-tutorial.png"><img src="media/hei-rebot-lift-assembly-debugging-tutorial.png" alt="HEI ReBot Lift 组装与调试教程二维码" width="360"></a>
+  <br>
+  <em>扫码查看 HEI ReBot Lift 组装与调试教程。</em>
+</p>
 
 ```text
 双臂：左右各 7 个达妙电机，关节 1-3 使用 DM4340P，关节 4-6 和夹爪使用 DM4310

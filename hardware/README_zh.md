@@ -6,6 +6,25 @@
 
 这个目录的目标不是只放几个模型文件，而是尽量把复现真实机器人需要的资料整理清楚：采购、加工、3D 打印、装配检查、后期维护都能有对应入口。
 
+## 版本更新记录
+
+### 2026-09-21
+
+本次将整机 BOM 升级到 V1.1，并更新了整机总装模型和 4 个打印件。项目内继续
+沿用原有文件名和路径，避免已有文档链接及下游引用失效：
+
+| 更新文件 | 变更内容 |
+| --- | --- |
+| [HEI_ReBot_Lift_BOM.md](HEI_ReBot_Lift_BOM.md) / [xlsx](HEI_ReBot_Lift_BOM.xlsx) | 更新到 BOM V1.1；Markdown 总价由 Excel 公式重算后重新生成 |
+| [Hei_robot_lift.STEP](Hei_robot_lift.STEP) | 替换为最新整机 STEP 总装模型 |
+| [part_dianchi_ke_1.STL](3D_Printed_Parts/part_dianchi_ke_1.STL) | 更新电池外壳打印件 1 |
+| [part_dianchi_ke_2.STL](3D_Printed_Parts/part_dianchi_ke_2.STL) | 更新电池外壳打印件 2 |
+| [part_dipan_3-1.STL](3D_Printed_Parts/part_dipan_3-1.STL) | 更新底盘打印件 3-1 |
+| [part_dipan_3.STL](3D_Printed_Parts/part_dipan_3.STL) | 更新底盘打印件 3 |
+
+加工或打印前请重新下载这些文件。此前已经打印的零件不一定与最新版总装完全
+匹配，复用前应在新 STEP 模型中检查配合面、孔位和装配间隙。
+
 ## 📁 目录结构
 
 ```text
@@ -26,12 +45,21 @@ hardware/
 
 | 文件 | 用途 | 说明 |
 | --- | --- | --- |
-| [HEI_ReBot_Lift_BOM.md](HEI_ReBot_Lift_BOM.md) / [xlsx](HEI_ReBot_Lift_BOM.xlsx) | 整机总 BOM | Markdown 用于在线查看，Excel 用于编辑维护 |
+| [HEI_ReBot_Lift_BOM.md](HEI_ReBot_Lift_BOM.md) / [xlsx](HEI_ReBot_Lift_BOM.xlsx) | 整机总 BOM V1.1 | Markdown 用于在线查看，Excel 用于编辑维护；采购前重新核对实时价格 |
 | [Hei_robot_lift.STEP](Hei_robot_lift.STEP) | 整机总装模型 | 建议优先打开，用来理解整机结构、空间布局和装配关系 |
 | [Metal_Parts/HEI_Metal_Body_Parts_List.xlsx](Metal_Parts/HEI_Metal_Body_Parts_List.xlsx) | 金属件清单 | 与 `Metal_Parts/step/`、`Metal_Parts/dwg/` 配合给加工厂使用 |
 | [3D_Printed_Parts/](3D_Printed_Parts/) | 3D 打印件 | 包含外壳、支架、升降、底盘、相机等相关 STL 文件 |
 | [Metal_Parts/step/](Metal_Parts/step/) | 金属件 STEP | 用于加工沟通、三维检查和装配确认 |
 | [Metal_Parts/dwg/](Metal_Parts/dwg/) | 金属件 DWG | 用于二维图纸检查和加工沟通 |
+
+## 组装与调试教程
+
+扫描下方二维码查看 HEI ReBot Lift 组装与调试教程。外部共享教程作为硬件资料包
+的补充；实际装配时仍需以仓库中的零件版本、接线、限位、急停和首次运动检查为准。
+
+<p align="center">
+  <a href="../media/hei-rebot-lift-assembly-debugging-tutorial.png"><img src="../media/hei-rebot-lift-assembly-debugging-tutorial.png" alt="HEI ReBot Lift 组装与调试教程二维码" width="360"></a>
+</p>
 
 ## 🧭 推荐复现顺序
 
@@ -82,7 +110,8 @@ hardware/
 
 ## 🖨️ 3D 打印件
 
-当前包含 **25 个 STL 文件**。
+当前包含 **25 个 STL 文件**。其中 4 个 STL 已于 2026-09-21 更新，详见
+[版本更新记录](#版本更新记录)。
 
 典型分类：
 

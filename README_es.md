@@ -114,11 +114,20 @@ La tabla resume el estado actual del proyecto y enlaza la documentación corresp
 | Recurso | Archivo / Directorio | Descripción |
 | --- | --- | --- |
 | Guía de hardware | [hardware/README.md](hardware/README.md) | Índice, orden de reproducción y checklist de seguridad |
-| BOM completo | [hardware/HEI_ReBot_Lift_BOM.md](hardware/HEI_ReBot_Lift_BOM.md) / [xlsx](hardware/HEI_ReBot_Lift_BOM.xlsx) | Lista principal de compra y preparación |
+| BOM completo V1.1 | [hardware/HEI_ReBot_Lift_BOM.md](hardware/HEI_ReBot_Lift_BOM.md) / [xlsx](hardware/HEI_ReBot_Lift_BOM.xlsx) | Lista principal; comprobar los precios actuales antes de comprar |
 | Ensamblaje completo | [hardware/Hei_robot_lift.STEP](hardware/Hei_robot_lift.STEP) | Modelo STEP completo del robot |
 | Piezas 3D | [hardware/3D_Printed_Parts/](hardware/3D_Printed_Parts/) | Archivos STL |
 | Lista de piezas metálicas | [hardware/Metal_Parts/HEI_Metal_Body_Parts_List.xlsx](hardware/Metal_Parts/HEI_Metal_Body_Parts_List.xlsx) | Lista CNC / chapa metálica |
 | CAD metálicos | [hardware/Metal_Parts/step/](hardware/Metal_Parts/step/) / [hardware/Metal_Parts/dwg/](hardware/Metal_Parts/dwg/) | Archivos STEP y DWG |
+
+### Tutorial de montaje y depuración
+
+Escanee este código QR para consultar el tutorial de HEI ReBot Lift. Compruebe
+también la BOM, los últimos archivos CAD y la lista de seguridad del repositorio.
+
+<p align="center">
+  <a href="media/hei-rebot-lift-assembly-debugging-tutorial.png"><img src="media/hei-rebot-lift-assembly-debugging-tutorial.png" alt="Código QR del tutorial de montaje y depuración de HEI ReBot Lift" width="360"></a>
+</p>
 
 ```text
 Brazos: dos brazos, 7 motores Damiao por brazo. Articulaciones 1-3: DM4340P; articulaciones 4-6 y pinza: DM4310

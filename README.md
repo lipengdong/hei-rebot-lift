@@ -148,11 +148,22 @@ The hardware package now includes the overall BOM, full robot STEP assembly, 3D 
 | Resource | File / Directory | Description |
 | --- | --- | --- |
 | Hardware guide | [hardware/README.md](hardware/README.md) | Hardware directory index, reproduction order, and safety checklist |
-| Overall BOM | [hardware/HEI_ReBot_Lift_BOM.md](hardware/HEI_ReBot_Lift_BOM.md) / [xlsx](hardware/HEI_ReBot_Lift_BOM.xlsx) | Main purchasing and preparation checklist for the complete robot |
+| Overall BOM V1.1 | [hardware/HEI_ReBot_Lift_BOM.md](hardware/HEI_ReBot_Lift_BOM.md) / [xlsx](hardware/HEI_ReBot_Lift_BOM.xlsx) | Main purchasing and preparation checklist; verify current prices before purchase |
 | Full robot assembly | [hardware/Hei_robot_lift.STEP](hardware/Hei_robot_lift.STEP) | Full STEP model for structure review and assembly reference |
 | 3D printed parts | [hardware/3D_Printed_Parts/](hardware/3D_Printed_Parts/) | STL files for printed covers, brackets, lift, chassis, and camera-related parts |
 | Metal body parts list | [hardware/Metal_Parts/HEI_Metal_Body_Parts_List.xlsx](hardware/Metal_Parts/HEI_Metal_Body_Parts_List.xlsx) | Metal/CNC/sheet-metal part list |
 | Metal CAD files | [hardware/Metal_Parts/step/](hardware/Metal_Parts/step/) / [hardware/Metal_Parts/dwg/](hardware/Metal_Parts/dwg/) | STEP and DWG files for machining communication |
+
+### Assembly and Debugging Tutorial
+
+Scan the QR code for the HEI ReBot Lift assembly and debugging tutorial. Use it
+together with the repository BOM, latest CAD files, and safety checklist.
+
+<p align="center">
+  <a href="media/hei-rebot-lift-assembly-debugging-tutorial.png"><img src="media/hei-rebot-lift-assembly-debugging-tutorial.png" alt="HEI ReBot Lift assembly and debugging tutorial QR code" width="360"></a>
+  <br>
+  <em>Scan to open the assembly and debugging tutorial.</em>
+</p>
 
 ```text
 Dual arms: left and right arms with 7 Damiao motors each. Joints 1-3 use DM4340P, joints 4-6 and gripper use DM4310

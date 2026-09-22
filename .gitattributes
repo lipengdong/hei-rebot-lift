@@ -1,0 +1,9 @@
+# Mechanical CAD, meshes, and spreadsheets must remain byte-for-byte intact.
+*.STEP binary
+*.step binary
+*.STL binary
+*.stl binary
+*.DWG binary
+*.dwg binary
+*.XLSX binary
+*.xlsx binary

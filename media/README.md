@@ -11,6 +11,7 @@ README illustrations and robot demonstration assets live here.
 | [hei-robot-lift-play.gif](hei-robot-lift-play.gif) | Robot demonstration |
 | [robot-mujoco.png](robot-mujoco.png) | Complete-model VR simulation overview |
 | [arm_zero.png](arm_zero.png) | Designed mechanical zero posture reference for both arms |
+| [hei-rebot-lift-assembly-debugging-tutorial.png](hei-rebot-lift-assembly-debugging-tutorial.png) | QR code for the assembly and debugging tutorial |
 | [META-QUEST-BUTTON.jpg](META-QUEST-BUTTON.jpg) | Right-controller system button for headset recentering |
 | [META-GRIP-BUTTON.jpg](META-GRIP-BUTTON.jpg) | Side grip buttons |
 | [META-FRONT-TRIGGER.jpg](META-FRONT-TRIGGER.jpg) | Front triggers |

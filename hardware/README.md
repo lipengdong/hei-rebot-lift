@@ -6,6 +6,27 @@ This directory contains the hardware release package for **HEI ReBot Lift**, a d
 
 The goal of this hardware folder is to make the robot easier to reproduce: not only software, but also the practical files needed for sourcing, machining, 3D printing, assembly review, and later maintenance.
 
+## Release Updates
+
+### 2026-09-21
+
+The BOM was upgraded to V1.1, and the full robot assembly and four printed parts
+were updated. Existing repository paths were retained so documentation links
+and downstream references remain valid:
+
+| Updated file | Change |
+| --- | --- |
+| [HEI_ReBot_Lift_BOM.md](HEI_ReBot_Lift_BOM.md) / [xlsx](HEI_ReBot_Lift_BOM.xlsx) | Updated to BOM V1.1; Markdown totals were regenerated from recalculated Excel formulas |
+| [Hei_robot_lift.STEP](Hei_robot_lift.STEP) | Replaced with the latest complete robot STEP assembly |
+| [part_dianchi_ke_1.STL](3D_Printed_Parts/part_dianchi_ke_1.STL) | Updated battery enclosure part 1 |
+| [part_dianchi_ke_2.STL](3D_Printed_Parts/part_dianchi_ke_2.STL) | Updated battery enclosure part 2 |
+| [part_dipan_3-1.STL](3D_Printed_Parts/part_dipan_3-1.STL) | Updated chassis printed part 3-1 |
+| [part_dipan_3.STL](3D_Printed_Parts/part_dipan_3.STL) | Updated chassis printed part 3 |
+
+Re-download these files before machining or printing. Previously printed parts
+may not match the latest assembly; verify mating surfaces and holes in the new
+STEP model before reusing old parts.
+
 ## 📁 Directory Layout
 
 ```text
@@ -26,12 +47,22 @@ hardware/
 
 | File | Purpose | Notes |
 | --- | --- | --- |
-| [HEI_ReBot_Lift_BOM.md](HEI_ReBot_Lift_BOM.md) / [xlsx](HEI_ReBot_Lift_BOM.xlsx) | Overall robot BOM | Markdown for online viewing, Excel for editing |
+| [HEI_ReBot_Lift_BOM.md](HEI_ReBot_Lift_BOM.md) / [xlsx](HEI_ReBot_Lift_BOM.xlsx) | Overall robot BOM V1.1 | Markdown for online viewing, Excel for editing; verify current prices before purchase |
 | [Hei_robot_lift.STEP](Hei_robot_lift.STEP) | Full robot assembly model | Use this first to inspect the complete mechanical structure and spatial layout |
 | [Metal_Parts/HEI_Metal_Body_Parts_List.xlsx](Metal_Parts/HEI_Metal_Body_Parts_List.xlsx) | Metal body parts list | Used with `Metal_Parts/step/` and `Metal_Parts/dwg/` for machining |
 | [3D_Printed_Parts/](3D_Printed_Parts/) | 3D printed parts | STL files for printed covers, brackets, lift and camera-related parts |
 | [Metal_Parts/step/](Metal_Parts/step/) | Metal STEP files | 3D CAD files for CNC/sheet-metal communication and assembly check |
 | [Metal_Parts/dwg/](Metal_Parts/dwg/) | Metal DWG drawings | 2D drawing files for manufacturing reference |
+
+## Assembly and Debugging Tutorial
+
+Scan the QR code below for the HEI ReBot Lift assembly and debugging tutorial.
+The shared tutorial complements this hardware package; verify part revisions,
+wiring, limits, emergency stop, and first-motion checks against the repository.
+
+<p align="center">
+  <a href="../media/hei-rebot-lift-assembly-debugging-tutorial.png"><img src="../media/hei-rebot-lift-assembly-debugging-tutorial.png" alt="HEI ReBot Lift assembly and debugging tutorial QR code" width="360"></a>
+</p>
 
 ## 🧭 Recommended Reproduction Order
 
@@ -82,7 +113,8 @@ The chassis supports translation and rotation for mobile manipulation tasks.
 
 ## 🖨️ 3D Printed Parts
 
-Current release: **25 STL files**.
+Current release: **25 STL files**. Four STL files were revised on 2026-09-21;
+see [Release Updates](#release-updates).
 
 Typical groups include:
 

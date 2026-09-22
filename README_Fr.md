@@ -114,11 +114,20 @@ Le tableau présente l'état actuel du projet et les liens vers la documentation
 | Ressource | Fichier / Dossier | Description |
 | --- | --- | --- |
 | Guide matériel | [hardware/README.md](hardware/README.md) | Index matériel, ordre de reproduction et checklist de sécurité |
-| BOM complet | [hardware/HEI_ReBot_Lift_BOM.md](hardware/HEI_ReBot_Lift_BOM.md) / [xlsx](hardware/HEI_ReBot_Lift_BOM.xlsx) | Liste principale d'achat et de préparation |
+| BOM complet V1.1 | [hardware/HEI_ReBot_Lift_BOM.md](hardware/HEI_ReBot_Lift_BOM.md) / [xlsx](hardware/HEI_ReBot_Lift_BOM.xlsx) | Liste principale; vérifier les prix actuels avant achat |
 | Assemblage complet | [hardware/Hei_robot_lift.STEP](hardware/Hei_robot_lift.STEP) | Modèle STEP complet du robot |
 | Pièces imprimées 3D | [hardware/3D_Printed_Parts/](hardware/3D_Printed_Parts/) | Fichiers STL |
 | Liste des pièces métalliques | [hardware/Metal_Parts/HEI_Metal_Body_Parts_List.xlsx](hardware/Metal_Parts/HEI_Metal_Body_Parts_List.xlsx) | Liste CNC / tôlerie |
 | CAD métalliques | [hardware/Metal_Parts/step/](hardware/Metal_Parts/step/) / [hardware/Metal_Parts/dwg/](hardware/Metal_Parts/dwg/) | STEP et DWG |
+
+### Tutoriel d'assemblage et de mise au point
+
+Scanner ce code QR pour consulter le tutoriel HEI ReBot Lift. Vérifier également
+la BOM, les derniers fichiers CAD et la checklist de sécurité du dépôt.
+
+<p align="center">
+  <a href="media/hei-rebot-lift-assembly-debugging-tutorial.png"><img src="media/hei-rebot-lift-assembly-debugging-tutorial.png" alt="Code QR du tutoriel d'assemblage et de mise au point HEI ReBot Lift" width="360"></a>
+</p>
 
 ```text
 Bras : deux bras, 7 moteurs Damiao chacun. Joints 1-3 : DM4340P ; joints 4-6 et pince : DM4310

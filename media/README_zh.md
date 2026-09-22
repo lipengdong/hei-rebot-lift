@@ -11,6 +11,7 @@
 | [hei-robot-lift-play.gif](hei-robot-lift-play.gif) | 功能演示 |
 | [robot-mujoco.png](robot-mujoco.png) | 完整模型 VR 仿真概览 |
 | [arm_zero.png](arm_zero.png) | 双臂设计机械零位姿态参考 |
+| [hei-rebot-lift-assembly-debugging-tutorial.png](hei-rebot-lift-assembly-debugging-tutorial.png) | 组装与调试教程二维码 |
 | [META-QUEST-BUTTON.jpg](META-QUEST-BUTTON.jpg) | 右手柄系统按钮，用于头显重新居中 |
 | [META-GRIP-BUTTON.jpg](META-GRIP-BUTTON.jpg) | 侧面握把按钮 |
 | [META-FRONT-TRIGGER.jpg](META-FRONT-TRIGGER.jpg) | 前扳机 |
