@@ -26,7 +26,7 @@ examples/hei_rebot_lift/VR_mujoco_ik/
 debug/Arm_Zero_Status_Test.py   Damiao arm zero-writing and status check
 debug/Lift_Status_Test.py       Lift homing, I/K position control, limit IO, and motor status
 debug/Chassis_Status_Test.py    Keyboard chassis control, speed gears, and four-wheel status
-debug/Port_Binding_Wizard.py    Guided serial discovery, diagnosis, and udev port binding
+debug/Port_Binding_Wizard.py    Guided serial/camera discovery, preview, diagnosis, and udev binding
 teleoperate.py            Teleoperate only, without recording data
 record.py                 Record LeRobotDataset with VR teleoperation
 replay.py                 Replay actions from a recorded episode
@@ -92,25 +92,25 @@ v4l2-ctl --device=/dev/video2 --list-formats-ext
 Default three-camera setup:
 
 ```text
-front       /dev/video0
-left_wrist  /dev/video2
-right_wrist /dev/video4
+front       /dev/hei_front_camera
+left_wrist  /dev/hei_left_wrist_camera
+right_wrist /dev/hei_right_wrist_camera
 ```
 
 Cameras use `MJPG` by default for better stability with multiple USB cameras.
 
-After discovery, edit [config_hei_rebot_lift.py](../../src/lerobot/robots/hei_rebot_lift/config_hei_rebot_lift.py)
-on the **robot Jetson**: replace the three `index_or_path` values inside
-`hei_rebot_lift_cameras_config()` with the actual front/left-wrist/right-wrist
-device paths. Keep the camera keys and other settings unchanged, stop discovery,
-then restart the host. See the [configuration example](../../src/lerobot/robots/hei_rebot_lift/README.md#where-to-change-camera-ids).
+The default configuration uses `/dev/hei_front_camera`,
+`/dev/hei_left_wrist_camera`, and `/dev/hei_right_wrist_camera`. The binding
+wizard below identifies physical cameras by preview and creates those stable
+symlinks, so changing `/dev/videoN` numbers does not require code edits.
 
-### Serial port binding wizard
+### Serial and camera binding wizard
 
 Run on the **robot-side Jetson**, with the host and all serial debug tools stopped.
 Power down and support the arms before changing wiring. Temporarily disconnect
 right-arm IDs 4-7, leaving IDs 1-3; keep left-arm IDs 1-7, chassis IDs 1-4, and
-lift ID 1 connected. Power the four U2CAN boards, motors, and limit IO for scanning.
+lift ID 1 connected. Power the four U2CAN boards, motors, and limit IO, and connect
+all currently available cameras.
 
 Set serial-port read/write permissions before starting the wizard:
 
@@ -124,16 +124,22 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 \
   python -u examples/hei_rebot_lift/debug/Port_Binding_Wizard.py
 ```
 
-The wizard identifies motor IDs and valid limit IO frames, reports missing/busy
-or ambiguous devices, and asks for confirmation before writing
+The wizard identifies serial devices, then previews each camera with MJPG. Press
+`F/L/R/S` in the preview window to assign front, left wrist, right wrist, or skip.
+Missing cameras do not block the available cameras and serial devices from being
+bound. Without a graphical desktop, snapshots are saved under
+`outputs/camera_binding_previews/` and roles are selected by number in the terminal.
+The wizard asks for confirmation before writing
 `examples/hei_rebot_lift/rules/99-nx-robot.rules`. It can install the rules into
 `/etc/udev/rules.d/` with sudo and preserves existing lidar/IMU rules.
 It does not enable motors, write zeros, or command motion. Keep USB sockets
-unchanged; bindings use physical topology. Use `--yes --install` only for
-verified, unambiguous repeat binding.
+unchanged; bindings use physical topology. `--yes --install` skips visual camera
+assignment and preserves existing camera rules. Use `--skip-cameras` when only
+rebinding serial devices.
 
 ```bash
 ls -l /dev/hei_right_arm /dev/hei_left_arm /dev/hei_chassis /dev/hei_lift /dev/hei_lift_io
+ls -l /dev/hei_front_camera /dev/hei_left_wrist_camera /dev/hei_right_wrist_camera
 ```
 
 After verification, power down, reconnect right-arm IDs 4-7, then power up.

@@ -267,13 +267,13 @@ Stable udev device names are used by default:
 /dev/hei_lift_io     Lift limit-switch serial port
 ```
 
-### 1. Serial Port Discovery and Binding Wizard
+### 1. Serial and Camera Discovery and Binding Wizard
 
 Run [Port_Binding_Wizard.py](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/debug/Port_Binding_Wizard.py)
-on the **robot-side Jetson**. It scans `ttyACM*` / `ttyUSB*`, identifies adapters
-from responding motor IDs and valid limit-switch IO frames, and generates stable
-device mappings after confirmation. It does not enable motors, write zeros, or
-send movement commands.
+on the **robot-side Jetson**. It identifies serial adapters from responding motor
+IDs and limit-switch IO frames, then previews each camera so the user can assign
+front, left-wrist, right-wrist, or skip it. Missing cameras do not stop available
+devices from being bound. It does not enable motors, write zeros, or command motion.
 
 **Prepare the hardware:**
 
@@ -308,6 +308,7 @@ are not identified by this scan.
 
 ```bash
 ls -l /dev/hei_right_arm /dev/hei_left_arm /dev/hei_chassis /dev/hei_lift /dev/hei_lift_io
+ls -l /dev/hei_front_camera /dev/hei_left_wrist_camera /dev/hei_right_wrist_camera
 ```
 
 If a symlink is missing, reconnect that USB device to the same socket and check
@@ -318,8 +319,9 @@ in its original socket, and rebind after changing sockets or hubs.
 For missing/ambiguous devices, busy ports, or invalid IO frames, check power,
 USB/CAN wiring, motor IDs, competing processes, and the IO baud rate before
 accepting any mapping. For permission errors, check serial access (usually the
-`dialout` group). Use interactive mode for first deployment; `--yes --install`
-is only for repeat binding with verified wiring and an unambiguous scan.
+`dialout` group). Use interactive mode for first deployment. `--yes --install`
+skips camera preview and preserves existing camera rules; use `--skip-cameras`
+when rebinding serial devices only.
 
 ### 2. After Binding: Arm Zeros and Independent Hardware Tests
 
@@ -453,9 +455,9 @@ for a serial port.
 Default cameras (verify actual devices on the **robot**, not your computer):
 
 ```text
-front       /dev/video0
-left_wrist  /dev/video2
-right_wrist /dev/video4
+front       /dev/hei_front_camera
+left_wrist  /dev/hei_left_wrist_camera
+right_wrist /dev/hei_right_wrist_camera
 ```
 
 Find connected cameras:
@@ -466,34 +468,25 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 \
   lerobot-find-cameras opencv --opencv-fourcc MJPG --opencv-width 640 --opencv-height 480 --opencv-fps 30
 ```
 
-### Where to Change Camera IDs
+### Stable Camera Mapping
 
-On the **robot-side Jetson**, stop the host and camera discovery tool, then edit
-[config_hei_rebot_lift.py](software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/config_hei_rebot_lift.py), in
-`hei_rebot_lift_cameras_config()`. From the software directory, the path is
-`src/lerobot/robots/hei_rebot_lift/config_hei_rebot_lift.py`.
-
-Use the captured images in `outputs/captured_images` to identify the front,
-left wrist, and right wrist cameras. Replace each camera's `index_or_path`
-with its actual device path; the following values are examples, not fixed IDs:
+The default configuration uses `/dev/hei_*_camera` symlinks created by the
+binding wizard, so changing `/dev/videoN` numbers does not require code edits.
+Run the wizard again after moving a camera to another physical USB socket:
 
 ```python
 def hei_rebot_lift_cameras_config() -> dict[str, CameraConfig]:
     return {
-        "front": OpenCVCameraConfig(index_or_path="/dev/video0", fps=30, width=640, height=480, fourcc="MJPG"),
-        "left_wrist": OpenCVCameraConfig(index_or_path="/dev/video2", fps=30, width=640, height=480, fourcc="MJPG"),
-        "right_wrist": OpenCVCameraConfig(index_or_path="/dev/video4", fps=30, width=640, height=480, fourcc="MJPG"),
+        "front": OpenCVCameraConfig(index_or_path="/dev/hei_front_camera", fps=30, width=640, height=480, fourcc="MJPG"),
+        "left_wrist": OpenCVCameraConfig(index_or_path="/dev/hei_left_wrist_camera", fps=30, width=640, height=480, fourcc="MJPG"),
+        "right_wrist": OpenCVCameraConfig(index_or_path="/dev/hei_right_wrist_camera", fps=30, width=640, height=480, fourcc="MJPG"),
     }
 ```
 
 Keep the names `front`, `left_wrist`, and `right_wrist` unchanged: datasets,
-policies, and clients use these keys. Leave the other settings intact when
-only changing IDs; do not edit `camera_opencv.py` or the VR YAML for USB IDs.
-Restart `hei-rebot-lift-host` after saving. If the client runs on another
-computer, keep the same camera keys and image dimensions in its configuration;
-the hardware device paths are opened by the robot host, not the client.
-Device numbers can change after reconnecting USB cameras; check again or use
-a verified stable device path such as `/dev/v4l/by-id/...`.
+policies, and clients use these keys. Do not edit `camera_opencv.py` or the VR
+YAML for USB IDs. A separate client keeps the same camera keys and dimensions;
+the robot host opens the physical USB devices.
 
 ## 🎮 Startup Flow
 

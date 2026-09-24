@@ -60,9 +60,9 @@ lift_io_port = "/dev/hei_lift_io"
 默认三路相机：
 
 ```text
-front       /dev/video0
-left_wrist  /dev/video2
-right_wrist /dev/video4
+front       /dev/hei_front_camera
+left_wrist  /dev/hei_left_wrist_camera
+right_wrist /dev/hei_right_wrist_camera
 ```
 
 配置位于 `hei_rebot_lift_cameras_config()`。所有相机默认使用：
@@ -90,31 +90,22 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 \
 v4l2-ctl --device=/dev/video2 --list-formats-ext
 ```
 
-### 在哪里修改相机 ID
+### 稳定相机映射
 
-在**机器人 Jetson** 上，先停止 host 和查找相机程序，然后编辑
-[config_hei_rebot_lift.py](config_hei_rebot_lift.py) 中的
-`hei_rebot_lift_cameras_config()`。从软件目录出发，文件路径是
-`src/lerobot/robots/hei_rebot_lift/config_hei_rebot_lift.py`。
-
-查看 `outputs/captured_images` 中保存的画面，确认哪路是头部、左腕、右腕，
-再将各路的 `index_or_path` 改成实际设备路径。下面的编号只是示例，不是固定 ID：
+默认配置使用绑定向导生成的稳定软链接，不直接依赖变化的 `/dev/videoN`：
 
 ```python
 def hei_rebot_lift_cameras_config() -> dict[str, CameraConfig]:
     return {
-        "front": OpenCVCameraConfig(index_or_path="/dev/video0", fps=30, width=640, height=480, fourcc="MJPG"),
-        "left_wrist": OpenCVCameraConfig(index_or_path="/dev/video2", fps=30, width=640, height=480, fourcc="MJPG"),
-        "right_wrist": OpenCVCameraConfig(index_or_path="/dev/video4", fps=30, width=640, height=480, fourcc="MJPG"),
+        "front": OpenCVCameraConfig(index_or_path="/dev/hei_front_camera", fps=30, width=640, height=480, fourcc="MJPG"),
+        "left_wrist": OpenCVCameraConfig(index_or_path="/dev/hei_left_wrist_camera", fps=30, width=640, height=480, fourcc="MJPG"),
+        "right_wrist": OpenCVCameraConfig(index_or_path="/dev/hei_right_wrist_camera", fps=30, width=640, height=480, fourcc="MJPG"),
     }
 ```
 
 保留 `front`、`left_wrist`、`right_wrist` 名称，数据集、策略和客户端依赖这些
-字段。只改 ID 时保留其他参数，不需要改 `camera_opencv.py` 或 VR YAML。
-保存后重启 `hei-rebot-lift-host`。电脑端与机器人端分开部署时，客户端配置也
-应保持相同的相机名称和图像尺寸；实际 USB 设备路径由机器人 host 打开，
-不是由电脑客户端打开。重新插拔可能改变编号，需重新检查，或使用经过验证的
-`/dev/v4l/by-id/...` 等稳定设备路径。
+字段。更换 USB 插口后重新运行 `Port_Binding_Wizard.py`，不需要修改
+`camera_opencv.py` 或 VR YAML。
 
 端口绑定与升降/底盘独立控制见
 [示例硬件教程](../../../../examples/hei_rebot_lift/README_zh.md#1-硬件检查)。

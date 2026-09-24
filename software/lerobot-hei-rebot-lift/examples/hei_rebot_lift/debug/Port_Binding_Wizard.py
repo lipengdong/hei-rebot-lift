@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Interactively identify HEI ReBot Lift serial devices and create udev rules."""
+"""Interactively identify HEI ReBot Lift serial devices and cameras and create udev rules."""
 
 from __future__ import annotations
 
@@ -15,6 +15,7 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
+import cv2
 import serial
 
 from lerobot.motors.damiao_u2can import DM_Motor_Type, Motor, MotorControl
@@ -43,6 +44,22 @@ EXPECTED_MOTOR_IDS = {
     "lift": frozenset({1}),
     "chassis": frozenset(range(1, 5)),
 }
+
+CAMERA_ROLE_ORDER = ("front_camera", "left_wrist_camera", "right_wrist_camera")
+CAMERA_ROLE_LABELS = {
+    "front_camera": "前置相机",
+    "left_wrist_camera": "左腕相机",
+    "right_wrist_camera": "右腕相机",
+}
+CAMERA_KEY_TO_ROLE = {
+    ord("f"): "front_camera",
+    ord("l"): "left_wrist_camera",
+    ord("r"): "right_wrist_camera",
+}
+CAMERA_WIDTH = 640
+CAMERA_HEIGHT = 480
+CAMERA_FPS = 30
+CAMERA_FOURCC = "MJPG"
 
 
 @dataclass
@@ -73,6 +90,18 @@ class PortInfo:
         return self.usb_id == LIFT_IO_USB_ID
 
 
+@dataclass
+class CameraInfo:
+    device: Path
+    id_path: str = ""
+    vendor_id: str = ""
+    product_id: str = ""
+    product: str = ""
+    serial_short: str = ""
+    video_index: int | None = None
+    scan_error: str = ""
+
+
 class ProbeMotor(Motor):
     """Motor object that records whether a status response was decoded."""
 
@@ -87,7 +116,7 @@ class ProbeMotor(Motor):
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Identify HEI ReBot Lift serial ports by connected motor count and create udev rules."
+        description="Identify HEI ReBot Lift serial devices and cameras, then create stable udev mappings."
     )
     parser.add_argument("--rules-file", type=Path, default=DEFAULT_RULES_FILE, help="Project udev rules file.")
     parser.add_argument("--motor-baud", type=int, default=MOTOR_BAUD, help="Damiao U2CAN baud rate.")
@@ -102,6 +131,17 @@ def parse_args() -> argparse.Namespace:
         "--install",
         action="store_true",
         help="Install the generated file into /etc/udev/rules.d after writing it.",
+    )
+    parser.add_argument(
+        "--skip-cameras",
+        action="store_true",
+        help="Skip interactive camera preview and preserve existing camera rules.",
+    )
+    parser.add_argument(
+        "--camera-preview-dir",
+        type=Path,
+        default=Path("outputs/camera_binding_previews"),
+        help="Directory used for camera snapshots and as a fallback when no GUI is available.",
     )
     return parser.parse_args()
 
@@ -187,6 +227,217 @@ def discover_serial_ports() -> list[PortInfo]:
     return ports
 
 
+def video_index_from_sysfs(device: Path) -> int | None:
+    index_path = Path("/sys/class/video4linux") / device.name / "index"
+    try:
+        return int(index_path.read_text(encoding="utf-8").strip())
+    except (OSError, ValueError):
+        return None
+
+
+def discover_cameras() -> list[CameraInfo]:
+    def video_number(path: Path) -> int:
+        match = re.search(r"(\d+)$", path.name)
+        return int(match.group(1)) if match else 10_000
+
+    cameras: list[CameraInfo] = []
+    for device in sorted(Path("/dev").glob("video*"), key=video_number):
+        try:
+            properties = run_udevadm_properties(device)
+        except RuntimeError as exc:
+            cameras.append(CameraInfo(device=device, scan_error=str(exc)))
+            continue
+
+        capabilities = properties.get("ID_V4L_CAPABILITIES", "")
+        video_index = video_index_from_sysfs(device)
+        # UVC devices commonly expose index 0 for image capture and index 1 for
+        # metadata or a duplicate interface. Only present index 0 to the user.
+        if ":capture:" not in capabilities or video_index != 0:
+            continue
+
+        cameras.append(
+            CameraInfo(
+                device=device,
+                id_path=properties.get("ID_PATH", ""),
+                vendor_id=properties.get("ID_VENDOR_ID", "").lower(),
+                product_id=properties.get("ID_MODEL_ID", "").lower(),
+                product=properties.get("ID_V4L_PRODUCT", properties.get("ID_MODEL", "unknown")),
+                serial_short=properties.get("ID_SERIAL_SHORT", ""),
+                video_index=video_index,
+            )
+        )
+    return cameras
+
+
+def open_camera(camera: CameraInfo):
+    capture = cv2.VideoCapture(str(camera.device), cv2.CAP_V4L2)
+    if not capture.isOpened():
+        capture.release()
+        raise RuntimeError(f"无法打开 {camera.device}。确认 host 和其他相机程序已经停止。")
+
+    capture.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*CAMERA_FOURCC))
+    capture.set(cv2.CAP_PROP_FRAME_WIDTH, CAMERA_WIDTH)
+    capture.set(cv2.CAP_PROP_FRAME_HEIGHT, CAMERA_HEIGHT)
+    capture.set(cv2.CAP_PROP_FPS, CAMERA_FPS)
+    with contextlib.suppress(Exception):
+        capture.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+    return capture
+
+
+def read_camera_frame(capture, camera: CameraInfo):
+    deadline = time.monotonic() + 3.0
+    last_error = ""
+    while time.monotonic() < deadline:
+        ok, frame = capture.read()
+        if ok and frame is not None:
+            return frame
+        last_error = "read returned status=False"
+        time.sleep(0.03)
+    raise RuntimeError(f"{camera.device} 在 3 秒内没有有效画面（{last_error}）。")
+
+
+def prompt_camera_role(camera: CameraInfo, assignments: dict[str, CameraInfo]) -> str | None:
+    available = [role for role in CAMERA_ROLE_ORDER if role not in assignments]
+    print(f"\n相机：{camera.device}  型号={camera.product}  USB路径={camera.id_path or '?'}")
+    for index, role in enumerate(available, 1):
+        print(f"  {index}. {CAMERA_ROLE_LABELS[role]} -> /dev/hei_{role}")
+    print("  s. 跳过这台相机")
+    print("  q. 退出向导")
+    while True:
+        answer = input("请选择相机角色：").strip().lower()
+        if answer == "q":
+            raise KeyboardInterrupt
+        if answer in {"s", "skip", ""}:
+            return None
+        if answer.isdigit() and 1 <= int(answer) <= len(available):
+            return available[int(answer) - 1]
+        print("输入无效，请重新选择。")
+
+
+def preview_and_choose_camera(
+    camera: CameraInfo,
+    assignments: dict[str, CameraInfo],
+    preview_dir: Path,
+) -> str | None:
+    capture = open_camera(camera)
+    window_name = f"HEI Camera Binding - {camera.device.name}"
+    gui_available = bool(os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"))
+    window_created = False
+    latest_frame = None
+    try:
+        latest_frame = read_camera_frame(capture, camera)
+        preview_dir.mkdir(parents=True, exist_ok=True)
+        snapshot_path = preview_dir / f"{camera.device.name}.jpg"
+        cv2.imwrite(str(snapshot_path), latest_frame)
+
+        if gui_available:
+            try:
+                cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
+                cv2.resizeWindow(window_name, CAMERA_WIDTH, CAMERA_HEIGHT)
+                window_created = True
+            except cv2.error as exc:
+                print(f"[WARNING] OpenCV 无法创建窗口：{exc}")
+                gui_available = False
+
+        if not gui_available:
+            print(f"[WARNING] 当前终端没有可用图形窗口，预览已保存到：{snapshot_path}")
+            return prompt_camera_role(camera, assignments)
+
+        print(f"\n正在显示 {camera.device}。请点击预览窗口后按键选择：")
+        print("  F=前置相机  L=左腕相机  R=右腕相机  S=跳过  Q=退出")
+        while True:
+            ok, frame = capture.read()
+            if not ok or frame is None:
+                print(f"[WARNING] {camera.device} 读取失败，已跳过。")
+                return None
+            latest_frame = frame
+            display = frame.copy()
+            cv2.putText(
+                display,
+                "F: FRONT   L: LEFT WRIST   R: RIGHT WRIST   S: SKIP   Q: QUIT",
+                (12, 28),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.55,
+                (0, 255, 255),
+                2,
+                cv2.LINE_AA,
+            )
+            cv2.imshow(window_name, display)
+            key = cv2.waitKey(1) & 0xFF
+            if 65 <= key <= 90:
+                key += 32
+            if key == ord("q"):
+                raise KeyboardInterrupt
+            if key == ord("s"):
+                return None
+            try:
+                window_visible = cv2.getWindowProperty(window_name, cv2.WND_PROP_VISIBLE) >= 1
+            except cv2.error:
+                window_visible = False
+            if not window_visible:
+                print("[WARNING] 预览窗口已关闭，改用终端选择。")
+                return prompt_camera_role(camera, assignments)
+            role = CAMERA_KEY_TO_ROLE.get(key)
+            if role is None:
+                continue
+            if role in assignments:
+                print(
+                    f"[WARNING] {CAMERA_ROLE_LABELS[role]} 已绑定到 "
+                    f"{assignments[role].device}，请选择其他角色。"
+                )
+                continue
+            return role
+    finally:
+        capture.release()
+        if latest_frame is not None:
+            preview_dir.mkdir(parents=True, exist_ok=True)
+            cv2.imwrite(str(preview_dir / f"{camera.device.name}.jpg"), latest_frame)
+        if window_created:
+            with contextlib.suppress(cv2.error):
+                cv2.destroyWindow(window_name)
+                cv2.waitKey(1)
+
+
+def assign_cameras(cameras: list[CameraInfo], preview_dir: Path) -> dict[str, CameraInfo]:
+    print_header("步骤 4/6：相机画面确认与角色绑定")
+    usable = [camera for camera in cameras if not camera.scan_error and camera.id_path]
+    if not usable:
+        print(
+            "[WARNING] 没有发现可绑定的 video-index0 采集节点；"
+            "相机部分留空，继续处理串口规则。"
+        )
+        return {}
+
+    print(
+        f"检测到 {len(usable)} 个可采集相机节点。"
+        "将逐台打开，不会因缺少某一路而中止向导。"
+    )
+    assignments: dict[str, CameraInfo] = {}
+    for camera in usable:
+        try:
+            role = preview_and_choose_camera(camera, assignments, preview_dir)
+        except RuntimeError as exc:
+            print(f"[WARNING] {exc} 已跳过该相机。")
+            continue
+        if role is not None:
+            assignments[role] = camera
+            print(f"[OK] {camera.device} -> /dev/hei_{role}")
+        if len(assignments) == len(CAMERA_ROLE_ORDER):
+            break
+
+    print("\n相机分配结果：")
+    for role in CAMERA_ROLE_ORDER:
+        camera = assignments.get(role)
+        if camera is None:
+            print(f"  [SKIP] /dev/hei_{role}：本次未绑定")
+        else:
+            print(f"  [OK]   /dev/hei_{role} -> {camera.device}  ID_PATH={camera.id_path}")
+    if ask_yes_no("是否接受以上相机分配？", default=True):
+        return assignments
+    print("重新开始相机画面确认。")
+    return assign_cameras(cameras, preview_dir)
+
+
 def scan_motor_ids(port: PortInfo, baud: int, attempts: int) -> None:
     serial_device = None
     try:
@@ -255,7 +506,7 @@ def format_ids(ids: set[int]) -> str:
 
 
 def print_scan_table(ports: list[PortInfo]) -> None:
-    print_header("步骤 2/5：串口与设备响应扫描结果")
+    print_header("步骤 2/6：串口与设备响应扫描结果")
     print("%-3s %-14s %-11s %-13s %-16s %-8s %-10s" % (
         "No", "DEVICE", "USB ID", "USB KERNEL", "MOTOR IDS", "IO", "RESULT"
     ))
@@ -356,7 +607,7 @@ def confirm_assignments(
     problems: list[str],
     assume_yes: bool,
 ) -> dict[str, PortInfo]:
-    print_header("步骤 3/5：模块识别与确认")
+    print_header("步骤 3/6：串口模块识别与确认")
     if problems:
         print("自动识别发现以下问题：")
         for problem in problems:
@@ -439,18 +690,42 @@ def make_rule(role: str, port: PortInfo) -> str:
     )
 
 
-def merge_project_rules(existing: str, assignments: dict[str, PortInfo]) -> str:
-    managed_pattern = re.compile(r'SYMLINK\+="hei_(?:right_arm|left_arm|lift|chassis|lift_io)"')
+def make_camera_rule(role: str, camera: CameraInfo) -> str:
+    return (
+        'SUBSYSTEM=="video4linux", KERNEL=="video*", '
+        f'ENV{{ID_PATH}}=="{camera.id_path}", ATTR{{index}}=="{camera.video_index}", '
+        f'SYMLINK+="hei_{role}"'
+    )
+
+
+def merge_project_rules(
+    existing: str,
+    assignments: dict[str, PortInfo],
+    camera_assignments: dict[str, CameraInfo] | None,
+) -> str:
+    serial_pattern = re.compile(r'SYMLINK\+="hei_(?:right_arm|left_arm|lift|chassis|lift_io)"')
+    camera_pattern = re.compile(r'SYMLINK\+="hei_(?:front_camera|left_wrist_camera|right_wrist_camera)"')
     generated_comments = {
         "# HEI ReBot Lift ports generated by debug/Port_Binding_Wizard.py",
         "# Binding uses physical USB topology; keep each adapter in the same USB socket.",
+        "# HEI ReBot Lift cameras selected interactively by debug/Port_Binding_Wizard.py",
+        "# Camera binding uses ID_PATH and video-index0; keep each camera in the same USB socket.",
         "# Existing unrelated devices (IMU/lidar) are preserved below.",
     }
-    preserved = [
-        line
-        for line in existing.splitlines()
-        if not managed_pattern.search(line) and line.strip() not in generated_comments
-    ]
+    preserved = []
+    for line in existing.splitlines():
+        if serial_pattern.search(line):
+            continue
+        if camera_assignments is not None and camera_pattern.search(line):
+            continue
+        if line.strip() in generated_comments:
+            camera_comment = line.strip().startswith(
+                ("# HEI ReBot Lift cameras", "# Camera binding")
+            )
+            if camera_assignments is None and camera_comment:
+                preserved.append(line)
+            continue
+        preserved.append(line)
     while preserved and not preserved[0].strip():
         preserved.pop(0)
 
@@ -460,6 +735,20 @@ def merge_project_rules(existing: str, assignments: dict[str, PortInfo]) -> str:
         "# Binding uses physical USB topology; keep each adapter in the same USB socket.",
         *generated,
     ]
+    if camera_assignments is not None:
+        camera_rules = [
+            make_camera_rule(role, camera_assignments[role])
+            for role in CAMERA_ROLE_ORDER
+            if role in camera_assignments
+        ]
+        lines.extend(
+            [
+                "",
+                "# HEI ReBot Lift cameras selected interactively by debug/Port_Binding_Wizard.py",
+                "# Camera binding uses ID_PATH and video-index0; keep each camera in the same USB socket.",
+                *camera_rules,
+            ]
+        )
     if preserved:
         lines.extend(["", "# Existing unrelated devices (IMU/lidar) are preserved below.", *preserved])
     return "\n".join(lines).rstrip() + "\n"
@@ -486,13 +775,18 @@ def atomic_write_with_backup(path: Path, content: str) -> Path | None:
     return backup
 
 
-def install_rules(project_rules: Path, assignments: dict[str, PortInfo]) -> None:
-    print_header("步骤 5/5：安装规则并验证软链接")
+def install_rules(
+    project_rules: Path,
+    assignments: dict[str, PortInfo],
+    camera_assignments: dict[str, CameraInfo] | None,
+) -> None:
+    print_header("步骤 6/6：安装规则并验证软链接")
     destination = Path("/etc/udev/rules.d") / RULE_NAME
     commands = [
         ["sudo", "install", "-m", "0644", str(project_rules), str(destination)],
         ["sudo", "udevadm", "control", "--reload-rules"],
         ["sudo", "udevadm", "trigger", "--subsystem-match=tty", "--action=add"],
+        ["sudo", "udevadm", "trigger", "--subsystem-match=video4linux", "--action=add"],
         ["sudo", "udevadm", "settle"],
     ]
     for command in commands:
@@ -512,10 +806,28 @@ def install_rules(project_rules: Path, assignments: dict[str, PortInfo]) -> None
         else:
             all_ok = False
             print(f"  [ERROR] {link} 未生成")
+    if camera_assignments is not None:
+        print("\n相机软链接验证：")
+        for role in CAMERA_ROLE_ORDER:
+            link = Path("/dev") / f"hei_{role}"
+            camera = camera_assignments.get(role)
+            if camera is None:
+                print(f"  [SKIP] {link} 本次未绑定")
+                continue
+            expected = camera.device.resolve()
+            if link.is_symlink():
+                actual = link.resolve()
+                ok = actual == expected
+                all_ok &= ok
+                print(f"  [{'OK' if ok else 'ERROR'}] {link} -> {actual}  expected={expected}")
+            else:
+                all_ok = False
+                print(f"  [ERROR] {link} 未生成")
+
     if not all_ok:
         print("\n部分软链接未生效。请保持 USB 插口不变，拔插对应设备后重新运行验证。")
     else:
-        print("\n全部 HEI ReBot Lift 串口软链接已正确生效。")
+        print("\n本次选择的 HEI ReBot Lift 软链接已正确生效。")
 
 
 def main() -> None:
@@ -523,7 +835,7 @@ def main() -> None:
     if args.probe_attempts <= 0:
         raise RuntimeError("--probe-attempts 必须是大于 0 的整数。")
 
-    print_header("HEI ReBot Lift 串口自动识别与 udev 绑定向导")
+    print_header("HEI ReBot Lift 串口与相机自动识别、udev 绑定向导")
     print("本程序不会使能电机、不会写零位、不会发送运动命令。")
     print("识别依据：")
     print("  右臂：只连接电机 ID 1-3（请临时断开右臂 ID 4-7）")
@@ -531,14 +843,16 @@ def main() -> None:
     print("  底盘：连接电机 ID 1-4")
     print("  升降：连接电机 ID 1")
     print("  限位：USB ID 1a86:7523，并能读取有效 IO 帧")
+    print("  相机：逐台显示 MJPG 画面，由用户确认前置、左腕和右腕；缺失相机允许跳过")
     print("  IMU 和雷达：本次忽略，原规则会原样保留")
 
     if not args.yes:
-        print_header("步骤 1/5：接线准备")
+        print_header("步骤 1/6：接线准备")
         print("1. 停止 hei-rebot-lift-host 和所有电机/串口调试程序。")
         print("2. 四块 U2CAN、升降限位 IO 和所有需要识别的电机均上电。")
         print("3. 仅将右臂电机 4-7 与右臂总线断开，保留右臂 ID 1-3。")
-        print("4. 不要在扫描和规则安装过程中移动 USB 插口。")
+        print("4. 接好需要绑定的相机；相机缺失时可以在画面确认阶段跳过。")
+        print("5. 不要在扫描和规则安装过程中移动 USB 插口。")
         ask_enter("准备完成后按 Enter 开始扫描，Ctrl+C 退出：")
 
     ports = discover_serial_ports()
@@ -558,10 +872,21 @@ def main() -> None:
     assignments = confirm_assignments(ports, automatic, problems, args.yes)
     validate_rule_attributes(assignments)
 
-    print_header("步骤 4/5：生成项目规则文件")
+    camera_assignments: dict[str, CameraInfo] | None = None
+    if args.skip_cameras:
+        print_header("步骤 4/6：跳过相机绑定")
+        print("已使用 --skip-cameras，保留规则文件中已有的相机绑定。")
+    elif args.yes:
+        print_header("步骤 4/6：跳过相机绑定")
+        print("--yes 不进行需要人工看画面的相机分配，保留已有相机绑定。")
+    else:
+        cameras = discover_cameras()
+        camera_assignments = assign_cameras(cameras, args.camera_preview_dir.expanduser().resolve())
+
+    print_header("步骤 5/6：生成项目规则文件")
     rules_path = args.rules_file.expanduser().resolve()
     existing = rules_path.read_text(encoding="utf-8") if rules_path.exists() else ""
-    content = merge_project_rules(existing, assignments)
+    content = merge_project_rules(existing, assignments, camera_assignments)
     print(content)
     backup = atomic_write_with_backup(rules_path, content)
     print(f"已写入：{rules_path}")
@@ -572,7 +897,7 @@ def main() -> None:
     if not args.install and not args.yes:
         should_install = ask_yes_no("是否现在安装到 /etc/udev/rules.d 并重新加载？", default=True)
     if should_install:
-        install_rules(rules_path, assignments)
+        install_rules(rules_path, assignments, camera_assignments)
     else:
         print("\n已跳过系统安装。之后可重新运行并添加 --install。")
 

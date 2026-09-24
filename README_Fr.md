@@ -199,14 +199,16 @@ ne pas installer `pin` séparément avec pip. Les scripts activent automatiqueme
 /dev/hei_lift_io     Port série des fins de course
 ```
 
-### 1. Identification et liaison des ports
+### 1. Identification et liaison des ports et caméras
 
 Sur le Jetson, arrêter le host et tous les outils série. Couper l'alimentation
 et soutenir les bras avant de changer le câblage. Débrancher temporairement les
 moteurs **4-7 du bras droit** (ne garder que 1-3); laisser le bras gauche 1-7, le
 châssis 1-4 et l'élévateur 1 branchés. Alimenter les quatre U2CAN, moteurs et IO
 pour la détection. L'assistant [Port_Binding_Wizard.py](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/debug/Port_Binding_Wizard.py) ne commande aucun mouvement
-et n'écrit aucun zéro.
+et n'écrit aucun zéro. Il affiche chaque caméra en MJPG; utiliser `F/L/R/S`
+pour choisir avant, poignet gauche, poignet droit ou ignorer. Une caméra absente
+n'empêche pas la liaison des périphériques disponibles.
 
 Définir les droits de lecture/écriture des ports série avant de lancer
 l'assistant Python :
@@ -223,9 +225,9 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 python -u examples/hei_
 
 Confirmer les résultats avant d'écrire les règles; installation système avec
 sudo. Les règles lidar/IMU existantes sont conservées. Garder les mêmes prises
-USB: la liaison suit la topologie physique. Vérifier les cinq liens, couper
+USB: la liaison suit la topologie physique. Vérifier les liens, couper
 l'alimentation, puis reconnecter les moteurs droits 4-7 avant les tests.
-`--yes --install` est réservé aux répétitions déjà vérifiées.
+`--yes --install` conserve les règles caméra existantes et ignore l'aperçu.
 
 ### 2. Tests indépendants après la liaison
 
@@ -247,8 +249,9 @@ terminal interactif (SSH avec TTY). Les détails sont dans le
 
 ### 3. Caméras
 
-Vérifier sur le **robot**: `front=/dev/video0`, `left_wrist=/dev/video2`,
-`right_wrist=/dev/video4`; profils actuels `640x480 @ 30 FPS`, `MJPG`.
+Vérifier sur le **robot**: `front=/dev/hei_front_camera`,
+`left_wrist=/dev/hei_left_wrist_camera`,
+`right_wrist=/dev/hei_right_wrist_camera`; profils actuels `640x480 @ 30 FPS`, `MJPG`.
 Les noms de périphériques peuvent varier. Rechercher les caméras sur le robot :
 
 ```bash
@@ -259,16 +262,10 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 \
 
 Le flux vidéo VR est actuellement désactivé, pas la capture du host.
 
-Sur le **Jetson du robot**, arrêter le host et l'outil de recherche, puis modifier
-[config_hei_rebot_lift.py](software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/config_hei_rebot_lift.py), fonction
-`hei_rebot_lift_cameras_config()`. Identifier les caméras avec les images de
-`outputs/captured_images` et remplacer les trois valeurs `index_or_path`.
-Conserver les clés `front`, `left_wrist`, `right_wrist` et les autres réglages;
-ne pas modifier `camera_opencv.py` ni le YAML VR pour ces IDs USB.
-Enregistrer et redémarrer `hei-rebot-lift-host`. Sur l'ordinateur client,
-conserver les mêmes clés et dimensions; les périphériques USB sont ouverts
-sur le robot. Après reconnexion USB, vérifier les IDs à nouveau.
-[Exemple de configuration](software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/README.md#where-to-change-camera-ids).
+Ces chemins stables sont créés par l'assistant selon la prise USB physique.
+Après déplacement d'une caméra vers une autre prise, relancer l'assistant au
+lieu de modifier le code. Conserver les clés `front`, `left_wrist` et
+`right_wrist`. [Exemple de configuration](software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/README.md#stable-camera-mapping).
 
 ## 🎮 Démarrage
 

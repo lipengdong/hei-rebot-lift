@@ -26,7 +26,7 @@ examples/hei_rebot_lift/VR_mujoco_ik/
 debug/Arm_Zero_Status_Test.py   达妙机械臂写零位和状态检查
 debug/Lift_Status_Test.py       升降归零、I/K 位置控制、限位 IO 和电机状态
 debug/Chassis_Status_Test.py    底盘键盘控制、速度档位和四轮状态
-debug/Port_Binding_Wizard.py    串口自动识别、故障诊断和 udev 端口绑定向导
+debug/Port_Binding_Wizard.py    串口/相机识别、画面确认、故障诊断和 udev 绑定向导
 teleoperate.py            只遥操作，不录数据
 record.py                 VR 遥操作录制数据集
 replay.py                 回放数据集中的某一集动作
@@ -91,24 +91,22 @@ v4l2-ctl --device=/dev/video2 --list-formats-ext
 三路相机默认配置：
 
 ```text
-front       /dev/video0
-left_wrist  /dev/video2
-right_wrist /dev/video4
+front       /dev/hei_front_camera
+left_wrist  /dev/hei_left_wrist_camera
+right_wrist /dev/hei_right_wrist_camera
 ```
 
 相机默认使用 `MJPG`，这样多个 USB 相机同时跑时更稳。
 
-查找后，在**机器人 Jetson** 上编辑
-[config_hei_rebot_lift.py](../../src/lerobot/robots/hei_rebot_lift/config_hei_rebot_lift.py)
-的 `hei_rebot_lift_cameras_config()`，将三路 `index_or_path` 分别改为头部、
-左腕、右腕的实际设备路径。相机名称和其他参数保持不变，停止查找程序后重启
-host。完整示例见 [相机 ID 修改说明](../../src/lerobot/robots/hei_rebot_lift/README_zh.md#在哪里修改相机-id)。
+默认配置使用 `/dev/hei_front_camera`、`/dev/hei_left_wrist_camera` 和
+`/dev/hei_right_wrist_camera`。下面的绑定向导通过画面确认实际相机并生成这些
+稳定软链接，不需要手动跟随 `/dev/videoN` 修改代码。
 
-### 串口绑定向导
+### 串口与相机绑定向导
 
 在**机器人 Jetson** 上执行，先停止 host 和所有串口调试程序。改接线前断电并
 支撑机械臂；暂时断开右臂 ID 4-7，只留 ID 1-3，左臂保留 ID 1-7，底盘 ID 1-4，
-升降 ID 1。扫描时给四块 U2CAN、电机及限位 IO 上电。
+升降 ID 1。扫描时给四块 U2CAN、电机及限位 IO 上电，并连接当前可用的相机。
 
 运行向导前设置串口读写权限：
 
@@ -122,14 +120,18 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 \
   python -u examples/hei_rebot_lift/debug/Port_Binding_Wizard.py
 ```
 
-向导根据电机响应 ID 和有效限位 IO 帧识别设备，提示缺失、占用或歧义，确认后写入
+向导根据电机响应 ID 和有效限位 IO 帧识别串口，然后逐台显示 MJPG 相机画面；
+在预览窗口按 `F/L/R/S` 选择前置、左腕、右腕或跳过。缺少某路相机不会阻止已有
+相机和串口完成绑定。没有图形桌面时，截图保存到
+`outputs/camera_binding_previews/`，再在终端按编号选择。确认后写入
 `examples/hei_rebot_lift/rules/99-nx-robot.rules`；可通过 sudo 安装到
 `/etc/udev/rules.d/`，保留已有雷达/IMU 规则。不会使能、写零位或发送运动命令。
-规则绑定 USB 物理拓扑，插口不要变；`--yes --install` 仅用于接线已验证且
-识别结果无歧义的重复绑定。
+规则绑定 USB 物理拓扑，插口不要变。`--yes --install` 会跳过需要人工看画面的
+相机分配并保留已有相机规则；只重新绑定串口时也可显式添加 `--skip-cameras`。
 
 ```bash
 ls -l /dev/hei_right_arm /dev/hei_left_arm /dev/hei_chassis /dev/hei_lift /dev/hei_lift_io
+ls -l /dev/hei_front_camera /dev/hei_left_wrist_camera /dev/hei_right_wrist_camera
 ```
 
 确认后断电，接回右臂 ID 4-7，再上电。详细排查与测试注意事项见

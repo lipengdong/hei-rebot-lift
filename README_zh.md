@@ -257,12 +257,13 @@ env -u LD_LIBRARY_PATH python -c "import pinocchio as pin; from pinocchio import
 /dev/hei_lift_io     升降限位开关串口
 ```
 
-### 1. 串口自动识别与绑定向导
+### 1. 串口与相机自动识别、绑定向导
 
 在**机器人端 Jetson**运行
 [Port_Binding_Wizard.py](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/debug/Port_Binding_Wizard.py)，
-它会扫描 `ttyACM*` / `ttyUSB*`，根据响应的电机 ID 和有效限位 IO 帧识别设备，
-确认后生成稳定端口映射。程序不会使能电机、写零位或发送运动命令。
+它会扫描 `ttyACM*` / `ttyUSB*`，根据响应的电机 ID 和有效限位 IO 帧识别设备；
+随后逐台显示相机画面，由用户选择前置、左腕、右腕或跳过。确认后统一生成稳定
+设备映射。缺少某路相机不会中止绑定；程序不会使能电机、写零位或发送运动命令。
 
 **运行前准备：**
 
@@ -295,6 +296,7 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 \
 
 ```bash
 ls -l /dev/hei_right_arm /dev/hei_left_arm /dev/hei_chassis /dev/hei_lift /dev/hei_lift_io
+ls -l /dev/hei_front_camera /dev/hei_left_wrist_camera /dev/hei_right_wrist_camera
 ```
 
 若软链接未生效，保持 USB 插口不变，重新插拔对应 USB 设备并检查。
@@ -304,7 +306,8 @@ ls -l /dev/hei_right_arm /dev/hei_left_arm /dev/hei_chassis /dev/hei_lift /dev/h
 若提示设备缺失、识别有歧义、串口忙或 IO 帧无效，先检查上电、USB/CAN 接线、
 电机 ID、串口占用及 IO 波特率，不要在未确认时强行接受映射。
 权限不足时检查用户是否具有串口访问权限（通常为 `dialout` 组）。
-首次部署使用交互模式；`--yes --install` 仅适用于接线已验证且扫描无歧义的重复绑定。
+首次部署使用交互模式。`--yes --install` 会跳过相机画面确认并保留已有相机规则；
+只重新绑定串口时可使用 `--skip-cameras`。
 
 ### 2. 绑定后：机械臂零位与独立硬件测试
 
@@ -424,9 +427,9 @@ PYTHONPATH=src python -u examples/hei_rebot_lift/debug/Lift_Status_Test.py \
 默认相机（请在**机器人端**确认实际设备，不是自己电脑的相机）：
 
 ```text
-front       /dev/video0
-left_wrist  /dev/video2
-right_wrist /dev/video4
+front       /dev/hei_front_camera
+left_wrist  /dev/hei_left_wrist_camera
+right_wrist /dev/hei_right_wrist_camera
 ```
 
 查找相机：
@@ -437,31 +440,23 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 \
   lerobot-find-cameras opencv --opencv-fourcc MJPG --opencv-width 640 --opencv-height 480 --opencv-fps 30
 ```
 
-### 在哪里修改相机 ID
+### 稳定相机映射
 
-在**机器人 Jetson** 上，先停止 host 和查找相机程序，然后编辑
-[config_hei_rebot_lift.py](software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/config_hei_rebot_lift.py) 中的
-`hei_rebot_lift_cameras_config()`。从软件目录出发，文件路径是
-`src/lerobot/robots/hei_rebot_lift/config_hei_rebot_lift.py`。
-
-查看 `outputs/captured_images` 中保存的画面，确认哪路是头部、左腕、右腕，
-再将各路的 `index_or_path` 改成实际设备路径。下面的编号只是示例，不是固定 ID：
+默认配置固定使用绑定向导创建的 `/dev/hei_*_camera` 软链接，不需要随着
+`/dev/videoN` 变化而修改代码。相机更换 USB 插口后，重新运行绑定向导：
 
 ```python
 def hei_rebot_lift_cameras_config() -> dict[str, CameraConfig]:
     return {
-        "front": OpenCVCameraConfig(index_or_path="/dev/video0", fps=30, width=640, height=480, fourcc="MJPG"),
-        "left_wrist": OpenCVCameraConfig(index_or_path="/dev/video2", fps=30, width=640, height=480, fourcc="MJPG"),
-        "right_wrist": OpenCVCameraConfig(index_or_path="/dev/video4", fps=30, width=640, height=480, fourcc="MJPG"),
+        "front": OpenCVCameraConfig(index_or_path="/dev/hei_front_camera", fps=30, width=640, height=480, fourcc="MJPG"),
+        "left_wrist": OpenCVCameraConfig(index_or_path="/dev/hei_left_wrist_camera", fps=30, width=640, height=480, fourcc="MJPG"),
+        "right_wrist": OpenCVCameraConfig(index_or_path="/dev/hei_right_wrist_camera", fps=30, width=640, height=480, fourcc="MJPG"),
     }
 ```
 
 保留 `front`、`left_wrist`、`right_wrist` 名称，数据集、策略和客户端依赖这些
-字段。只改 ID 时保留其他参数，不需要改 `camera_opencv.py` 或 VR YAML。
-保存后重启 `hei-rebot-lift-host`。电脑端与机器人端分开部署时，客户端配置也
-应保持相同的相机名称和图像尺寸；实际 USB 设备路径由机器人 host 打开，
-不是由电脑客户端打开。重新插拔可能改变编号，需重新检查，或使用经过验证的
-`/dev/v4l/by-id/...` 等稳定设备路径。
+字段，不需要修改 `camera_opencv.py` 或 VR YAML。电脑端与机器人端分开部署时，
+客户端仍保持相同的相机名称和图像尺寸；实际 USB 设备由机器人 host 打开。
 
 ## 🎮 启动流程
 

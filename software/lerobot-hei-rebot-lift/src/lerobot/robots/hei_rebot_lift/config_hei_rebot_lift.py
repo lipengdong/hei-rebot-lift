@@ -11,13 +11,13 @@ from ..config import RobotConfig
 def hei_rebot_lift_cameras_config() -> dict[str, CameraConfig]:
     return {
         "front": OpenCVCameraConfig(
-            index_or_path="/dev/video0", fps=30, width=640, height=480, rotation=Cv2Rotation.NO_ROTATION, fourcc="MJPG",
+            index_or_path="/dev/hei_front_camera", fps=30, width=640, height=480, rotation=Cv2Rotation.NO_ROTATION, fourcc="MJPG",
         ),
         "left_wrist": OpenCVCameraConfig(
-            index_or_path="/dev/video2", fps=30, width=640, height=480, rotation=Cv2Rotation.NO_ROTATION, fourcc="MJPG",
+            index_or_path="/dev/hei_left_wrist_camera", fps=30, width=640, height=480, rotation=Cv2Rotation.NO_ROTATION, fourcc="MJPG",
         ),
         "right_wrist": OpenCVCameraConfig(
-            index_or_path="/dev/video4", fps=30, width=640, height=480, rotation=Cv2Rotation.NO_ROTATION, fourcc="MJPG",
+            index_or_path="/dev/hei_right_wrist_camera", fps=30, width=640, height=480, rotation=Cv2Rotation.NO_ROTATION, fourcc="MJPG",
         ),
     }
 
