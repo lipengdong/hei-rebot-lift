@@ -77,8 +77,12 @@ fourcc="MJPG"
 Find cameras:
 
 ```bash
-PYTHONPATH=src conda run --no-capture-output -n lerobot5 lerobot-find-cameras
+PYTHONPATH=src conda run --no-capture-output -n lerobot5 \
+  lerobot-find-cameras opencv --opencv-fourcc MJPG --opencv-width 640 --opencv-height 480 --opencv-fps 30
 ```
+
+Selecting `opencv` skips unrelated RealSense discovery. Capture is forced to
+MJPG so three cameras do not saturate USB bandwidth with default YUYV streams.
 
 List supported formats:
 

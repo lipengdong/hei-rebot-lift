@@ -433,7 +433,8 @@ right_wrist /dev/video4
 
 ```bash
 cd software/lerobot-hei-rebot-lift
-PYTHONPATH=src conda run --no-capture-output -n lerobot5 lerobot-find-cameras
+PYTHONPATH=src conda run --no-capture-output -n lerobot5 \
+  lerobot-find-cameras opencv --opencv-fourcc MJPG --opencv-width 640 --opencv-height 480 --opencv-fps 30
 ```
 
 ### 在哪里修改相机 ID

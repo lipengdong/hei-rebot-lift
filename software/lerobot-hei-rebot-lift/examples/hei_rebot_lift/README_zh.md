@@ -75,8 +75,12 @@ VR_mujoco_ik/             Telegrip + MuJoCo + Pinocchio IK 一体化 VR 控制�
 查相机：
 
 ```bash
-PYTHONPATH=src conda run --no-capture-output -n lerobot5 lerobot-find-cameras
+PYTHONPATH=src conda run --no-capture-output -n lerobot5 \
+  lerobot-find-cameras opencv --opencv-fourcc MJPG --opencv-width 640 --opencv-height 480 --opencv-fps 30
 ```
+
+指定 `opencv` 可跳过无关的 RealSense 检测；查找工具会使用 MJPG 同时取图，避免
+三路相机以默认 YUYV 工作时占满 USB 带宽。照片保存在 `outputs/captured_images/`。
 
 查某个相机支持格式：
 

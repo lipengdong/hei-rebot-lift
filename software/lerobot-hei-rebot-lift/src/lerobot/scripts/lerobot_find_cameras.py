@@ -151,7 +151,14 @@ def save_image(
         logger.error(f"Failed to save image for camera {camera_identifier} (type {camera_type}): {e}")
 
 
-def create_camera_instance(cam_meta: dict[str, Any]) -> dict[str, Any] | None:
+def create_camera_instance(
+    cam_meta: dict[str, Any],
+    *,
+    opencv_fourcc: str,
+    opencv_fps: int,
+    opencv_width: int,
+    opencv_height: int,
+) -> dict[str, Any] | None:
     """Create and connect to a camera instance based on metadata."""
     cam_type = cam_meta.get("type")
     cam_id = cam_meta.get("id")
@@ -161,9 +168,22 @@ def create_camera_instance(cam_meta: dict[str, Any]) -> dict[str, Any] | None:
 
     try:
         if cam_type == "OpenCV":
+            fourcc = None if opencv_fourcc.lower() == "auto" else opencv_fourcc.upper()
+            logger.info(
+                "Opening OpenCV camera %s with profile %s %dx%d@%d FPS",
+                cam_id,
+                fourcc or "auto",
+                opencv_width,
+                opencv_height,
+                opencv_fps,
+            )
             cv_config = OpenCVCameraConfig(
                 index_or_path=cam_id,
                 color_mode=ColorMode.RGB,
+                fourcc=fourcc,
+                fps=opencv_fps,
+                width=opencv_width,
+                height=opencv_height,
             )
             instance = OpenCVCamera(cv_config)
         elif cam_type == "RealSense":
@@ -229,6 +249,10 @@ def save_images_from_all_cameras(
     output_dir: Path,
     record_time_s: float = 2.0,
     camera_type: str | None = None,
+    opencv_fourcc: str = "MJPG",
+    opencv_fps: int = 30,
+    opencv_width: int = 640,
+    opencv_height: int = 480,
 ):
     """
     Connects to detected cameras (optionally filtered by type) and saves images from each.
@@ -250,7 +274,13 @@ def save_images_from_all_cameras(
 
     cameras_to_use = []
     for cam_meta in all_camera_metadata:
-        camera_instance = create_camera_instance(cam_meta)
+        camera_instance = create_camera_instance(
+            cam_meta,
+            opencv_fourcc=opencv_fourcc,
+            opencv_fps=opencv_fps,
+            opencv_width=opencv_width,
+            opencv_height=opencv_height,
+        )
         if camera_instance:
             cameras_to_use.append(camera_instance)
 
@@ -308,6 +338,30 @@ def main():
         type=float,
         default=6.0,
         help="Time duration to attempt capturing frames. Default: 6 seconds.",
+    )
+    parser.add_argument(
+        "--opencv-fourcc",
+        type=str,
+        default="MJPG",
+        help="FOURCC used to capture OpenCV cameras. Use 'auto' for the device default. Default: MJPG",
+    )
+    parser.add_argument(
+        "--opencv-fps",
+        type=int,
+        default=30,
+        help="FPS used to capture OpenCV cameras. Default: 30",
+    )
+    parser.add_argument(
+        "--opencv-width",
+        type=int,
+        default=640,
+        help="Frame width used to capture OpenCV cameras. Default: 640",
+    )
+    parser.add_argument(
+        "--opencv-height",
+        type=int,
+        default=480,
+        help="Frame height used to capture OpenCV cameras. Default: 480",
     )
     args = parser.parse_args()
     save_images_from_all_cameras(**vars(args))

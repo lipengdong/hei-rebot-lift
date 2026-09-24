@@ -219,6 +219,11 @@ class RealSenseCamera(Camera):
             OSError: If pyrealsense2 is not installed.
             ImportError: If pyrealsense2 is not installed.
         """
+        if rs is None or not callable(getattr(rs, "context", None)):
+            raise ImportError(
+                "pyrealsense2 is unavailable or incomplete; reinstall a Jetson-compatible librealsense/pyrealsense2 build."
+            )
+
         found_cameras_info = []
         context = rs.context()
         devices = context.query_devices()

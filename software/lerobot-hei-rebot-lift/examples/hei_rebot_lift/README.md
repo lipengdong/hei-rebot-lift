@@ -75,8 +75,13 @@ Before this real-robot flow, complete [pure simulation practice](VR_mujoco_ik/RE
 Find cameras:
 
 ```bash
-PYTHONPATH=src conda run --no-capture-output -n lerobot5 lerobot-find-cameras
+PYTHONPATH=src conda run --no-capture-output -n lerobot5 \
+  lerobot-find-cameras opencv --opencv-fourcc MJPG --opencv-width 640 --opencv-height 480 --opencv-fps 30
 ```
+
+Selecting `opencv` skips unrelated RealSense discovery. The capture check uses
+MJPG for all cameras so three default YUYV streams do not saturate USB bandwidth.
+Captured images are saved under `outputs/captured_images/`.
 
 List supported formats for one camera:
 

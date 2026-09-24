@@ -77,8 +77,12 @@ fourcc="MJPG"
 查看相机：
 
 ```bash
-PYTHONPATH=src conda run --no-capture-output -n lerobot5 lerobot-find-cameras
+PYTHONPATH=src conda run --no-capture-output -n lerobot5 \
+  lerobot-find-cameras opencv --opencv-fourcc MJPG --opencv-width 640 --opencv-height 480 --opencv-fps 30
 ```
+
+指定 `opencv` 可跳过无关的 RealSense 检测。取图阶段强制使用 MJPG，避免三路
+相机按默认 YUYV 同时打开时占满 USB 带宽。
 
 查看某路相机支持的格式：
 

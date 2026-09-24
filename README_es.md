@@ -248,7 +248,14 @@ un terminal interactivo (SSH con TTY). Detalles en el
 
 Comprobar en el **robot**: `front=/dev/video0`, `left_wrist=/dev/video2`,
 `right_wrist=/dev/video4`; perfil actual `640x480 @ 30 FPS`, `MJPG`.
-Los dispositivos pueden variar. Ejecutar `lerobot-find-cameras` en el robot.
+Los dispositivos pueden variar. Buscar las cámaras en el robot:
+
+```bash
+cd software/lerobot-hei-rebot-lift
+PYTHONPATH=src conda run --no-capture-output -n lerobot5 \
+  lerobot-find-cameras opencv --opencv-fourcc MJPG --opencv-width 640 --opencv-height 480 --opencv-fps 30
+```
+
 La imagen VR está desactivada actualmente, no la captura del host.
 
 En el **Jetson del robot**, detener el host y la herramienta de búsqueda y editar
