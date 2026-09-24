@@ -470,9 +470,13 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 \
 
 ### Stable Camera Mapping
 
-The default configuration uses `/dev/hei_*_camera` symlinks created by the
-binding wizard, so changing `/dev/videoN` numbers does not require code edits.
-Run the wizard again after moving a camera to another physical USB socket:
+The binding wizard above creates stable `/dev/hei_*_camera` symlinks, so camera
+IDs normally require no further edits. Run the wizard again after moving a
+camera to another physical USB socket.
+
+To manually override a camera device ID or path, edit
+`software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/config_hei_rebot_lift.py`,
+then change the corresponding `index_or_path` in `hei_rebot_lift_cameras_config()`:
 
 ```python
 def hei_rebot_lift_cameras_config() -> dict[str, CameraConfig]:

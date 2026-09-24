@@ -263,7 +263,10 @@ La imagen VR está desactivada actualmente, no la captura del host.
 
 El asistente crea estas rutas estables según el puerto USB físico. Después de
 mover una cámara a otro puerto, ejecutar de nuevo el asistente en lugar de
-modificar el código. Mantener las claves `front`, `left_wrist` y `right_wrist`.
+modificar el código. Para cambiar manualmente un ID o una ruta, editar
+`hei_rebot_lift_cameras_config()` en
+`software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/config_hei_rebot_lift.py`.
+Mantener las claves `front`, `left_wrist` y `right_wrist`.
 [Ejemplo de configuración](software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/README.md#stable-camera-mapping).
 
 ## 🎮 Flujo de arranque

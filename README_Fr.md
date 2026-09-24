@@ -264,8 +264,11 @@ Le flux vidéo VR est actuellement désactivé, pas la capture du host.
 
 Ces chemins stables sont créés par l'assistant selon la prise USB physique.
 Après déplacement d'une caméra vers une autre prise, relancer l'assistant au
-lieu de modifier le code. Conserver les clés `front`, `left_wrist` et
-`right_wrist`. [Exemple de configuration](software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/README.md#stable-camera-mapping).
+lieu de modifier le code. Pour remplacer manuellement un ID ou un chemin,
+modifier `hei_rebot_lift_cameras_config()` dans
+`software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/config_hei_rebot_lift.py`.
+Conserver les clés `front`, `left_wrist` et `right_wrist`.
+[Exemple de configuration](software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/README.md#stable-camera-mapping).
 
 ## 🎮 Démarrage
 

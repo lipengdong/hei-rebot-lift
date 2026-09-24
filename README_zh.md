@@ -442,8 +442,12 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 \
 
 ### 稳定相机映射
 
-默认配置固定使用绑定向导创建的 `/dev/hei_*_camera` 软链接，不需要随着
-`/dev/videoN` 变化而修改代码。相机更换 USB 插口后，重新运行绑定向导：
+前面的绑定向导已经创建 `/dev/hei_*_camera` 稳定软链接，正常情况下无需再修改
+相机 ID。相机更换 USB 插口后，优先重新运行绑定向导。
+
+如果确实需要手动修改相机设备 ID 或路径，编辑
+`software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/config_hei_rebot_lift.py`
+中的 `hei_rebot_lift_cameras_config()`，修改对应相机的 `index_or_path`：
 
 ```python
 def hei_rebot_lift_cameras_config() -> dict[str, CameraConfig]:
