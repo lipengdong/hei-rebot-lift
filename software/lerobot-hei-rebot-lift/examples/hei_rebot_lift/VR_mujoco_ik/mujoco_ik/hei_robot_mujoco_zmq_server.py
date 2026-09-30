@@ -252,7 +252,11 @@ class HEIMujocoZmqServer(HEIRobotVRSimulator):
                 if self.control_source == "vr":
                     self._print_status(fresh, packet_count)
                 elif now_s - self.last_network_status_s >= 1.0:
-                    age = now_s - self.last_command_s if self.last_command_s > 0.0 else float("inf")
+                    age = (
+                        max(0.0, now_s - self.last_command_s)
+                        if self.last_command_s > 0.0
+                        else float("inf")
+                    )
                     print(
                         f"[HEI Sim Server] policy={'online' if fresh else 'waiting'} "
                         f"published={self.sequence} command_age={age:.2f}s dropped={self.dropped_packets}",

@@ -147,20 +147,25 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 \
 - `height.pos` 范围为 `-800~0 mm`；
 - `theta.vel` 为 `[-1, 1]` 归一化值。
 
+检查程序还会输出 `moving action fields` 和 `constant action fields`。开始训练前，
+任务实际使用的机械臂、夹爪、底盘或升降字段必须出现在变化列表中。如果 18 个
+动作字段全部不变，策略只能学会保持初始姿态；如果任务写“右臂”但只有左臂字段
+变化，也应重新录制或修正任务描述，不能靠增加训练步数解决。
+
 ## 5. 训练 ACT
 
-训练只使用 `lerobot5`：
+训练只使用 `lerobot5`。下面示例训练**键盘仿真数据集**：
 
 ```bash
 cd software/lerobot-hei-rebot-lift
 PYTHONPATH=src conda run --no-capture-output -n lerobot5 lerobot-train \
-  --dataset.repo_id=HGM/hei_rebot_lift_mujoco \
-  --dataset.root=datasets/hei_rebot_lift_mujoco \
+  --dataset.repo_id=HGM/hei_rebot_lift_keyboard_mujoco \
+  --dataset.root=datasets/hei_rebot_lift_keyboard_mujoco \
   --policy.type=act \
   --policy.device=cuda \
   --policy.push_to_hub=false \
-  --output_dir=outputs/train/act_hei_rebot_lift_mujoco \
-  --job_name=act_hei_rebot_lift_mujoco \
+  --output_dir=outputs/train/act_hei_rebot_lift_keyboard_mujoco \
+  --job_name=act_hei_rebot_lift_keyboard_mujoco \
   --batch_size=8 \
   --steps=100000 \
   --save_freq=10000 \
@@ -170,6 +175,10 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 lerobot-train \
 ```
 
 首次联调可将 `--steps` 改为 `1000`。
+
+训练 VR 仿真数据时，将上述 `repo_id`、`root`、`output_dir` 和 `job_name` 中的
+`keyboard_mujoco` 改为 `mujoco`。不要把键盘数据集名称和 VR 数据集名称混用；
+检查点的 `train_config.json` 会记录它实际使用的数据集。
 
 ## 6. 在 MuJoCo 中推理
 
@@ -184,12 +193,15 @@ cd software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik
 
 ```bash
 ./run_hei_robot_mujoco_rollout.sh \
-  --model-id outputs/train/act_hei_rebot_lift_mujoco \
-  --task "Pick up the red cube with the right gripper and place it in the center of the table." \
+  --model-id outputs/train/act_hei_rebot_lift_keyboard_mujoco \
+  --task "这里必须填写录制数据时使用的相同任务描述" \
   --duration-sec 30 --fps 30 --device cuda
 ```
 
-推理程序只负责模型计算；MuJoCo 窗口、机器人状态和动作执行都由策略仿真进程负责。推理超时或退出时，仿真服务端会保持机械臂和升降位置，并把底盘速度置零。
+推理程序只负责模型计算；MuJoCo 窗口、机器人状态和动作执行都由策略仿真进程负责。
+推理日志中的 `requested=hold` 表示模型当前只请求保持；如果持续 3 秒从未请求运动，
+程序会提示检查动作范围和任务/机械臂是否匹配。推理超时或退出时，仿真服务端会
+保持机械臂和升降位置，并把底盘速度置零。
 
 ## 7. 数据兼容边界
 

@@ -31,6 +31,42 @@ def tensor_image_to_rgb(image) -> np.ndarray:
     return array[..., :3]
 
 
+def print_action_coverage(dataset: LeRobotDataset) -> None:
+    """Report which action dimensions actually changed in the recorded dataset."""
+    stats = dataset.meta.stats
+    action_stats = stats.get("action") if stats is not None else None
+    if action_stats is None:
+        print("[HEI Sim Inspect] WARNING: action statistics are unavailable", flush=True)
+        return
+
+    names = dataset.features["action"].get("names") or []
+    minimum = np.asarray(action_stats["min"], dtype=float).reshape(-1)
+    maximum = np.asarray(action_stats["max"], dtype=float).reshape(-1)
+    if len(names) != len(minimum):
+        print("[HEI Sim Inspect] WARNING: action names/statistics length mismatch", flush=True)
+        return
+
+    spans = maximum - minimum
+    moving = [name for name, span in zip(names, spans, strict=True) if span > 1e-5]
+    constant = [name for name, span in zip(names, spans, strict=True) if span <= 1e-5]
+    print(
+        f"[HEI Sim Inspect] moving action fields ({len(moving)}/{len(names)}): "
+        f"{', '.join(moving) if moving else 'none'}",
+        flush=True,
+    )
+    print(
+        f"[HEI Sim Inspect] constant action fields ({len(constant)}/{len(names)}): "
+        f"{', '.join(constant) if constant else 'none'}",
+        flush=True,
+    )
+    if not moving:
+        print(
+            "[HEI Sim Inspect] WARNING: every action field is constant. "
+            "A policy trained on this dataset will only learn to hold the initial pose.",
+            flush=True,
+        )
+
+
 def main() -> None:
     args = parse_args()
     dataset = LeRobotDataset(
@@ -50,6 +86,7 @@ def main() -> None:
     print(f"[HEI Sim Inspect] observation.state={sample['observation.state']}", flush=True)
     print(f"[HEI Sim Inspect] action={sample['action']}", flush=True)
     print(f"[HEI Sim Inspect] task={sample.get('task', '')}", flush=True)
+    print_action_coverage(dataset)
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
     for name in ("front", "left_wrist", "right_wrist"):

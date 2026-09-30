@@ -115,23 +115,34 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 \
 
 The command exports all three camera frames under `outputs/mujoco_dataset_sample/`. Before a full recording session, verify the 18-D state/action vectors, camera names, gripper units, lift range, and normalized yaw command.
 
+The inspector also prints `moving action fields` and `constant action fields`.
+Before training, every arm, gripper, base, or lift field required by the task
+must appear in the moving list. If all 18 action fields are constant, a policy
+can only learn to hold the initial pose. If the task says right arm while only
+left-arm fields move, re-record the demonstration or correct the task text.
+
 ## 5. Train ACT
 
-Training runs only in `lerobot5`:
+Training runs only in `lerobot5`. This example trains the **keyboard simulation dataset**:
 
 ```bash
 cd software/lerobot-hei-rebot-lift
 PYTHONPATH=src conda run --no-capture-output -n lerobot5 lerobot-train \
-  --dataset.repo_id=HGM/hei_rebot_lift_mujoco \
-  --dataset.root=datasets/hei_rebot_lift_mujoco \
+  --dataset.repo_id=HGM/hei_rebot_lift_keyboard_mujoco \
+  --dataset.root=datasets/hei_rebot_lift_keyboard_mujoco \
   --policy.type=act --policy.device=cuda --policy.push_to_hub=false \
-  --output_dir=outputs/train/act_hei_rebot_lift_mujoco \
-  --job_name=act_hei_rebot_lift_mujoco \
+  --output_dir=outputs/train/act_hei_rebot_lift_keyboard_mujoco \
+  --job_name=act_hei_rebot_lift_keyboard_mujoco \
   --batch_size=8 --steps=100000 --save_freq=10000 --log_freq=200 \
   --num_workers=4 --wandb.enable=false
 ```
 
 Use `--steps=1000` for an initial pipeline check.
+
+For a VR simulation dataset, replace `keyboard_mujoco` with `mujoco` in
+`repo_id`, `root`, `output_dir`, and `job_name`. Do not mix keyboard and VR
+dataset names. The checkpoint's `train_config.json` records the dataset that
+was actually used.
 
 ## 6. Run a Policy in MuJoCo
 
@@ -146,12 +157,16 @@ Terminal 2:
 
 ```bash
 ./run_hei_robot_mujoco_rollout.sh \
-  --model-id outputs/train/act_hei_rebot_lift_mujoco \
-  --task "Pick up the red cube with the right gripper and place it in the center of the table." \
+  --model-id outputs/train/act_hei_rebot_lift_keyboard_mujoco \
+  --task "Use exactly the same task description that was recorded in the dataset" \
   --duration-sec 30 --fps 30 --device cuda
 ```
 
-Inference only computes actions. The policy simulation process owns the MuJoCo window and execution. If inference stops or times out, the server holds arm/lift positions and zeros chassis velocity.
+Inference only computes actions. The policy simulation process owns the MuJoCo
+window and execution. `requested=hold` means the model currently requests no
+visible motion. If it never requests motion for three seconds, rollout prints a
+dataset/task mismatch warning. If inference stops or times out, the server holds
+arm/lift positions and zeros chassis velocity.
 
 ## 7. Compatibility Boundary
 

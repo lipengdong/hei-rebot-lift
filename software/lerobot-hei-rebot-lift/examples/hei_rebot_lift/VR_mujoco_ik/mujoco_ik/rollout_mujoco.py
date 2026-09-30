@@ -133,6 +133,21 @@ def serializable_action(action: dict) -> dict[str, float]:
     return {name: float(action[name]) for name in STATE_NAMES}
 
 
+def requested_action_fields(action: dict[str, float], observation: dict) -> list[str]:
+    """Return fields that currently request visible motion instead of a hold."""
+    requested = []
+    for name in STATE_NAMES:
+        if name in ("x.vel", "y.vel", "theta.vel"):
+            magnitude = abs(action[name])
+            threshold = 1e-3
+        else:
+            magnitude = abs(action[name] - float(observation[name]))
+            threshold = 0.5 if name == "height.pos" else 1e-3
+        if magnitude > threshold:
+            requested.append(name)
+    return requested
+
+
 def main() -> None:
     args = parse_args()
     policy, policy_config, device, preprocessor, postprocessor, resolved_id = load_policy(
@@ -146,6 +161,10 @@ def main() -> None:
     warned_fps = False
     started_s = None
     inference_count = 0
+    hold_action_started_s = None
+    warned_hold_action = False
+    policy_ever_requested_motion = False
+    last_requested_fields: list[str] = []
     policy.reset()
     print(
         f"[HEI Sim Rollout] policy={resolved_id}, type={policy_config.type}, device={device}",
@@ -212,6 +231,25 @@ def main() -> None:
                 robot_type=ROBOT_TYPE,
             )
             action = serializable_action(make_robot_action(action_tensor, features))
+            last_requested_fields = requested_action_fields(action, observation)
+            now_s = time.monotonic()
+            if last_requested_fields:
+                policy_ever_requested_motion = True
+                hold_action_started_s = None
+            elif hold_action_started_s is None:
+                hold_action_started_s = now_s
+            elif (
+                not policy_ever_requested_motion
+                and not warned_hold_action
+                and now_s - hold_action_started_s >= 3.0
+            ):
+                print(
+                    "[HEI Sim Rollout] WARNING: the policy has requested only hold actions "
+                    "for 3 seconds. Check dataset action ranges and confirm the recorded "
+                    "arm/task match the rollout instruction.",
+                    flush=True,
+                )
+                warned_hold_action = True
             client.send("policy_action", sequence=sequence, action=action)
             inference_count += 1
             if args.verbose:
@@ -220,7 +258,8 @@ def main() -> None:
                 elapsed_s = time.monotonic() - started_s
                 print(
                     f"[HEI Sim Rollout] actions={inference_count}, "
-                    f"average={inference_count / max(elapsed_s, 1e-6):.1f} Hz",
+                    f"average={inference_count / max(elapsed_s, 1e-6):.1f} Hz, "
+                    f"requested={','.join(last_requested_fields) if last_requested_fields else 'hold'}",
                     flush=True,
                 )
     except KeyboardInterrupt:
