@@ -151,6 +151,22 @@ cd examples/hei_rebot_lift/VR_mujoco_ik
 不会掉落物体；再次张开夹爪才会释放。物体位于桌面范围上方时会稳定放到桌面，
 否则放到地面。每条机械臂同时最多抓取一个物体。
 
+#### 可选：接触物理抓取验证
+
+稳定模式适合熟悉控制和采集可重复示教。需要验证自由物体、重力、双指接触、滑落
+与释放时，使用彼此独立的物理模式：
+
+```bash
+./run_hei_robot_keyboard_physics.sh
+# 或保持 Telegrip 运行并使用 VR：
+./run_hei_robot_vr_physics.sh
+```
+
+键盘键位保持不变。物理场景使用边长 `50 mm` 的方块、平面高摩擦夹持垫、双指
+接触后的 `5 mm` 预紧，以及最大 `6 N` 的限力切向辅助。辅助不会瞬移或焊接物体，
+张开夹爪后立即取消。完整说明见
+[物理抓取仿真教程](mujoco_ik/PHYSICS_GRASP_SIMULATION_zh.md)。
+
 #### VR 手柄使用教程
 
 <table align="center">

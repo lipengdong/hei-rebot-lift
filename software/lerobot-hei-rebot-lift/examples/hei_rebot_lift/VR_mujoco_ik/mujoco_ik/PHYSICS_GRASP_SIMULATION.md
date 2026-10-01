@@ -4,7 +4,9 @@
 
 This program is independent from the stable demonstration simulator. Stable mode attaches an object to the TCP for repeatable demonstrations. Physical mode never attaches objects and instead relies on MuJoCo gravity, collision, two-finger contact, actuator force, and friction to expose sliding, dropping, and grasp failures.
 
-The three colored cubes are `60 mm` wide in physical mode, making reliable two-finger contact easier than with the larger stable-demonstration cubes.
+The three colored cubes are `50 mm` wide in physical mode, making reliable two-finger contact easier than with the larger stable-demonstration cubes.
+
+Gripper closure is compliant: it closes at `40 mm/s` in simulation time before contact, independent of the VR/render loop rate, then holds the measured opening with `5 mm` of preload after both fingers touch the same object. Flat, high-friction contact pads are used instead of the irregular finger STL collision surfaces. A force-limited spring-damper assist, capped at `6 N`, compensates tangential slip only after bilateral contact; it does not teleport or weld the object. This keeps applying grip force without continuously wedging a rigid cube out of the fingers. Opening the gripper or persistently losing contact clears the hold and assist immediately.
 
 This mode uses hybrid control. Arm joints follow IK output kinematically for the same TCP response as the stable simulator. The fingers use force-limited position actuators, while tabletop objects remain free bodies with full contact dynamics. The chassis and lift use command-level motion. This validates finger-object contact, friction, and dropping, not arm motor dynamics.
 

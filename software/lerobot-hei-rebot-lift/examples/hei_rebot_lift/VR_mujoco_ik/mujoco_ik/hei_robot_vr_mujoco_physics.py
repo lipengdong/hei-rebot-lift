@@ -18,6 +18,15 @@ import hei_robot_vr_mujoco_sim as stable_sim
 from hei_robot_mujoco_physics_scene import build_physics_mujoco_model
 
 
+GRIPPER_CLOSE_SPEED_M_S = 0.04
+GRIPPER_CLOSE_MAX_DT_S = 0.05
+GRIPPER_CONTACT_PRELOAD_M = 0.005
+GRIPPER_CONTACT_LOSS_STEPS = 6
+GRASP_ASSIST_KP_N_M = 400.0
+GRASP_ASSIST_KD_N_S_M = 8.0
+GRASP_ASSIST_MAX_FORCE_N = 6.0
+
+
 class HEIRobotVRPhysicsSimulator(stable_sim.HEIRobotVRSimulator):
     """Reuse VR/IK mapping while replacing stable attachment with MuJoCo physics."""
 
@@ -29,6 +38,20 @@ class HEIRobotVRPhysicsSimulator(stable_sim.HEIRobotVRSimulator):
         self._physical_grasps: set[tuple[str, str]] = set()
         self._arm_command_q: dict[str, np.ndarray] = {}
         self._lift_command_q = 0.0
+        self._gripper_contact_hold: dict[str, tuple[str, float] | None] = {
+            "right": None,
+            "left": None,
+        }
+        self._gripper_contact_loss_steps = {"right": 0, "left": 0}
+        self._gripper_command_opening_m = {
+            "right": stable_sim.GRIPPER_CLOSED_M,
+            "left": stable_sim.GRIPPER_CLOSED_M,
+        }
+        self._gripper_last_command_sim_s = {"right": 0.0, "left": 0.0}
+        self._grasp_assist_anchor: dict[str, tuple[str, np.ndarray] | None] = {
+            "right": None,
+            "left": None,
+        }
 
         original_builder = stable_sim.build_mujoco_model
 
@@ -76,6 +99,14 @@ class HEIRobotVRPhysicsSimulator(stable_sim.HEIRobotVRSimulator):
                 "right": self._mujoco_body_id("b_left_end_link_R_finger"),
             },
         }
+        self._gripper_command_opening_m = {
+            side: self._measured_gripper_opening(side) for side in ("right", "left")
+        }
+        self._gripper_last_command_sim_s = {
+            "right": float(self.data.time),
+            "left": float(self.data.time),
+        }
+        self._grasp_assist_anchor = {"right": None, "left": None}
         self._physics_ready = True
         self._arm_command_q = {
             "right": self._get_joint_q(stable_sim.RIGHT_ARM_JOINTS),
@@ -120,6 +151,18 @@ class HEIRobotVRPhysicsSimulator(stable_sim.HEIRobotVRSimulator):
             runtime.tcp_relative_pos = None
             runtime.tcp_relative_rot = None
         self.previous_gripper_closed = {"right": True, "left": True}
+        self._gripper_contact_hold = {"right": None, "left": None}
+        self._gripper_contact_loss_steps = {"right": 0, "left": 0}
+        self._gripper_command_opening_m = {
+            "right": stable_sim.GRIPPER_CLOSED_M,
+            "left": stable_sim.GRIPPER_CLOSED_M,
+        }
+        self._gripper_last_command_sim_s = {
+            "right": float(self.data.time),
+            "left": float(self.data.time),
+        }
+        self._grasp_assist_anchor = {"right": None, "left": None}
+        self.data.xfrc_applied[:] = 0.0
         if hasattr(self, "_physical_grasps"):
             self._physical_grasps.clear()
 
@@ -154,6 +197,65 @@ class HEIRobotVRPhysicsSimulator(stable_sim.HEIRobotVRSimulator):
         self.data.qvel[int(self.model.jnt_dofadr[lift_id])] = 0.0
         self.data.ctrl[self._actuator_by_joint[stable_sim.LIFT_JOINT]] = self._lift_command_q
 
+    def _measured_gripper_opening(self, side: str) -> float:
+        primary, follower = stable_sim.GRIPPER_JOINTS[side]
+        return float(
+            np.clip(
+                0.5
+                * (
+                    self.data.qpos[self.mj_qpos[primary]]
+                    - self.data.qpos[self.mj_qpos[follower]]
+                ),
+                stable_sim.GRIPPER_CLOSED_M,
+                stable_sim.GRIPPER_OPEN_M,
+            )
+        )
+
+    def _capture_grasp_assist_anchor(self, side: str, object_name: str) -> None:
+        runtime = self.graspable_objects[object_name]
+        tcp_id = self._mujoco_body_id(stable_sim.TCP_FRAMES[side])
+        tcp_rotation = self.data.xmat[tcp_id].reshape(3, 3)
+        relative_pos = tcp_rotation.T @ (
+            self.data.xpos[runtime.body_id] - self.data.xpos[tcp_id]
+        )
+        self._grasp_assist_anchor[side] = (object_name, relative_pos.copy())
+
+    def _apply_grasp_assist_forces(self) -> None:
+        # 只补偿已经形成双指接触的物体，不直接修改物体位姿。
+        for runtime in self.graspable_objects.values():
+            self.data.xfrc_applied[runtime.body_id] = 0.0
+
+        for side, anchor in self._grasp_assist_anchor.items():
+            if anchor is None:
+                continue
+            object_name, relative_pos = anchor
+            contact_hold = self._gripper_contact_hold[side]
+            if contact_hold is None or contact_hold[0] != object_name:
+                continue
+
+            runtime = self.graspable_objects[object_name]
+            tcp_id = self._mujoco_body_id(stable_sim.TCP_FRAMES[side])
+            tcp_rotation = self.data.xmat[tcp_id].reshape(3, 3)
+            target_pos = self.data.xpos[tcp_id] + tcp_rotation @ relative_pos
+            _, dof_address = self._free_joint_addresses(runtime.body_id)
+            linear_velocity = self.data.qvel[dof_address : dof_address + 3]
+            force = (
+                GRASP_ASSIST_KP_N_M * (target_pos - self.data.xpos[runtime.body_id])
+                - GRASP_ASSIST_KD_N_S_M * linear_velocity
+                - self.model.body_mass[runtime.body_id] * self.model.opt.gravity
+            )
+            left_finger = self._finger_bodies[side]["left"]
+            right_finger = self._finger_bodies[side]["right"]
+            closing_axis = self.data.xpos[right_finger] - self.data.xpos[left_finger]
+            closing_axis_norm = float(np.linalg.norm(closing_axis))
+            if closing_axis_norm > 1e-9:
+                closing_axis /= closing_axis_norm
+                force -= float(np.dot(force, closing_axis)) * closing_axis
+            force_norm = float(np.linalg.norm(force))
+            if force_norm > GRASP_ASSIST_MAX_FORCE_N:
+                force *= GRASP_ASSIST_MAX_FORCE_N / force_norm
+            self.data.xfrc_applied[runtime.body_id, :3] += force
+
     def _set_gripper(self, side: str, opening_m: float) -> None:
         opening_m = float(
             np.clip(opening_m, stable_sim.GRIPPER_CLOSED_M, stable_sim.GRIPPER_OPEN_M)
@@ -162,8 +264,74 @@ class HEIRobotVRPhysicsSimulator(stable_sim.HEIRobotVRSimulator):
             super()._set_gripper(side, opening_m)
             return
         primary, follower = stable_sim.GRIPPER_JOINTS[side]
-        self.data.ctrl[self._actuator_by_joint[primary]] = opening_m
-        self.data.ctrl[self._actuator_by_joint[follower]] = -opening_m
+        command_sim_s = float(self.data.time)
+        if opening_m > stable_sim.GRIPPER_CLOSED_M:
+            self._gripper_contact_hold[side] = None
+            self._gripper_contact_loss_steps[side] = 0
+            self._grasp_assist_anchor[side] = None
+            actuator_target_m = opening_m
+            self._gripper_command_opening_m[side] = actuator_target_m
+            self._gripper_last_command_sim_s[side] = command_sim_s
+        else:
+            contacts = self._finger_contacts()
+            contact_hold = self._gripper_contact_hold[side]
+            if contact_hold is not None:
+                object_name, actuator_target_m = contact_hold
+                if contacts.get((side, object_name)):
+                    self._gripper_contact_loss_steps[side] = 0
+                else:
+                    self._gripper_contact_loss_steps[side] += 1
+                    if self._gripper_contact_loss_steps[side] >= GRIPPER_CONTACT_LOSS_STEPS:
+                        self._gripper_contact_hold[side] = None
+                        self._grasp_assist_anchor[side] = None
+                        contact_hold = None
+
+            if contact_hold is None:
+                bilateral_object = next(
+                    (
+                        object_name
+                        for (contact_side, object_name), fingers in contacts.items()
+                        if contact_side == side and fingers == {"left", "right"}
+                    ),
+                    None,
+                )
+                measured_opening_m = self._measured_gripper_opening(side)
+                if bilateral_object is not None:
+                    actuator_target_m = max(
+                        stable_sim.GRIPPER_CLOSED_M,
+                        measured_opening_m - GRIPPER_CONTACT_PRELOAD_M,
+                    )
+                    self._gripper_contact_hold[side] = (
+                        bilateral_object,
+                        actuator_target_m,
+                    )
+                    self._gripper_contact_loss_steps[side] = 0
+                    self._capture_grasp_assist_anchor(side, bilateral_object)
+                    print(
+                        f"[HEI Physics] {side} contact hold: {bilateral_object}, "
+                        f"opening={actuator_target_m:.4f}m",
+                        flush=True,
+                    )
+                else:
+                    # 依据仿真时间渐进闭合，使速度不受 VR/渲染循环帧率影响。
+                    # 命令开度独立于实际位置，两根手指始终获得对称目标。
+                    command_dt_s = float(
+                        np.clip(
+                            command_sim_s - self._gripper_last_command_sim_s[side],
+                            0.0,
+                            GRIPPER_CLOSE_MAX_DT_S,
+                        )
+                    )
+                    actuator_target_m = max(
+                        stable_sim.GRIPPER_CLOSED_M,
+                        self._gripper_command_opening_m[side]
+                        - GRIPPER_CLOSE_SPEED_M_S * command_dt_s,
+                    )
+
+            self._gripper_command_opening_m[side] = actuator_target_m
+            self._gripper_last_command_sim_s[side] = command_sim_s
+        self.data.ctrl[self._actuator_by_joint[primary]] = actuator_target_m
+        self.data.ctrl[self._actuator_by_joint[follower]] = -actuator_target_m
         self.gripper_target[side] = opening_m
 
     def _sync_robot_controls(self, *, include_arms: bool = True) -> None:
@@ -189,6 +357,16 @@ class HEIRobotVRPhysicsSimulator(stable_sim.HEIRobotVRSimulator):
                 "right": self._get_joint_q(stable_sim.RIGHT_ARM_JOINTS),
                 "left": self._get_joint_q(stable_sim.LEFT_ARM_JOINTS),
             }
+            self._gripper_command_opening_m = {
+                side: self._measured_gripper_opening(side)
+                for side in ("right", "left")
+            }
+            self._gripper_last_command_sim_s = {
+                "right": float(self.data.time),
+                "left": float(self.data.time),
+            }
+            self._grasp_assist_anchor = {"right": None, "left": None}
+            self.data.xfrc_applied[:] = 0.0
             self._sync_robot_controls()
             self._apply_kinematic_robot_pose()
             mujoco.mj_forward(self.model, self.data)
@@ -198,6 +376,7 @@ class HEIRobotVRPhysicsSimulator(stable_sim.HEIRobotVRSimulator):
         self._physics_accumulator_s += float(np.clip(dt, 0.0, 0.05))
         while self._physics_accumulator_s >= timestep_s:
             self._apply_kinematic_robot_pose()
+            self._apply_grasp_assist_forces()
             mujoco.mj_step(self.model, self.data)
             self._physics_accumulator_s -= timestep_s
         # 丢弃物理求解器对双臂和升降造成的偏移，但保留传递给物体的接触响应。
@@ -360,8 +539,8 @@ class HEIRobotVRPhysicsSimulator(stable_sim.HEIRobotVRSimulator):
             initial_fingers,
         ):
             raise RuntimeError("Physical gripper command changed qpos without simulation")
-        for _ in range(int(1.0 / self.model.opt.timestep)):
-            mujoco.mj_step(self.model, self.data)
+        for _ in range(50):
+            self._advance_physics(0.02)
         opened_fingers = self.data.qpos[[primary_address, follower_address]]
         expected_open = np.array(
             [stable_sim.GRIPPER_OPEN_M, -stable_sim.GRIPPER_OPEN_M]
@@ -369,14 +548,80 @@ class HEIRobotVRPhysicsSimulator(stable_sim.HEIRobotVRSimulator):
         if not np.allclose(opened_fingers, expected_open, atol=0.005):
             raise RuntimeError(f"Physical gripper did not open: qpos={opened_fingers}")
 
-        self._set_gripper("right", stable_sim.GRIPPER_CLOSED_M)
-        for _ in range(int(1.0 / self.model.opt.timestep)):
-            mujoco.mj_step(self.model, self.data)
+        for _ in range(100):
+            self._set_gripper("right", stable_sim.GRIPPER_CLOSED_M)
+            self._advance_physics(0.02)
         closed_fingers = self.data.qpos[[primary_address, follower_address]]
-        if not np.allclose(closed_fingers, 0.0, atol=0.005):
-            raise RuntimeError(f"Physical gripper did not close: qpos={closed_fingers}")
+        closed_opening_m = self._measured_gripper_opening("right")
+        closed_ctrl = self.data.ctrl[
+            [self._actuator_by_joint[primary], self._actuator_by_joint[follower]]
+        ]
+        if closed_opening_m > 0.005 or not np.allclose(closed_ctrl, 0.0, atol=1e-9):
+            raise RuntimeError(
+                "Physical gripper did not close: "
+                f"opening={closed_opening_m:.4f}m, qpos={closed_fingers}, ctrl={closed_ctrl}"
+            )
         print("[HEI Physics] force-limited gripper actuator self-check passed", flush=True)
 
+        runtime = self.graspable_objects["hei_object_cube_red"]
+        qpos_address, dof_address = self._free_joint_addresses(runtime.body_id)
+        self._set_gripper("right", stable_sim.GRIPPER_OPEN_M)
+        for _ in range(50):
+            self._advance_physics(0.02)
+
+        left_pad_id = mujoco.mj_name2id(
+            self.model,
+            mujoco.mjtObj.mjOBJ_GEOM,
+            "a_right_end_link_L_finger_contact_pad",
+        )
+        right_pad_id = mujoco.mj_name2id(
+            self.model,
+            mujoco.mjtObj.mjOBJ_GEOM,
+            "a_right_end_link_R_finger_contact_pad",
+        )
+        if left_pad_id < 0 or right_pad_id < 0:
+            raise RuntimeError("Physical gripper contact pads are missing")
+
+        saved_gravity = self.model.opt.gravity.copy()
+        self.model.opt.gravity[:] = 0.0
+        grasp_center = 0.5 * (
+            self.data.geom_xpos[left_pad_id] + self.data.geom_xpos[right_pad_id]
+        )
+        self.data.qpos[qpos_address : qpos_address + 3] = grasp_center
+        self.data.qpos[qpos_address + 3 : qpos_address + 7] = [1.0, 0.0, 0.0, 0.0]
+        self.data.qvel[dof_address : dof_address + 6] = 0.0
+        mujoco.mj_forward(self.model, self.data)
+        for _ in range(100):
+            self._set_gripper("right", stable_sim.GRIPPER_CLOSED_M)
+            self._advance_physics(0.02)
+        if self._gripper_contact_hold["right"] is None:
+            raise RuntimeError("Physical gripper failed to establish bilateral contact hold")
+
+        held_start_z = float(self.data.xpos[runtime.body_id, 2])
+        self.model.opt.gravity[:] = saved_gravity
+        for _ in range(50):
+            self._set_gripper("right", stable_sim.GRIPPER_CLOSED_M)
+            self._advance_physics(0.02)
+        held_end_z = float(self.data.xpos[runtime.body_id, 2])
+        if self._gripper_contact_hold["right"] is None or held_start_z - held_end_z > 0.02:
+            raise RuntimeError(
+                "Physical gripper failed to support the cube: "
+                f"z={held_start_z:.3f}m -> {held_end_z:.3f}m"
+            )
+
+        self._set_gripper("right", stable_sim.GRIPPER_OPEN_M)
+        for _ in range(50):
+            self._advance_physics(0.02)
+        released_z = float(self.data.xpos[runtime.body_id, 2])
+        if released_z >= held_end_z - 0.10:
+            raise RuntimeError("Released cube did not fall after opening the gripper")
+        print(
+            f"[HEI Physics] grasp support/release self-check passed: "
+            f"held_drop={held_start_z - held_end_z:.4f}m",
+            flush=True,
+        )
+
+        self._reset_full_pose()
         runtime = self.graspable_objects["hei_object_cube_red"]
         qpos_address, dof_address = self._free_joint_addresses(runtime.body_id)
         support_height_m = self._object_support_height(runtime)
@@ -386,8 +631,8 @@ class HEIRobotVRPhysicsSimulator(stable_sim.HEIRobotVRSimulator):
         self.data.qvel[dof_address : dof_address + 6] = 0.0
         mujoco.mj_forward(self.model, self.data)
         initial_z = float(self.data.xpos[runtime.body_id, 2])
-        for _ in range(int(1.0 / self.model.opt.timestep)):
-            mujoco.mj_step(self.model, self.data)
+        for _ in range(50):
+            self._advance_physics(0.02)
         final_z = float(self.data.xpos[runtime.body_id, 2])
         expected_z = stable_sim.TABLE_TOP_Z_M + support_height_m
         if final_z >= initial_z - 0.05:

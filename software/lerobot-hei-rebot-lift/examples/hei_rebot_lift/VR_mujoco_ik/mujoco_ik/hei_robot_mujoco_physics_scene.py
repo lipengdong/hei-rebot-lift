@@ -21,7 +21,10 @@ from hei_robot_mujoco_scene import (
 )
 
 
-PHYSICS_CUBE_HALF_SIZE_M = 0.03
+PHYSICS_CUBE_HALF_SIZE_M = 0.025
+CONTACT_ENVIRONMENT = 1
+CONTACT_FINGER = 2
+CONTACT_OBJECT = 4
 
 
 ARM_JOINTS = tuple(
@@ -42,6 +45,9 @@ FINGER_BODIES = (
     "b_left_end_link_L_finger",
     "b_left_end_link_R_finger",
 )
+FINGER_PAD_HALF_SIZE_M = (0.005, 0.035, 0.035)
+FINGER_PAD_LOCAL_Z_M = 0.012
+FINGER_PAD_INWARD_OFFSET_M = 0.008
 
 
 def _enable_contact(
@@ -90,13 +96,26 @@ def _configure_environment_contacts(spec: mujoco.MjSpec, object_friction: float)
         )
         geom.mass = mass
 
-    # URDF 同时包含 visual 和 collision geom，只提高真正参与碰撞的手指 geom 摩擦。
+    # STL 手指碰撞面不够平整，夹紧后容易产生额外切向力并让物体滑落。
+    # 保留网格用于显示，物理接触改用规则的不可见矩形夹持垫。
     for body_name in FINGER_BODIES:
         body = spec.body(body_name)
         for geom in body.geoms:
-            if int(geom.contype) == 0:
-                continue
-            _enable_contact(geom, friction=(1.6, 0.03, 0.003), condim=6)
+            geom.contype = 0
+            geom.conaffinity = 0
+        inward_sign = -1.0 if "_L_finger" in body_name else 1.0
+        pad = body.add_geom(
+            name=f"{body_name}_contact_pad",
+            type=mujoco.mjtGeom.mjGEOM_BOX,
+            size=FINGER_PAD_HALF_SIZE_M,
+            pos=[
+                inward_sign * FINGER_PAD_INWARD_OFFSET_M,
+                0.0,
+                FINGER_PAD_LOCAL_Z_M,
+            ],
+            rgba=[0.0, 0.0, 0.0, 0.0],
+        )
+        _enable_contact(pad, friction=(3.0, 0.05, 0.005), condim=6, margin=0.0005)
 
 
 def _joint_range(spec: mujoco.MjSpec, joint_name: str) -> tuple[float, float]:
@@ -148,6 +167,38 @@ def _add_robot_position_actuators(spec: mujoco.MjSpec, gripper_force_n: float) -
     _add_position_actuator(spec, LIFT_JOINT, kp=1200.0, kv=80.0, force=1500.0)
 
 
+def _apply_physics_contact_masks(model: mujoco.MjModel) -> None:
+    """Keep grasp contacts while excluding coarse robot mesh collisions.
+
+    The imported URDF uses full link meshes as collision geometry. Around the
+    wrist these hulls overlap the usable finger volume and can eject an object
+    before the fingers establish contact. Physical grasp mode therefore keeps
+    contact on the fingers and environment, while the kinematically controlled
+    arm links remain visual-only collision participants.
+    """
+    for geom_id in range(model.ngeom):
+        if int(model.geom_contype[geom_id]) == 0:
+            continue
+        body_id = int(model.geom_bodyid[geom_id])
+        body_name = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_BODY, body_id) or ""
+        geom_name = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_GEOM, geom_id) or ""
+
+        if body_name.startswith("hei_object_"):
+            model.geom_contype[geom_id] = CONTACT_OBJECT
+            model.geom_conaffinity[geom_id] = (
+                CONTACT_ENVIRONMENT | CONTACT_FINGER | CONTACT_OBJECT
+            )
+        elif body_name in FINGER_BODIES:
+            model.geom_contype[geom_id] = CONTACT_FINGER
+            model.geom_conaffinity[geom_id] = CONTACT_ENVIRONMENT | CONTACT_OBJECT
+        elif geom_name == "hei_ground" or body_name == "hei_table":
+            model.geom_contype[geom_id] = CONTACT_ENVIRONMENT
+            model.geom_conaffinity[geom_id] = CONTACT_FINGER | CONTACT_OBJECT
+        else:
+            model.geom_contype[geom_id] = 0
+            model.geom_conaffinity[geom_id] = 0
+
+
 def build_physics_mujoco_model(
     urdf_path: str | Path,
     *,
@@ -175,6 +226,7 @@ def build_physics_mujoco_model(
     spec.option.iterations = 80
     spec.option.ls_iterations = 20
     model = spec.compile()
+    _apply_physics_contact_masks(model)
 
     # 机器人 URDF 的质量误差较大，默认完全补偿机器人自身重力；自由物体仍保留
     # 正常重力。gravcomp 只抵消重力，不会关闭惯性、执行器力或碰撞响应。

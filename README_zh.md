@@ -125,7 +125,7 @@ cd software/lerobot-hei-rebot-lift
 | --- | --- | --- | --- |
 | 机械本体 | ✅ 已完成首版 | 双臂 + 升降平台 + 四轮 O 型全向底盘整体方案已跑通 | [Hardware](hardware/README.md) |
 | 完整机器人 URDF | ✅ 已完成 | 已建立底盘、轮组、升降、双臂、平行夹爪与 TCP 坐标系的完整模型，用于仿真和真机 IK | [URDF 模型](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/mujoco_ik/model/HEI_robot_urdf/) |
-| MuJoCo 仿真测试 | ✅ 已完成 | 已测试键盘与 VR 控制双臂、夹爪、升降与底盘，支持轮组动画、工作空间投影及稳定抓取模式的取放演示 | [仿真教程](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/README_zh.md) |
+| MuJoCo 仿真测试 | ✅ 已完成 | 已测试键盘与 VR 控制双臂、夹爪、升降与底盘，支持轮组动画、工作空间投影、稳定取放演示及独立接触物理抓取验证 | [仿真教程](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/README_zh.md) |
 | 仿真数据与策略闭环 | ✅ 已跑通 | 键盘或 VR 示教可发布同步的 18 维状态/动作和三路相机画面，支持 LeRobotDataset 录制、可视化、ACT 训练及 MuJoCo 策略推理 | [采集、训练与推理教程](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/mujoco_ik/SIM_DATASET_WORKFLOW_zh.md) |
 | 达妙电机驱动 | ✅ 已完成首版 | 已封装 `damiao_u2can`，支持双臂、夹爪、底盘和升降电机控制 | [Damiao U2CAN](software/lerobot-hei-rebot-lift/src/lerobot/motors/damiao_u2can/) |
 | 升降平台 | ✅ 已完成首版 | 支持启动上限位 homing，并使用 `height.pos` 位置目标控制 | [Robot Driver](software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/README.md) · [升降独立控制](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README_zh.md#单独调试升降) |
@@ -559,7 +559,24 @@ Meta Quest 按钮校准的是**头显/VR 参考坐标**；`grip` 建立的是每
 减小动作并返回可达区域，不要持续向边界外推。完整说明见
 [VR 手柄教程](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/README_zh.md)。
 
-#### 1.5 在仿真中采集、训练和推理
+#### 1.5 验证接触物理抓取（可选）
+
+普通键盘/VR 仿真为了便于重复练习和采集数据，使用稳定 TCP 绑定抓取。若要进一步
+验证自由刚体、重力、双指接触、滑落和释放，请启动独立的物理模式：
+
+```bash
+cd software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik
+./run_hei_robot_keyboard_physics.sh
+# 或先启动 Telegrip，再运行：
+./run_hei_robot_vr_physics.sh
+```
+
+物理场景使用边长 `50 mm` 的方块、平面高摩擦夹持垫、`5 mm` 接触预紧，以及
+最大 `6 N` 的限力切向辅助。物体仍是 MuJoCo 自由刚体；张开夹爪会立即取消辅助，
+物体随后按正常重力掉落。详细控制、参数和无窗口自检命令见
+[物理抓取仿真教程](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/mujoco_ik/PHYSICS_GRASP_SIMULATION_zh.md)。
+
+#### 1.6 在仿真中采集、训练和推理
 
 完整 MuJoCo 环境不仅用于练习，也可以作为独立的策略开发环境。示教既可使用
 **键盘控制，也可使用 VR 控制**；采集的数据采用与真机一致的 18 维状态/动作
@@ -582,7 +599,7 @@ Meta Quest 按钮校准的是**头显/VR 参考坐标**；`grip` 建立的是每
 依次完成环境区分、键盘/VR 采集、episode 可视化、ACT 训练和策略仿真推理。
 该流程默认完全不连接真实机器人；只有单独启动真机相关程序时才会进入硬件链路。
 
-#### 1.6 练熟后再进入真机
+#### 1.7 练熟后再进入真机
 
 - 能分别控制左右臂平移、旋转，并熟练松开/重新按住 `grip` 建立新原点。
 - 能长按 Meta Quest 按钮校准 VR 原点，知道换位置、换朝向或方向不一致时要重新校准。
@@ -593,8 +610,9 @@ Meta Quest 按钮校准的是**头显/VR 参考坐标**；`grip` 建立的是每
 练习结束，关闭纯仿真 MuJoCo 窗口或用 `Ctrl+C` 停止仿真程序，再按下面第 2、3
 节启动真机。Telegrip 可继续使用；若练习时停用了相机，需要显示实机画面时恢复
 `vr_images.enabled: true`、检查机器人相机 IP 并重启 Telegrip，不要重复启动两份。
-**仿真练习通过不代表硬件安全检查通过**：稳定抓取是运动学演示，不是接触力学
-验证；实机方向、零位、限位和负载仍需单独检查，仿真升降速度也可能快于实机。
+**仿真练习通过不代表硬件安全检查通过**：稳定抓取是运动学演示；可选物理模式
+能够验证仿真接触和释放，但仍不能证明真实电机负载能力。电机方向、零位、限位与
+真实负载仍需独立检查，仿真升降速度也可能与真机不同。
 
 ### 2. 机器人端 Jetson：启动 host（终端 1）
 

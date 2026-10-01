@@ -127,7 +127,7 @@ We will continue improving HEI ReBot Lift across hardware materials, software in
 | --- | --- | --- | --- |
 | Robot body | ✅ First version completed | Dual arms, lift platform, and four-wheel O-type omnidirectional base are integrated and tested as a complete system | [Hardware](hardware/README.md) |
 | Complete robot URDF | ✅ Completed | Full robot model includes the chassis, wheels, lift, dual arms, parallel grippers, and TCP frames for simulation and real-robot IK | [URDF Model](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/mujoco_ik/model/HEI_robot_urdf/) |
-| MuJoCo simulation testing | ✅ Completed | Keyboard and VR control of both arms, grippers, lift, and chassis have been tested; includes wheel animations, workspace projection, and stable-grasp pick-and-place demonstrations | [Simulation Guide](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/README.md) |
+| MuJoCo simulation testing | ✅ Completed | Keyboard and VR control of both arms, grippers, lift, and chassis have been tested; includes wheel animations, workspace projection, stable demonstrations, and independent contact-physics grasp validation | [Simulation Guide](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/README.md) |
 | Simulation data and policy loop | ✅ Verified | Keyboard or VR demonstrations publish synchronized 18-D states/actions and three camera views for LeRobotDataset recording, visualization, ACT training, and MuJoCo policy rollout | [Dataset, Training & Inference Guide](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/mujoco_ik/SIM_DATASET_WORKFLOW.md) |
 | Damiao motor driver | ✅ First version completed | `damiao_u2can` is implemented for dual arms, grippers, chassis, and lift motor control | [Damiao U2CAN](software/lerobot-hei-rebot-lift/src/lerobot/motors/damiao_u2can/) |
 | Lift platform | ✅ First version completed | Supports upper-limit homing on startup and `height.pos` position-target control | [Robot Driver](software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/README.md) · [Independent Lift Control](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README.md#independent-lift-test) |
@@ -599,7 +599,28 @@ reachable area instead of pushing farther out. See the
 [controller tutorial](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/README.md)
 for complete instructions.
 
-#### 1.5 Collect, Train, and Run Policies in Simulation
+#### 1.5 Validate Contact-Physics Grasping (Optional)
+
+The ordinary keyboard/VR simulators use stable TCP attachment for repeatable
+practice and data collection. To test free-body collision, gravity, bilateral
+finger contact, slip, and release instead, start one of the independent physics
+modes:
+
+```bash
+cd software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik
+./run_hei_robot_keyboard_physics.sh
+# Or, after starting Telegrip:
+./run_hei_robot_vr_physics.sh
+```
+
+The physics scene uses `50 mm` cubes, flat high-friction finger pads, `5 mm`
+contact preload, and a force-limited tangential assist capped at `6 N`. Objects
+remain free MuJoCo bodies: opening the gripper removes the assist immediately
+and the object falls normally. See the
+[Physical Grasp Simulation Guide](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/mujoco_ik/PHYSICS_GRASP_SIMULATION.md)
+for controls, parameters, and headless validation commands.
+
+#### 1.6 Collect, Train, and Run Policies in Simulation
 
 The complete MuJoCo environment is also a reproducible policy-development
 environment. Demonstrations can be controlled by **keyboard or VR**, recorded
@@ -626,7 +647,7 @@ episode visualization, ACT training, and policy rollout. This workflow never
 connects to the physical robot unless you separately start the real-robot
 programs.
 
-#### 1.6 Move to Hardware Only After Practice
+#### 1.7 Move to Hardware Only After Practice
 
 - Control each arm's translation/rotation and confidently release/recapture the relative origin with `grip`.
 - Recenter with the Meta Quest button and know to recalibrate after moving, changing heading, or observing a direction mismatch.
@@ -639,9 +660,10 @@ Close the pure-simulation viewer or stop it with `Ctrl+C`, then follow sections
 restore `vr_images.enabled: true`, check the robot camera IP, and restart
 Telegrip when real camera display is needed; do not launch duplicate instances.
 **Simulation practice does not replace hardware safety checks.** Stable grasping
-is a kinematic demonstration, not contact-physics validation. Motor directions,
-zeros, limits, and load capacity still require independent verification, and
-simulation lift speed can differ from real hardware.
+is a kinematic demonstration; the optional physics mode validates simulated
+contact and release but still cannot prove real motor load capacity. Motor
+directions, zeros, limits, and load capacity require independent verification,
+and simulation lift speed can differ from real hardware.
 
 ### 2. Robot-Side Jetson: Start the Host (Terminal 1)
 

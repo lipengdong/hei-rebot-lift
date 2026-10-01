@@ -151,6 +151,24 @@ its relative pose. The object remains attached after releasing the grip button.
 Opening the gripper releases it and places it on the table when it is above the
 table footprint, or on the floor otherwise. Each arm can hold one object.
 
+#### Optional Contact-Physics Grasp Validation
+
+Stable mode is recommended for learning controls and collecting repeatable
+demonstrations. Use the separate physics modes when you need free objects,
+gravity, bilateral finger contact, slip, and release:
+
+```bash
+./run_hei_robot_keyboard_physics.sh
+# Or keep Telegrip running and use VR:
+./run_hei_robot_vr_physics.sh
+```
+
+Keyboard controls are unchanged. The physics-only scene uses `50 mm` cubes,
+flat high-friction contact pads, `5 mm` preload after bilateral contact, and a
+force-limited tangential assist capped at `6 N`. The assist never teleports or
+welds an object and is removed immediately when the gripper opens. See
+[the complete physics grasp guide](mujoco_ik/PHYSICS_GRASP_SIMULATION.md).
+
 #### VR Controller Tutorial
 
 <table align="center">
