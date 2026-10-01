@@ -8,7 +8,9 @@
 - `mujoco_ik/`：接收 Telegrip 的 VR 数据，用 MuJoCo 显示完整机器人模型（或旧双臂模型），用 Pinocchio + CasADi 做正逆解，并通过 ZMQ 发布 LeRobot 可用的动作命令到 `tcp://*:6558`。
 - `examples/hei_rebot_lift/vr_control.py`：接收动作，同时在 `tcp://*:6559` 发布轻量实机关节/升降反馈，用于真机启动前安全同步。
 - `mujoco_ik/hei_robot_vr_mujoco_sim.py`：使用完整机器人模型进行纯仿真 VR 控制，不会向真实机器人发送命令。
+- `mujoco_ik/hei_robot_vr_mujoco_physics.py`：独立的物理抓取验证模式，物体不会绑定到 TCP。
 - `mujoco_ik/hei_robot_keyboard_mujoco_sim.py`：使用键盘控制完整机器人仿真，不需要 VR，也不会连接实机。
+- `mujoco_ik/hei_robot_keyboard_mujoco_physics.py`：使用键盘验证自由物体、碰撞、摩擦和真实夹爪接触。
 - LeRobot 录制端 `examples/hei_rebot_lift/record.py` 订阅 `tcp://localhost:6558`，把动作和机器人观测保存成数据集。
 
 ## 目录结构
@@ -19,7 +21,9 @@ VR_mujoco_ik/
   run_telegrip.sh          # 启动 VR Web 页面和 VR 数据发布
   run_mujoco_ik.sh         # 原双臂实机动作链路
   run_hei_robot_keyboard_sim.sh # 完整机器人键盘纯仿真
+  run_hei_robot_keyboard_physics.sh # 完整机器人键盘物理抓取验证
   run_hei_robot_vr_sim.sh  # 完整机器人 VR 纯仿真
+  run_hei_robot_vr_physics.sh # VR 物理抓取验证
   run_hei_robot_vr_real.sh # 完整模型 + 真实机器人命令桥接
   telegrip/                # WebXR/HTTPS/WebSocket/ZMQ VR 桥
   mujoco_ik/               # MuJoCo 模型、IK 主程序、Pinocchio 工具

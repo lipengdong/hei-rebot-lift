@@ -8,6 +8,8 @@ For environment installation, controller inputs, network configuration, and
 safe real-robot startup, see the [VR guide](../README.md).
 For simulated demonstrations, ACT training, and simulation rollout, see the
 [MuJoCo dataset workflow](SIM_DATASET_WORKFLOW.md).
+For collision, two-finger contact, friction, and drop validation, see
+[MuJoCo physical grasp validation](PHYSICS_GRASP_SIMULATION.md).
 The workflow keeps the `hei-rebot-vr` simulator separate from the `lerobot5`
 recording and inference clients.
 
@@ -20,9 +22,11 @@ Run only one real-robot action publisher on `6558`.
 | Entry | Model | Purpose |
 | --- | --- | --- |
 | `./run_hei_robot_keyboard_sim.sh` | `model/HEI_robot_urdf/` | Complete keyboard-only simulation; no VR or real commands |
+| `./run_hei_robot_keyboard_physics.sh` | `model/HEI_robot_urdf/` | Keyboard physical grasp validation with free objects, contacts, friction, and force-limited actuators |
 | `./run_hei_robot_keyboard_dataset_sim.sh` | `model/HEI_robot_urdf/` | Keyboard demonstration simulation server (`hei-rebot-vr`) |
 | `./run_hei_robot_keyboard_record.sh` | - | Keyboard demonstration recorder (`lerobot5`) |
 | `./run_hei_robot_vr_sim.sh` | `model/HEI_robot_urdf/` | Complete robot, scene, VR, stable-grasp demonstration; no real commands |
+| `./run_hei_robot_vr_physics.sh` | `model/HEI_robot_urdf/` | Independent physical grasp validation with gravity, contacts, friction, and force-limited fingers |
 | `./run_hei_robot_vr_dataset_sim.sh` | `model/HEI_robot_urdf/` | VR dataset simulation server (`hei-rebot-vr`) |
 | `./run_hei_robot_mujoco_record.sh` | - | Independent LeRobotDataset recorder (`lerobot5`) |
 | `./run_hei_robot_policy_sim.sh` | `model/HEI_robot_urdf/` | Policy simulation server (`hei-rebot-vr`) |
@@ -54,7 +58,9 @@ These checks do not publish real commands or require a VR headset:
 
 ```bash
 ./run_hei_robot_keyboard_sim.sh --headless-check
+./run_hei_robot_keyboard_physics.sh --headless-check
 ./run_hei_robot_vr_sim.sh --headless-check
+./run_hei_robot_vr_physics.sh --headless-check
 ./run_hei_robot_vr_real.sh --headless-check
 conda run --no-capture-output -n hei-rebot-vr python -m unittest discover -s mujoco_ik/tests -p 'test_*.py' -v
 ```

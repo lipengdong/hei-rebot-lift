@@ -8,7 +8,9 @@ This directory contains the complete VR teleoperation pipeline:
 - `mujoco_ik/`: receives Telegrip VR data, visualizes the complete robot model (or the legacy dual-arm model) in MuJoCo, solves FK/IK with Pinocchio + CasADi, and publishes LeRobot-compatible actions to `tcp://*:6558`.
 - `examples/hei_rebot_lift/vr_control.py`: receives those actions and publishes lightweight real-robot joint/lift feedback on `tcp://*:6559` for safe startup synchronization.
 - `mujoco_ik/hei_robot_vr_mujoco_sim.py`: controls the complete robot model in pure simulation. It never publishes commands to the real robot.
+- `mujoco_ik/hei_robot_vr_mujoco_physics.py`: independently validates contact-rich grasps without attaching objects to a TCP.
 - `mujoco_ik/hei_robot_keyboard_mujoco_sim.py`: controls the complete model by keyboard without VR or real-robot commands.
+- `mujoco_ik/hei_robot_keyboard_mujoco_physics.py`: uses keyboard control to validate free objects, collisions, friction, and physical finger contacts.
 - `examples/hei_rebot_lift/record.py`: subscribes to `tcp://localhost:6558` and saves robot actions/observations into a LeRobotDataset.
 
 ## Layout
@@ -19,7 +21,9 @@ VR_mujoco_ik/
   run_telegrip.sh          # Start the VR Web page and VR data publisher
   run_mujoco_ik.sh         # Existing dual-arm real-robot action pipeline
   run_hei_robot_keyboard_sim.sh # Complete robot, keyboard-controlled pure simulation
+  run_hei_robot_keyboard_physics.sh # Complete robot, keyboard physical grasp validation
   run_hei_robot_vr_sim.sh  # Complete robot, VR-controlled pure simulation
+  run_hei_robot_vr_physics.sh # VR physical grasp validation
   run_hei_robot_vr_real.sh # Complete model + real-robot command bridge
   telegrip/                # WebXR/HTTPS/WebSocket/ZMQ VR bridge
   mujoco_ik/               # MuJoCo model, IK main program, Pinocchio tools

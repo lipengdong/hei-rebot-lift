@@ -7,6 +7,8 @@
 统一部署、手柄操作、网络配置和真机安全启动请看 [VR 使用教程](../README_zh.md)。
 仿真示教采集、ACT 训练和仿真推理请看
 [MuJoCo 数据采集、训练与推理](SIM_DATASET_WORKFLOW_zh.md)。
+碰撞、双指接触、摩擦和掉落验证请看
+[MuJoCo 物理抓取验证](PHYSICS_GRASP_SIMULATION_zh.md)。
 该流程将 `hei-rebot-vr` 仿真进程与 `lerobot5` 采集/推理进程完全分开。
 
 ## 选择启动入口
@@ -18,9 +20,11 @@
 | 入口 | 模型 | 用途 |
 | --- | --- | --- |
 | `./run_hei_robot_keyboard_sim.sh` | `model/HEI_robot_urdf/` | 完整机器人键盘纯仿真；不需要 VR，不发布真机命令 |
+| `./run_hei_robot_keyboard_physics.sh` | `model/HEI_robot_urdf/` | 键盘物理抓取验证；自由物体、碰撞、摩擦和限力执行器 |
 | `./run_hei_robot_keyboard_dataset_sim.sh` | `model/HEI_robot_urdf/` | 键盘示教数据采集用仿真服务端（`hei-rebot-vr`） |
 | `./run_hei_robot_keyboard_record.sh` | - | 键盘示教数据采集客户端（`lerobot5`） |
 | `./run_hei_robot_vr_sim.sh` | `model/HEI_robot_urdf/` | 完整机器人、场景、VR、稳定抓取演示；不发布真机命令 |
+| `./run_hei_robot_vr_physics.sh` | `model/HEI_robot_urdf/` | 独立物理抓取验证；启用重力、碰撞、摩擦和受力夹爪 |
 | `./run_hei_robot_vr_dataset_sim.sh` | `model/HEI_robot_urdf/` | VR 数据采集用仿真服务端（`hei-rebot-vr`） |
 | `./run_hei_robot_mujoco_record.sh` | - | 独立 LeRobotDataset 采集客户端（`lerobot5`） |
 | `./run_hei_robot_policy_sim.sh` | `model/HEI_robot_urdf/` | 策略推理用仿真服务端（`hei-rebot-vr`） |
@@ -51,7 +55,9 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 \
 
 ```bash
 ./run_hei_robot_keyboard_sim.sh --headless-check
+./run_hei_robot_keyboard_physics.sh --headless-check
 ./run_hei_robot_vr_sim.sh --headless-check
+./run_hei_robot_vr_physics.sh --headless-check
 ./run_hei_robot_vr_real.sh --headless-check
 conda run --no-capture-output -n hei-rebot-vr python -m unittest discover -s mujoco_ik/tests -p 'test_*.py' -v
 ```
