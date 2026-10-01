@@ -18,12 +18,12 @@ from hei_robot_mujoco_dataset_adapter import (
     HEIGHT_TARGET_STEP_MM,
     HEIMujocoDatasetAdapter,
 )
+from hei_robot_mujoco_observation_publisher import AsyncObservationPublisher
 from hei_robot_mujoco_zmq_protocol import (
     DEFAULT_COMMAND_PORT,
     DEFAULT_OBSERVATION_PORT,
     OBSERVATION_TOPIC,
     STATE_NAMES,
-    encode_observation_packet,
     safe_hold_action,
     tcp_endpoint,
 )
@@ -73,26 +73,37 @@ class HEIMujocoZmqServer(HEIRobotVRSimulator):
         self.control_source = args.control_source
         super().__init__(args)
         self.adapter: HEIMujocoDatasetAdapter | None = None
+        self.publisher: AsyncObservationPublisher | None = None
         self.context: zmq.Context | None = None
-        self.observation_socket: zmq.Socket | None = None
         self.command_socket: zmq.Socket | None = None
         try:
-            self.adapter = HEIMujocoDatasetAdapter(self, width=args.width, height=args.height)
+            self.adapter = HEIMujocoDatasetAdapter(
+                self,
+                width=args.width,
+                height=args.height,
+                create_renderer=False,
+            )
             self.context = zmq.Context()
-            self.observation_socket = self.context.socket(zmq.PUB)
-            self.observation_socket.setsockopt(zmq.SNDHWM, 2)
-            self.observation_socket.bind(tcp_endpoint(args.bind_ip, args.observation_port))
             self.command_socket = self.context.socket(zmq.PULL)
             self.command_socket.setsockopt(zmq.RCVHWM, 4)
             self.command_socket.bind(tcp_endpoint(args.bind_ip, args.command_port))
+            self.publisher = AsyncObservationPublisher(
+                self,
+                endpoint=tcp_endpoint(args.bind_ip, args.observation_port),
+                topic=OBSERVATION_TOPIC,
+                source_mode=self.control_source,
+                publish_fps=args.publish_fps,
+                jpeg_quality=args.jpeg_quality,
+                width=args.width,
+                height=args.height,
+            )
+            self.publisher.start()
         except Exception:
             self.close()
             raise
 
-        self.sequence = 0
         self.last_command_s = 0.0
         self.last_policy_action = safe_hold_action(self.adapter.read_state())
-        self.dropped_packets = 0
         self.last_network_status_s = 0.0
 
     def _vr_listener(self) -> None:
@@ -150,29 +161,13 @@ class HEIMujocoZmqServer(HEIRobotVRSimulator):
             else:
                 print(f"[HEI Sim Server] ignored unknown command: {command_type!r}", flush=True)
 
-    def _step_policy(self, dt: float, now_s: float) -> None:
+    def _step_policy(self, dt: float, now_s: float) -> dict[str, float]:
         if self.last_command_s <= 0.0 or now_s - self.last_command_s > self.server_args.policy_timeout_s:
             action = safe_hold_action(self.adapter.read_state())
         else:
             action = self.last_policy_action
         self.adapter.apply_action(action, dt)
-
-    def _publish(self, observation: dict, action: dict, timestamp_s: float) -> None:
-        packet = encode_observation_packet(
-            topic=OBSERVATION_TOPIC,
-            sequence=self.sequence,
-            timestamp_s=timestamp_s,
-            source_mode=self.control_source,
-            publish_fps=self.server_args.publish_fps,
-            observation=observation,
-            action=action,
-            jpeg_quality=self.server_args.jpeg_quality,
-        )
-        try:
-            self.observation_socket.send_multipart(packet, flags=zmq.NOBLOCK, copy=False)
-            self.sequence += 1
-        except zmq.Again:
-            self.dropped_packets += 1
+        return action
 
     def _keyboard_callback(self, keycode: int) -> None:
         key = chr(keycode).upper() if 0 <= keycode < 256 else ""
@@ -213,9 +208,10 @@ class HEIMujocoZmqServer(HEIRobotVRSimulator):
                 dt = min(max(now_s - previous_s, 0.0), 0.05)
                 previous_s = now_s
                 self._process_commands()
+                self.publisher.raise_if_failed()
 
                 sample_due = now_s >= next_publish_s
-                observation = self.adapter.read_observation() if sample_due else None
+                snapshot = self.adapter.capture_snapshot() if sample_due else None
                 if self.control_source == "vr":
                     fresh, packet_count = self._step_control(dt)
                     if sample_due:
@@ -230,28 +226,29 @@ class HEIMujocoZmqServer(HEIRobotVRSimulator):
                         # 真机链路记录的是下一目标高度，而不是升降瞬时速度。
                         action["height.pos"] = float(
                             np.clip(
-                                observation["height.pos"] - lift_axis * HEIGHT_TARGET_STEP_MM,
+                                snapshot.state["height.pos"] - lift_axis * HEIGHT_TARGET_STEP_MM,
                                 HEIGHT_MIN_MM,
                                 HEIGHT_MAX_MM,
                             )
                         )
                 else:
-                    self._step_policy(dt, now_s)
+                    applied_action = self._step_policy(dt, now_s)
                     fresh = self.last_command_s > 0.0 and (
                         now_s - self.last_command_s <= self.server_args.policy_timeout_s
                     )
-                    packet_count = self.sequence
+                    packet_count = self.publisher.stats()[0]
                     if sample_due:
-                        action = self.last_policy_action.copy()
+                        action = dict(applied_action)
 
                 if sample_due:
-                    self._publish(observation, action, time.time())
+                    self.publisher.submit(snapshot, action, time.time())
                     next_publish_s = max(next_publish_s + publish_period_s, now_s + publish_period_s)
 
                 self.viewer.sync()
                 if self.control_source == "vr":
                     self._print_status(fresh, packet_count)
                 elif now_s - self.last_network_status_s >= 1.0:
+                    sequence, dropped_snapshots, dropped_network = self.publisher.stats()
                     age = (
                         max(0.0, now_s - self.last_command_s)
                         if self.last_command_s > 0.0
@@ -259,7 +256,8 @@ class HEIMujocoZmqServer(HEIRobotVRSimulator):
                     )
                     print(
                         f"[HEI Sim Server] policy={'online' if fresh else 'waiting'} "
-                        f"published={self.sequence} command_age={age:.2f}s dropped={self.dropped_packets}",
+                        f"published={sequence} command_age={age:.2f}s "
+                        f"dropped_snapshots={dropped_snapshots} dropped_network={dropped_network}",
                         flush=True,
                     )
                     self.last_network_status_s = now_s
@@ -269,12 +267,12 @@ class HEIMujocoZmqServer(HEIRobotVRSimulator):
             self.close()
 
     def close(self) -> None:
+        if self.publisher is not None:
+            self.publisher.close()
+            self.publisher = None
         if self.adapter is not None:
             self.adapter.close()
             self.adapter = None
-        if self.observation_socket is not None:
-            self.observation_socket.close(0)
-            self.observation_socket = None
         if self.command_socket is not None:
             self.command_socket.close(0)
             self.command_socket = None

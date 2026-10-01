@@ -55,7 +55,11 @@ cd software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik
 | 左方向键 | 丢弃当前 episode 并重新录制 |
 | `Esc` | 停止录制并整理数据集 |
 
-仿真端和采集端的 FPS 应保持一致。仿真端始终运行高频控制，只按 `--publish-fps` 发布同步样本；采集端不会启动 MuJoCo。
+仿真端和采集端的 FPS 应保持一致。仿真端始终运行高频控制，只按 `--publish-fps` 发布同步样本；采集端不会启动 MuJoCo。三路相机渲染、JPEG 编码和 ZMQ 发送在独立工作线程中完成，队列只保留最新快照。因此渲染或网络变慢时只会丢弃过期样本，不会阻塞控制循环或回放旧状态；服务端日志中的 `dropped_snapshots` 和 `dropped_network` 可用于判断是否发生丢帧。
+
+Episode 时长按数据集时间轴（`已保存帧数 / fps`）计算，而不是按墙上时间计算。仿真数据流断开后，录制计时会停在当前位置；重新收到有效帧后再继续，因此断流时间不会占用设定的 episode 时长。
+
+采集程序默认打开 Rerun 窗口，实时显示三路相机，以及真正写入数据集的 observation 和 action。无桌面环境可添加 `--no-rerun`；Rerun 内存占用或显示链路带宽较高时可添加 `--rerun-compress-images`。
 
 继续追加数据：
 

@@ -13,11 +13,11 @@ import zmq
 
 from hei_robot_keyboard_mujoco_sim import HEIRobotKeyboardSimulator
 from hei_robot_mujoco_dataset_adapter import HEIMujocoDatasetAdapter
+from hei_robot_mujoco_observation_publisher import AsyncObservationPublisher
 from hei_robot_mujoco_zmq_protocol import (
     DEFAULT_COMMAND_PORT,
     DEFAULT_OBSERVATION_PORT,
     OBSERVATION_TOPIC,
-    encode_observation_packet,
     tcp_endpoint,
 )
 from hei_robot_vr_mujoco_sim import (
@@ -84,24 +84,35 @@ class HEIRobotKeyboardDatasetServer(HEIRobotKeyboardSimulator):
     def __init__(self, args: argparse.Namespace) -> None:
         self.server_args = args
         self.adapter: HEIMujocoDatasetAdapter | None = None
+        self.publisher: AsyncObservationPublisher | None = None
         self.context: zmq.Context | None = None
-        self.observation_socket: zmq.Socket | None = None
         self.command_socket: zmq.Socket | None = None
         super().__init__(args)
         try:
-            self.adapter = HEIMujocoDatasetAdapter(self, width=args.width, height=args.height)
+            self.adapter = HEIMujocoDatasetAdapter(
+                self,
+                width=args.width,
+                height=args.height,
+                create_renderer=False,
+            )
             self.context = zmq.Context()
-            self.observation_socket = self.context.socket(zmq.PUB)
-            self.observation_socket.setsockopt(zmq.SNDHWM, 2)
-            self.observation_socket.bind(tcp_endpoint(args.bind_ip, args.observation_port))
             self.command_socket = self.context.socket(zmq.PULL)
             self.command_socket.setsockopt(zmq.RCVHWM, 4)
             self.command_socket.bind(tcp_endpoint(args.bind_ip, args.command_port))
+            self.publisher = AsyncObservationPublisher(
+                self,
+                endpoint=tcp_endpoint(args.bind_ip, args.observation_port),
+                topic=OBSERVATION_TOPIC,
+                source_mode="keyboard",
+                publish_fps=args.publish_fps,
+                jpeg_quality=args.jpeg_quality,
+                width=args.width,
+                height=args.height,
+            )
+            self.publisher.start()
         except Exception:
             self.close()
             raise
-        self.sequence = 0
-        self.dropped_packets = 0
 
     def _reset_for_recording(self) -> None:
         # 清除仍处于按下状态的运动键，避免 episode 复位后立即继续运动。
@@ -127,23 +138,6 @@ class HEIRobotKeyboardDatasetServer(HEIRobotKeyboardSimulator):
                     self.pressed_keys.clear()
             else:
                 print(f"[HEI Keyboard Dataset] ignored command: {command_type!r}", flush=True)
-
-    def _publish(self, observation: dict, action: dict) -> None:
-        packet = encode_observation_packet(
-            topic=OBSERVATION_TOPIC,
-            sequence=self.sequence,
-            timestamp_s=time.time(),
-            source_mode="keyboard",
-            publish_fps=self.server_args.publish_fps,
-            observation=observation,
-            action=action,
-            jpeg_quality=self.server_args.jpeg_quality,
-        )
-        try:
-            self.observation_socket.send_multipart(packet, flags=zmq.NOBLOCK, copy=False)
-            self.sequence += 1
-        except zmq.Again:
-            self.dropped_packets += 1
 
     def run(self) -> None:
         observation_endpoint = tcp_endpoint(
@@ -192,13 +186,14 @@ class HEIRobotKeyboardDatasetServer(HEIRobotKeyboardSimulator):
                 dt = min(max(now_s - previous_s, 0.0), 0.05)
                 previous_s = now_s
                 self._process_commands()
+                self.publisher.raise_if_failed()
 
                 sample_due = now_s >= next_publish_s
-                observation = self.adapter.read_observation() if sample_due else None
+                snapshot = self.adapter.capture_snapshot() if sample_due else None
                 mode = self._step_keyboard_control(dt)
                 if sample_due:
                     # 与真机采集顺序一致：先观察，再记录本次控制产生的动作。
-                    self._publish(observation, self.adapter.read_action())
+                    self.publisher.submit(snapshot, self.adapter.read_action(), time.time())
                     next_publish_s = max(next_publish_s + publish_period_s, now_s + publish_period_s)
 
                 self.viewer.sync()
@@ -209,12 +204,12 @@ class HEIRobotKeyboardDatasetServer(HEIRobotKeyboardSimulator):
             self.close()
 
     def close(self) -> None:
+        if self.publisher is not None:
+            self.publisher.close()
+            self.publisher = None
         if self.adapter is not None:
             self.adapter.close()
             self.adapter = None
-        if self.observation_socket is not None:
-            self.observation_socket.close(0)
-            self.observation_socket = None
         if self.command_socket is not None:
             self.command_socket.close(0)
             self.command_socket = None

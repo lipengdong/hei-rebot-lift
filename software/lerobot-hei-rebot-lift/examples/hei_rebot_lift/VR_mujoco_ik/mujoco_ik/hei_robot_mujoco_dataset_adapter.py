@@ -4,9 +4,12 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from dataclasses import dataclass
 
 import mujoco
 import numpy as np
+
+from hei_robot_mujoco_scene import build_mujoco_model
 
 from hei_robot_mujoco_zmq_protocol import (
     CAMERA_HEIGHT,
@@ -45,6 +48,75 @@ HEIGHT_TARGET_STEP_MM = 80.0
 ARM_MAX_SPEED_RAD_S = np.array([8.0, 8.0, 8.0, 1.8, 2.5, 2.5], dtype=float)
 
 
+@dataclass(frozen=True)
+class SimulationSnapshot:
+    """Small immutable copy of one simulation instant for asynchronous rendering."""
+
+    state: dict[str, float]
+    qpos: np.ndarray
+    body_pos: np.ndarray
+    body_quat: np.ndarray
+
+
+class HEIMujocoSnapshotRenderer:
+    """Render snapshots with a private model/data pair owned by one worker thread."""
+
+    def __init__(
+        self,
+        model_path,
+        *,
+        add_environment: bool,
+        width: int,
+        height: int,
+    ) -> None:
+        self.width = int(width)
+        self.height = int(height)
+        self.model = build_mujoco_model(model_path, add_environment=add_environment)
+        self.model.vis.global_.offwidth = max(self.model.vis.global_.offwidth, self.width)
+        self.model.vis.global_.offheight = max(self.model.vis.global_.offheight, self.height)
+        self.data = mujoco.MjData(self.model)
+        self.renderer = mujoco.Renderer(self.model, height=self.height, width=self.width)
+        self._closed = False
+        self._validate_cameras()
+
+    def _validate_cameras(self) -> None:
+        missing = [
+            name
+            for name in CAMERA_NAMES
+            if mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_CAMERA, name) < 0
+        ]
+        if missing:
+            raise ValueError(f"MuJoCo model is missing named cameras: {missing}")
+
+    def render(self, snapshot: SimulationSnapshot) -> dict[str, float | np.ndarray]:
+        if snapshot.qpos.shape != self.data.qpos.shape:
+            raise ValueError(
+                f"Snapshot qpos shape {snapshot.qpos.shape} does not match renderer {self.data.qpos.shape}"
+            )
+        if snapshot.body_pos.shape != self.model.body_pos.shape:
+            raise ValueError("Snapshot body_pos shape does not match renderer model")
+        if snapshot.body_quat.shape != self.model.body_quat.shape:
+            raise ValueError("Snapshot body_quat shape does not match renderer model")
+
+        self.data.qpos[:] = snapshot.qpos
+        self.data.qvel[:] = 0.0
+        self.model.body_pos[:] = snapshot.body_pos
+        self.model.body_quat[:] = snapshot.body_quat
+        mujoco.mj_forward(self.model, self.data)
+
+        observation: dict[str, float | np.ndarray] = dict(snapshot.state)
+        for camera_name in CAMERA_NAMES:
+            self.renderer.update_scene(self.data, camera=camera_name)
+            observation[camera_name] = self.renderer.render().copy()
+        return observation
+
+    def close(self) -> None:
+        if self._closed:
+            return
+        self.renderer.close()
+        self._closed = True
+
+
 def finite_or(value: float, fallback: float) -> float:
     value = float(value)
     return value if np.isfinite(value) else float(fallback)
@@ -70,16 +142,25 @@ class HEIMujocoDatasetAdapter:
     # 与 HeiRebotLiftClient.name 一致，避免 VLA 预处理看到不同的 robot_type。
     robot_type = ROBOT_TYPE
 
-    def __init__(self, simulator, *, width: int | None = None, height: int | None = None) -> None:
+    def __init__(
+        self,
+        simulator,
+        *,
+        width: int | None = None,
+        height: int | None = None,
+        create_renderer: bool = True,
+    ) -> None:
         self.simulator = simulator
         self.width = int(width or CAMERA_WIDTH)
         self.height = int(height or CAMERA_HEIGHT)
         if self.width <= 0 or self.height <= 0:
             raise ValueError("Camera width and height must be positive")
 
-        simulator.model.vis.global_.offwidth = max(simulator.model.vis.global_.offwidth, self.width)
-        simulator.model.vis.global_.offheight = max(simulator.model.vis.global_.offheight, self.height)
-        self.renderer = mujoco.Renderer(simulator.model, height=self.height, width=self.width)
+        self.renderer = None
+        if create_renderer:
+            simulator.model.vis.global_.offwidth = max(simulator.model.vis.global_.offwidth, self.width)
+            simulator.model.vis.global_.offheight = max(simulator.model.vis.global_.offheight, self.height)
+            self.renderer = mujoco.Renderer(simulator.model, height=self.height, width=self.width)
         self._closed = False
         self._validate_cameras()
 
@@ -133,7 +214,19 @@ class HEIMujocoDatasetAdapter:
         # 仿真控制器直接写位置目标；当前 qpos 就是发送给真机时对应的关节目标。
         return self.read_state()
 
+    def capture_snapshot(self) -> SimulationSnapshot:
+        """Copy state needed by the render worker without holding the control lock."""
+        with self.simulator.data_lock:
+            return SimulationSnapshot(
+                state=self._read_state_unlocked(),
+                qpos=self.simulator.data.qpos.copy(),
+                body_pos=self.simulator.model.body_pos.copy(),
+                body_quat=self.simulator.model.body_quat.copy(),
+            )
+
     def read_observation(self) -> dict[str, float | np.ndarray]:
+        if self.renderer is None:
+            raise RuntimeError("This adapter was created without an inline renderer")
         with self.simulator.data_lock:
             observation: dict[str, float | np.ndarray] = self._read_state_unlocked()
             for camera_name in CAMERA_NAMES:
@@ -200,5 +293,7 @@ class HEIMujocoDatasetAdapter:
     def close(self) -> None:
         if self._closed:
             return
-        self.renderer.close()
+        if self.renderer is not None:
+            self.renderer.close()
+            self.renderer = None
         self._closed = True

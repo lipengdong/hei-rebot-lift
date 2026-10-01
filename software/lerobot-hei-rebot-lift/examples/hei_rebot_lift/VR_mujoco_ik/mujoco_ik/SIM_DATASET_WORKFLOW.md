@@ -51,7 +51,11 @@ Recorder keys:
 | Left arrow | Discard and re-record the current episode |
 | `Esc` | Stop and finalize the dataset |
 
-Use matching FPS values on both sides. The simulation control loop remains unrestricted and only publishes synchronized samples at `--publish-fps`; the recorder never starts MuJoCo.
+Use matching FPS values on both sides. The simulation control loop remains unrestricted and only publishes synchronized samples at `--publish-fps`; the recorder never starts MuJoCo. Three-camera rendering, JPEG encoding, and ZMQ transmission run in a dedicated worker. Its queue keeps only the latest snapshot, so a slow renderer or network may drop old samples but cannot stall or replay stale states in the control loop. The server status reports `dropped_snapshots` and `dropped_network` when this happens.
+
+Episode duration is measured on the dataset timeline (`saved_frames / fps`), not by wall-clock time. If the simulation stream disconnects, recording pauses without consuming the configured episode duration and resumes from the same point when valid frames return.
+
+The recorder opens a Rerun window by default and displays the three camera streams together with the observation and action values that are actually written to the dataset. Use `--no-rerun` for headless recording, or `--rerun-compress-images` when viewer memory or display bandwidth is limited.
 
 To append data, use the same explicit `--root` and add `--resume`. If the processes run on different computers, pass the simulation computer address through `--sim-ip` and allow TCP ports `6565/6566`.
 
