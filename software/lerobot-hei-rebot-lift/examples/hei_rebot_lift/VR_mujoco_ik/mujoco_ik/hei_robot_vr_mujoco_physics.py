@@ -392,14 +392,14 @@ class HEIRobotVRPhysicsSimulator(stable_sim.HEIRobotVRSimulator):
                 arm = self.arms[side]
                 controller = controllers[side]
                 if controller["gripActive"]:
-                    self._update_arm_target(arm, controller)
+                    self._update_arm_target(arm, controller, dt)
                     target = (
                         stable_sim.GRIPPER_OPEN_M
                         if controller["trigger"]
                         else stable_sim.GRIPPER_CLOSED_M
                     )
                     self._set_gripper(side, target)
-                    self._solve_arm(arm)
+                    self._solve_arm(arm, dt)
                 else:
                     self._release_controller_origin(arm)
                     self._step_reset(arm)

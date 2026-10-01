@@ -136,6 +136,8 @@ class HEIRobotKeyboardSimulator(HEIRobotVRSimulator):
         arm.last_solved_target_tf = current_tf.copy()
         arm.last_accepted_ik_q = current_q.copy()
         arm.last_accepted_target_tf = current_tf.copy()
+        arm.filtered_target_tf = current_tf.copy()
+        arm.joint_target_q = current_q.copy()
         arm.settle_steps_remaining = 0
         arm.reset_requested = False
         arm.solver.init_data = current_q.copy()
@@ -371,7 +373,7 @@ class HEIRobotKeyboardSimulator(HEIRobotVRSimulator):
                 if arm.reset_requested:
                     self._step_reset(arm)
                 else:
-                    self._solve_arm(arm)
+                    self._solve_arm(arm, dt)
             self.data.qvel[:] = 0.0
             mujoco.mj_forward(self.model, self.data)
             self._step_stable_grasp()

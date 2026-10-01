@@ -86,9 +86,23 @@ VR_TO_ROBOT_ROT = np.array(
     dtype=float,
 )
 
-TARGET_POS_EPS_M = 0.0012
-TARGET_ROT_EPS_RAD = np.deg2rad(0.35)
+TARGET_POS_EPS_M = 0.0003
+TARGET_ROT_EPS_RAD = np.deg2rad(0.10)
+REAL_TARGET_POS_EPS_M = 0.0012
+REAL_TARGET_ROT_EPS_RAD = np.deg2rad(0.35)
 MAX_MUJOCO_JOINT_STEP_RAD = 0.08
+# 仿真专用的末端目标滤波：手柄快速移动时使用较短时间常数保证跟手，
+# 静止或慢速移动时增加平滑，避免 VR 位姿噪声直接进入 IK。
+ARM_TARGET_FILTER_FAST_TAU_S = 0.018
+ARM_TARGET_FILTER_SLOW_TAU_S = 0.055
+ARM_TARGET_FILTER_FAST_TRANSLATION_M = 0.015
+ARM_TARGET_FILTER_FAST_ROTATION_RAD = np.deg2rad(8.0)
+# IK 只负责生成目标关节角；MuJoCo 根据真实 dt 连续追踪，避免求解耗时变化
+# 造成固定“每循环一步”的视觉顿挫。该参数只用于仿真，真机保持原控制逻辑。
+ARM_TRACK_TIME_CONSTANT_S = 0.045
+ARM_MAX_JOINT_SPEED_RAD_S = np.array([3.0, 3.0, 3.0, 4.0, 4.0, 4.0], dtype=float)
+ARM_TRACK_MAX_DT_S = 0.05
+ARM_TRACK_HOLD_EPS_RAD = 1e-5
 # 只判断候选目标是否连续可达，不改变原有速度、加速度和电机参数。
 IK_TARGET_MAX_JOINT_DELTA_RAD = np.deg2rad([20.0, 20.0, 20.0, 25.0, 25.0, 25.0])
 IK_TARGET_MAX_POSITION_ERROR_M = 0.100
@@ -148,6 +162,8 @@ class ArmRuntime:
     last_failure_log_s: float = 0.0
     last_accepted_ik_q: np.ndarray | None = None
     last_accepted_target_tf: np.ndarray | None = None
+    filtered_target_tf: np.ndarray | None = None
+    joint_target_q: np.ndarray | None = None
 
 
 @dataclass
@@ -482,13 +498,19 @@ class HEIRobotVRSimulator:
         cosine = np.clip((np.trace(delta) - 1.0) * 0.5, -1.0, 1.0)
         return float(np.arccos(cosine))
 
+    def _target_thresholds(self) -> tuple[float, float]:
+        if bool(getattr(self, "real_command_enabled", False)):
+            return REAL_TARGET_POS_EPS_M, REAL_TARGET_ROT_EPS_RAD
+        return TARGET_POS_EPS_M, TARGET_ROT_EPS_RAD
+
     def _target_changed(self, arm: ArmRuntime, target: np.ndarray) -> bool:
         previous = arm.last_solved_target_tf
         if previous is None:
             return True
         translation = np.linalg.norm(target[:3, 3] - previous[:3, 3])
         rotation = self._rotation_delta_angle(previous, target)
-        return translation >= TARGET_POS_EPS_M or rotation >= TARGET_ROT_EPS_RAD
+        position_eps, rotation_eps = self._target_thresholds()
+        return translation >= position_eps or rotation >= rotation_eps
 
     def _capture_controller_origin(self, arm: ArmRuntime, controller: dict) -> None:
         current_q = self._get_joint_q(ARM_JOINTS[arm.side])
@@ -502,6 +524,8 @@ class HEIRobotVRSimulator:
         arm.last_solved_target_tf = current_tf.copy()
         arm.last_accepted_ik_q = current_q.copy()
         arm.last_accepted_target_tf = current_tf.copy()
+        arm.filtered_target_tf = current_tf.copy()
+        arm.joint_target_q = current_q.copy()
         arm.settle_steps_remaining = 0
         arm.reset_requested = False
         print(f"[HEI VR Sim] {arm.side} controller origin captured", flush=True)
@@ -515,9 +539,43 @@ class HEIRobotVRSimulator:
         arm.last_solved_target_tf = None
         arm.last_accepted_ik_q = None
         arm.last_accepted_target_tf = None
+        arm.filtered_target_tf = None
+        arm.joint_target_q = None
         arm.settle_steps_remaining = 0
 
-    def _update_arm_target(self, arm: ArmRuntime, controller: dict) -> None:
+    def _filter_arm_target(self, arm: ArmRuntime, target: np.ndarray, dt: float) -> np.ndarray:
+        """对 TCP 位姿做自适应低通，不改变 VR 到机器人的 1:1 比例。"""
+        previous = arm.filtered_target_tf
+        if previous is None:
+            arm.filtered_target_tf = target.copy()
+            return target.copy()
+
+        translation = float(np.linalg.norm(target[:3, 3] - previous[:3, 3]))
+        rotation = self._rotation_delta_angle(previous, target)
+        activity = max(
+            translation / ARM_TARGET_FILTER_FAST_TRANSLATION_M,
+            rotation / ARM_TARGET_FILTER_FAST_ROTATION_RAD,
+        )
+        activity = float(np.clip(activity, 0.0, 1.0))
+        tau_s = (
+            ARM_TARGET_FILTER_SLOW_TAU_S
+            + activity * (ARM_TARGET_FILTER_FAST_TAU_S - ARM_TARGET_FILTER_SLOW_TAU_S)
+        )
+        bounded_dt = float(np.clip(dt, 0.0, ARM_TRACK_MAX_DT_S))
+        alpha = 1.0 - np.exp(-bounded_dt / max(tau_s, 1e-6))
+
+        filtered = np.eye(4)
+        filtered[:3, 3] = previous[:3, 3] + alpha * (
+            target[:3, 3] - previous[:3, 3]
+        )
+        relative_rotation = previous[:3, :3].T @ target[:3, :3]
+        filtered[:3, :3] = previous[:3, :3] @ pin.exp3(
+            alpha * pin.log3(relative_rotation)
+        )
+        arm.filtered_target_tf = filtered.copy()
+        return filtered
+
+    def _update_arm_target(self, arm: ArmRuntime, controller: dict, dt: float = 1.0 / 60.0) -> None:
         if arm.controller_origin_pos is None:
             self._capture_controller_origin(arm, controller)
         delta = self._controller_delta(arm.controller_origin_pos, controller["position"])
@@ -525,9 +583,14 @@ class HEIRobotVRSimulator:
             arm.controller_origin_quat,
             controller["quaternion"],
         )
-        target = arm.robot_origin_tf.copy()
-        target[:3, 3] = arm.robot_origin_tf[:3, 3] + delta * self.args.vr_pos_scale
-        target[:3, :3] = relative_rotation @ arm.robot_origin_tf[:3, :3]
+        raw_target = arm.robot_origin_tf.copy()
+        raw_target[:3, 3] = arm.robot_origin_tf[:3, 3] + delta * self.args.vr_pos_scale
+        raw_target[:3, :3] = relative_rotation @ arm.robot_origin_tf[:3, :3]
+        target = (
+            raw_target
+            if bool(getattr(self, "real_command_enabled", False))
+            else self._filter_arm_target(arm, raw_target, dt)
+        )
         # 以“上一个已接受的 VR 目标”为基准做死区判断。小于阈值的手柄噪声不进入 IK；
         # 微小位移会继续累积，总变化超过阈值后仍会被接受，不会丢失慢速跟随。
         if self._target_changed(arm, target):
@@ -565,8 +628,9 @@ class HEIRobotVRSimulator:
             )
             requested_joint_distance = np.linalg.norm(raw_q - arm.controller_origin_q)
             accepted_joint_distance = np.linalg.norm(reference_q - arm.controller_origin_q)
+            position_eps, _ = self._target_thresholds()
             returning_to_origin = (
-                requested_distance < accepted_distance - TARGET_POS_EPS_M
+                requested_distance < accepted_distance - position_eps
                 and requested_joint_distance < accepted_joint_distance
             )
         changed = np.flatnonzero(np.abs(raw_q - reference_q) > IK_TARGET_MAX_JOINT_DELTA_RAD)
@@ -664,6 +728,11 @@ class HEIRobotVRSimulator:
         arm.target_tf = target_tf.copy()
         arm.last_accepted_ik_q = raw_q.copy()
         arm.last_accepted_target_tf = target_tf.copy()
+        if not bool(getattr(self, "real_command_enabled", False)):
+            # 仿真中缓存完整 IK 目标，关节运动由 _track_arm_joint_target 按 dt 完成。
+            arm.joint_target_q = raw_q.copy()
+            arm.settle_steps_remaining = 0
+            return
         # 快速回程可能远大于 8 * 0.08 rad。只延长收敛周期，不改变原来的
         # 单步幅度；接近目标后仍由下方 TCP 误差条件提前停止。
         required_steps = int(
@@ -683,7 +752,8 @@ class HEIRobotVRSimulator:
         achieved_tf = arm.solver.fk(applied_q)
         position_error = np.linalg.norm(target_tf[:3, 3] - achieved_tf[:3, 3])
         rotation_error = self._rotation_delta_angle(achieved_tf, target_tf)
-        if position_error < TARGET_POS_EPS_M and rotation_error < TARGET_ROT_EPS_RAD:
+        position_eps, rotation_eps = self._target_thresholds()
+        if position_error < position_eps and rotation_error < rotation_eps:
             arm.settle_steps_remaining = 0
 
     def _reject_arm_target(self, arm: ArmRuntime, current_q: np.ndarray, reason: str) -> None:
@@ -700,20 +770,43 @@ class HEIRobotVRSimulator:
         arm.last_solved_target_tf = safe_tf.copy()
         arm.settle_steps_remaining = 0
         arm.solver.init_data = current_q.copy()
-        safe_step = np.clip(
-            safe_q - current_q,
-            -MAX_MUJOCO_JOINT_STEP_RAD,
-            MAX_MUJOCO_JOINT_STEP_RAD,
-        )
-        if np.max(np.abs(safe_step)) >= IK_JOINT_HOLD_EPS_RAD:
-            self._set_joint_q(ARM_JOINTS[arm.side], current_q + safe_step)
+        if not bool(getattr(self, "real_command_enabled", False)):
+            arm.joint_target_q = np.asarray(safe_q, dtype=float).copy()
+        else:
+            safe_step = np.clip(
+                safe_q - current_q,
+                -MAX_MUJOCO_JOINT_STEP_RAD,
+                MAX_MUJOCO_JOINT_STEP_RAD,
+            )
+            if np.max(np.abs(safe_step)) >= IK_JOINT_HOLD_EPS_RAD:
+                self._set_joint_q(ARM_JOINTS[arm.side], current_q + safe_step)
         now = time.monotonic()
         if now - arm.last_failure_log_s >= 1.0:
             print(f"[HEI VR Boundary] {arm.side}: {reason}; keeping current pose", flush=True)
             arm.last_failure_log_s = now
 
-    def _solve_arm(self, arm: ArmRuntime) -> None:
+    def _track_arm_joint_target(self, arm: ArmRuntime, dt: float) -> None:
+        """按时间连续追踪缓存的关节目标，使速度不依赖 IK/渲染循环频率。"""
+        if arm.joint_target_q is None:
+            return
+        current_q = self._get_joint_q(ARM_JOINTS[arm.side])
+        error = np.asarray(arm.joint_target_q, dtype=float) - current_q
+        if np.max(np.abs(error)) < ARM_TRACK_HOLD_EPS_RAD:
+            return
+        bounded_dt = float(np.clip(dt, 0.0, ARM_TRACK_MAX_DT_S))
+        if bounded_dt <= 0.0:
+            return
+        alpha = 1.0 - np.exp(-bounded_dt / ARM_TRACK_TIME_CONSTANT_S)
+        step = alpha * error
+        max_step = ARM_MAX_JOINT_SPEED_RAD_S * bounded_dt
+        step = np.clip(step, -max_step, max_step)
+        self._set_joint_q(ARM_JOINTS[arm.side], current_q + step)
+
+    def _solve_arm(self, arm: ArmRuntime, dt: float = 1.0 / 60.0) -> None:
+        simulation_tracking = not bool(getattr(self, "real_command_enabled", False))
         if arm.settle_steps_remaining <= 0:
+            if simulation_tracking:
+                self._track_arm_joint_target(arm, dt)
             return
         current_q = self._get_joint_q(ARM_JOINTS[arm.side])
         requested_tf = arm.target_tf.copy()
@@ -725,6 +818,8 @@ class HEIRobotVRSimulator:
             projection = self._project_target_to_workspace(arm, current_q, requested_tf)
             if projection is None:
                 self._reject_arm_target(arm, current_q, reason)
+                if simulation_tracking:
+                    self._track_arm_joint_target(arm, dt)
                 return
             projected_tf, full_solution, raw_q, alpha = projection
             # last_solved_target_tf 保留投影后的安全目标。下一帧若手柄仍在
@@ -742,6 +837,8 @@ class HEIRobotVRSimulator:
         else:
             target_tf = requested_tf
         self._accept_arm_candidate(arm, current_q, target_tf, full_solution, raw_q)
+        if simulation_tracking:
+            self._track_arm_joint_target(arm, dt)
 
     def _step_reset(self, arm: ArmRuntime) -> None:
         if not arm.reset_requested:
@@ -1012,11 +1109,11 @@ class HEIRobotVRSimulator:
                 arm = self.arms[side]
                 controller = controllers[side]
                 if controller["gripActive"]:
-                    self._update_arm_target(arm, controller)
+                    self._update_arm_target(arm, controller, dt)
                     # 默认闭合，trigger 按下张开；松开 grip 后保留最后夹爪状态。
                     target = GRIPPER_OPEN_M if controller["trigger"] else GRIPPER_CLOSED_M
                     self._set_gripper(side, target)
-                    self._solve_arm(arm)
+                    self._solve_arm(arm, dt)
                 else:
                     self._release_controller_origin(arm)
                     self._step_reset(arm)

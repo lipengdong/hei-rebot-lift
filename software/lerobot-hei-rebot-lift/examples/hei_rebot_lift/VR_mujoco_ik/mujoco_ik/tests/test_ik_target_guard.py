@@ -8,7 +8,12 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from hei_robot_vr_mujoco_sim import ArmRuntime, HEIRobotVRSimulator, MAX_MUJOCO_JOINT_STEP_RAD
+from hei_robot_vr_mujoco_sim import (
+    ARM_MAX_JOINT_SPEED_RAD_S,
+    MAX_MUJOCO_JOINT_STEP_RAD,
+    ArmRuntime,
+    HEIRobotVRSimulator,
+)
 
 
 class FakeSolver:
@@ -16,6 +21,7 @@ class FakeSolver:
         self.solution = np.zeros(6)
         self.raw_solution = np.zeros(6)
         self.init_data = np.zeros(6)
+        self.ik_calls = 0
 
     def fk(self, q):
         transform = np.eye(4)
@@ -23,6 +29,7 @@ class FakeSolver:
         return transform
 
     def ik(self, target, current):
+        self.ik_calls += 1
         self.init_data = self.solution.copy()
         return self.solution.copy(), {"success": True, "raw_solution": self.raw_solution.copy()}
 
@@ -67,16 +74,38 @@ class IKTargetGuardTest(unittest.TestCase):
     def set_q(self, names, values):
         self.q = np.asarray(values).copy()
 
-    def test_normal_command_keeps_original_step_limit(self):
+    def test_normal_command_uses_time_based_joint_tracking(self):
         candidate = np.array([0.01, 0.01, 0.01, 0.12, 0.12, 0.12])
         self.solver.solution = candidate
         self.solver.raw_solution = candidate
         self.arm.target_tf = self.solver.fk(candidate)
-        self.controller._solve_arm(self.arm)
-        np.testing.assert_allclose(
-            self.q, np.clip(candidate, -MAX_MUJOCO_JOINT_STEP_RAD, MAX_MUJOCO_JOINT_STEP_RAD)
-        )
+        dt = 1.0 / 60.0
+        self.controller._solve_arm(self.arm, dt)
+        self.assertTrue(np.all(self.q > 0.0))
+        self.assertTrue(np.all(self.q <= ARM_MAX_JOINT_SPEED_RAD_S * dt + 1e-12))
+        np.testing.assert_array_equal(self.arm.joint_target_q, candidate)
         np.testing.assert_array_equal(self.arm.last_accepted_ik_q, candidate)
+
+    def test_real_mode_keeps_original_target_deadband(self):
+        self.arm.last_solved_target_tf = np.eye(4)
+        target = np.eye(4)
+        target[0, 3] = 0.0005
+        self.assertTrue(self.controller._target_changed(self.arm, target))
+        self.controller.real_command_enabled = True
+        self.assertFalse(self.controller._target_changed(self.arm, target))
+
+    def test_real_mode_keeps_original_per_cycle_tracking(self):
+        self.controller.real_command_enabled = True
+        candidate = np.full(6, 0.12)
+        self.solver.solution = candidate.copy()
+        self.solver.raw_solution = candidate.copy()
+        self.arm.target_tf = self.solver.fk(candidate)
+        self.controller._solve_arm(self.arm, 1.0 / 60.0)
+        np.testing.assert_allclose(
+            self.q,
+            np.clip(candidate, -MAX_MUJOCO_JOINT_STEP_RAD, MAX_MUJOCO_JOINT_STEP_RAD),
+        )
+        self.assertIsNone(self.arm.joint_target_q)
 
     def test_clipped_output_cannot_hide_raw_wrist_jump(self):
         self.solver.solution[5] = -0.12
@@ -109,8 +138,10 @@ class IKTargetGuardTest(unittest.TestCase):
         self.solver.raw_solution[0] = 0.01
         self.controller._update_arm_target(self.arm, controller)
         self.controller._solve_arm(self.arm)
-        self.assertAlmostEqual(self.q[0], 0.01)
+        self.assertGreater(self.q[0], 0.0)
+        self.assertLess(self.q[0], 0.01)
         self.assertIsNotNone(self.arm.controller_origin_pos)
+        self.assertAlmostEqual(self.arm.joint_target_q[0], 0.01)
         self.assertAlmostEqual(self.arm.last_accepted_ik_q[0], 0.01)
 
     def test_rejected_target_is_retried_immediately(self):
@@ -123,7 +154,9 @@ class IKTargetGuardTest(unittest.TestCase):
         self.arm.last_accepted_ik_q[0] = 0.16
         self.arm.target_tf[0, 3] = 0.03
         self.controller._reject_arm_target(self.arm, self.q, "test rejection")
-        self.assertAlmostEqual(self.q[0], MAX_MUJOCO_JOINT_STEP_RAD)
+        self.controller._solve_arm(self.arm, 1.0 / 60.0)
+        self.assertGreater(self.q[0], 0.0)
+        self.assertLessEqual(self.q[0], ARM_MAX_JOINT_SPEED_RAD_S[0] / 60.0)
 
     def test_unreachable_target_is_projected_to_workspace_boundary(self):
         solver = BoundedWorkspaceSolver()
@@ -133,7 +166,9 @@ class IKTargetGuardTest(unittest.TestCase):
         self.assertGreater(self.arm.last_accepted_target_tf[0, 3], 0.0)
         self.assertLessEqual(self.arm.last_accepted_target_tf[0, 3], 0.015 + 1e-9)
         self.assertAlmostEqual(self.arm.last_accepted_target_tf[0, 3], 0.015, places=6)
-        self.assertAlmostEqual(self.q[0], 0.015, places=6)
+        self.assertGreater(self.q[0], 0.0)
+        self.assertLess(self.q[0], 0.015)
+        self.assertAlmostEqual(self.arm.joint_target_q[0], 0.015, places=6)
         requested = np.eye(4)
         requested[0, 3] = 0.03
         self.assertTrue(self.controller._target_changed(self.arm, requested))
@@ -162,7 +197,7 @@ class IKTargetGuardTest(unittest.TestCase):
         candidate[4] = 0.10
         self.assertIsNone(self.controller._candidate_rejection_reason(self.arm, self.q, candidate))
 
-    def test_fast_return_extends_settling_without_changing_step_size(self):
+    def test_fast_return_is_cached_and_time_limited(self):
         self.controller._rotation_delta_angle = lambda first, second: 1.0
         self.q[4] = 1.0
         self.arm.last_accepted_target_tf[0, 3] = 0.20
@@ -171,9 +206,26 @@ class IKTargetGuardTest(unittest.TestCase):
         self.solver.solution[0] = 0.05
         self.solver.solution[4] = 0.10
         self.solver.raw_solution = self.solver.solution.copy()
-        self.controller._solve_arm(self.arm)
-        self.assertGreater(self.arm.settle_steps_remaining, 8)
-        self.assertAlmostEqual(self.q[4], 1.0 - MAX_MUJOCO_JOINT_STEP_RAD)
+        dt = 1.0 / 60.0
+        self.controller._solve_arm(self.arm, dt)
+        self.assertEqual(self.arm.settle_steps_remaining, 0)
+        self.assertAlmostEqual(self.arm.joint_target_q[4], 0.10)
+        self.assertLess(self.q[4], 1.0)
+        self.assertGreaterEqual(self.q[4], 1.0 - ARM_MAX_JOINT_SPEED_RAD_S[4] * dt)
+
+    def test_cached_target_tracks_without_repeating_ik(self):
+        candidate = np.full(6, 0.12)
+        self.solver.solution = candidate.copy()
+        self.solver.raw_solution = candidate.copy()
+        self.arm.target_tf = self.solver.fk(candidate)
+        self.controller._solve_arm(self.arm, 1.0 / 60.0)
+        first_q = self.q.copy()
+        self.assertEqual(self.solver.ik_calls, 1)
+        for _ in range(5):
+            self.controller._solve_arm(self.arm, 1.0 / 60.0)
+        self.assertEqual(self.solver.ik_calls, 1)
+        self.assertTrue(np.all(self.q > first_q))
+        self.assertTrue(np.all(self.q <= candidate))
 
     def test_nonfinite_raw_solution_is_rejected(self):
         candidate = np.zeros(6)

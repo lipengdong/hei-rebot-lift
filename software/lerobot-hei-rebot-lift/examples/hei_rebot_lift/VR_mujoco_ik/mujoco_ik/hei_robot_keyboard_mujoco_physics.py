@@ -88,7 +88,7 @@ class HEIRobotKeyboardPhysicsSimulator(
                 if arm.reset_requested:
                     self._step_reset(arm)
                 else:
-                    self._solve_arm(arm)
+                    self._solve_arm(arm, dt)
 
             lift_id = self._mujoco_joint_id(LIFT_JOINT)
             self.data.qvel[int(self.model.jnt_dofadr[lift_id])] = 0.0
