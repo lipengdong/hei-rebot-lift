@@ -11,6 +11,7 @@
 - `mujoco_ik/hei_robot_vr_mujoco_physics.py`：独立的物理抓取验证模式，物体不会绑定到 TCP。
 - `mujoco_ik/hei_robot_keyboard_mujoco_sim.py`：使用键盘控制完整机器人仿真，不需要 VR，也不会连接实机。
 - `mujoco_ik/hei_robot_keyboard_mujoco_physics.py`：使用键盘验证自由物体、碰撞、摩擦和真实夹爪接触。
+- 完整模型仿真采用自适应 TCP 滤波、单次 IK 目标缓存和基于真实 `dt` 的关节追踪，减少正常工作空间内的停顿和阶梯式跳动。
 - LeRobot 录制端 `examples/hei_rebot_lift/record.py` 订阅 `tcp://localhost:6558`，把动作和机器人观测保存成数据集。
 
 ## 目录结构
@@ -24,9 +25,15 @@ VR_mujoco_ik/
   run_hei_robot_keyboard_physics.sh # 完整机器人键盘物理抓取验证
   run_hei_robot_vr_sim.sh  # 完整机器人 VR 纯仿真
   run_hei_robot_vr_physics.sh # VR 物理抓取验证
+  run_hei_robot_keyboard_dataset_sim.sh # 键盘示教仿真服务端
+  run_hei_robot_keyboard_record.sh # 键盘示教 LeRobotDataset 采集端
+  run_hei_robot_vr_dataset_sim.sh # VR 示教仿真服务端
+  run_hei_robot_mujoco_record.sh # VR 示教 LeRobotDataset 采集端
+  run_hei_robot_policy_sim.sh # 策略推理仿真服务端
+  run_hei_robot_mujoco_rollout.sh # LeRobot 策略推理客户端
   run_hei_robot_vr_real.sh # 完整模型 + 真实机器人命令桥接
   telegrip/                # WebXR/HTTPS/WebSocket/ZMQ VR 桥
-  mujoco_ik/               # MuJoCo 模型、IK 主程序、Pinocchio 工具
+  mujoco_ik/               # 模型、IK、物理场景和数据工作流文档
 ```
 
 ## 一体化环境部署
@@ -150,6 +157,18 @@ cd examples/hei_rebot_lift/VR_mujoco_ik
 程序会把最近的物体绑定到对应 TCP，并保留抓取瞬间的相对位置和朝向。松开 grip
 不会掉落物体；再次张开夹爪才会释放。物体位于桌面范围上方时会稳定放到桌面，
 否则放到地面。每条机械臂同时最多抓取一个物体。
+
+#### 机械臂 IK 平滑
+
+完整模型的 VR 仿真先对 TCP 位置和姿态做自适应滤波：快速运动时缩短时间常数以
+保持跟手，静止和慢速运动时增强防抖。每个通过死区判断的新 TCP 目标只进行一次
+IK 求解并缓存完整关节目标，MuJoCo 再依据真实循环 `dt` 连续追踪该目标，而不是
+按“每循环固定跳一步”的方式运动。键盘仿真也使用相同的关节目标缓存和 `dt` 追踪。
+
+仿真默认目标死区为 `0.3 mm / 0.1 deg`，关节 1-3 最大追踪速度为 `3 rad/s`，
+关节 4-6 为 `4 rad/s`。这些平滑参数只作用于纯仿真和物理仿真；真机桥仍保留
+原来的 `1.2 mm / 0.35 deg` 死区和固定步进控制，避免本次仿真优化改变真实机器人手感。
+参数位置和调节方向见 [MuJoCo IK 技术说明](mujoco_ik/README_zh.md#ik-平滑与连续追踪)。
 
 #### 可选：接触物理抓取验证
 
@@ -402,7 +421,10 @@ ss -ltnp | rg ':(8443|8442|5567|6555|6556|6558|6559)\b'
 在 `VR_mujoco_ik/` 目录执行，以下检查不发布真机命令：
 
 ```bash
+./run_hei_robot_keyboard_sim.sh --headless-check
+./run_hei_robot_keyboard_physics.sh --headless-check
 ./run_hei_robot_vr_sim.sh --headless-check
+./run_hei_robot_vr_physics.sh --headless-check
 ./run_hei_robot_vr_real.sh --headless-check
 conda run --no-capture-output -n hei-rebot-vr python -m unittest discover -s mujoco_ik/tests -p 'test_*.py' -v
 ```
@@ -410,9 +432,15 @@ conda run --no-capture-output -n hei-rebot-vr python -m unittest discover -s muj
 | 参数 | 所在文件 | 生效范围 |
 | --- | --- | --- |
 | 电机增益/限速、丝杆导程/加速度、相机 | 软件根目录下 `src/lerobot/robots/hei_rebot_lift/config_hei_rebot_lift.py` | 机器人 host；修改后重启 host |
-| 完整模型 IK 判断与工作空间投影 | `mujoco_ik/hei_robot_vr_mujoco_sim.py` | 完整模型仿真与真机桥接共用 |
+| IK 跳解判断、工作空间投影和误差阈值 | `mujoco_ik/hei_robot_vr_mujoco_sim.py` | 完整模型仿真与真机桥接共用 |
+| 自适应 TCP 滤波、仿真死区、关节追踪速度和时间常数 | `mujoco_ik/hei_robot_vr_mujoco_sim.py` | 仅纯仿真与物理仿真；真机自动绕过 |
 | 实机反馈/VR 超时、升降显示速度 | `mujoco_ik/hei_robot_vr_mujoco_real.py` 及命令行选项 | 电脑端真机桥接 |
 | VR 相机地址与图像显示 | `telegrip/config.yaml` | Telegrip；与机器人相机采集配置分开 |
+
+仿真平滑主要参数是 `ARM_TARGET_FILTER_*`、`ARM_TRACK_TIME_CONSTANT_S` 和
+`ARM_MAX_JOINT_SPEED_RAD_S`。减小追踪时间常数会更跟手但更容易显出噪声，增大则
+更平滑但延迟更明显；建议每次只调整一组参数，并先运行纯仿真验证。真机使用独立的
+`REAL_TARGET_POS_EPS_M`、`REAL_TARGET_ROT_EPS_RAD` 和原固定步进逻辑。
 
 `IK_TARGET_MAX_POSITION_ERROR_M` 当前为 `0.100 m`，是接受 IK 解的误差阈值，
 不表示末端控制精度能达到该值；调大后，请求目标与实际执行目标可能相差更多。

@@ -32,6 +32,34 @@
 | `./run_hei_robot_vr_real.sh --enable-real-publish` | `model/HEI_robot_urdf/` | 仅机器人显示与真机桥接；需要实机反馈及松开握把解锁 |
 | `./run_mujoco_ik.sh` | `model/reBot_description/` | 旧双臂 realtime 控制程序，不是完整机器人入口 |
 
+## IK 平滑与连续追踪
+
+完整模型的纯仿真与物理仿真使用以下链路：
+
+```text
+VR/键盘 TCP 目标 -> 自适应位姿滤波（VR） -> 单次 IK 求解
+                 -> 缓存完整关节目标 -> 按真实 dt 连续追踪
+```
+
+VR 快速运动时滤波时间常数自动减小，静止和慢速运动时自动增大；映射比例仍为
+1:1。每个超过仿真死区的新 TCP 目标只求解一次，后续渲染循环继续追踪缓存的
+关节目标，不会对静止目标重复运行 IPOPT。键盘模式不需要 VR 位姿滤波，但共用
+关节目标缓存和 `dt` 追踪。
+
+参数都在 `hei_robot_vr_mujoco_sim.py`：
+
+| 参数 | 默认值 | 作用 |
+| --- | --- | --- |
+| `TARGET_POS_EPS_M` / `TARGET_ROT_EPS_RAD` | `0.0003 m` / `0.10 deg` | 仿真 TCP 新目标死区 |
+| `ARM_TARGET_FILTER_FAST_TAU_S` / `SLOW_TAU_S` | `0.018 s` / `0.055 s` | VR 快速/慢速运动滤波时间常数 |
+| `ARM_TRACK_TIME_CONSTANT_S` | `0.045 s` | 缓存关节目标的跟随时间常数 |
+| `ARM_MAX_JOINT_SPEED_RAD_S` | `[3,3,3,4,4,4]` | 仿真六关节最大追踪速度 |
+| `REAL_TARGET_POS_EPS_M` / `REAL_TARGET_ROT_EPS_RAD` | `0.0012 m` / `0.35 deg` | 真机桥原目标死区 |
+
+减小 `ARM_TRACK_TIME_CONSTANT_S` 会更跟手但更容易显出噪声，增大则更平滑但延迟
+更明显。一次只改一组参数，并先运行纯仿真与下面的无界面测试。真机模式自动绕过
+自适应滤波和 `dt` 追踪，继续使用原固定步进逻辑。
+
 键盘仿真中按 `5` 可让左臂缓慢复位，按 `6` 可让右臂缓慢复位；按一下即可，
 重新操作对应机械臂或按 `Space` 会取消复位并保持当前位置。完整键位见
 [上级使用教程](../README_zh.md)。

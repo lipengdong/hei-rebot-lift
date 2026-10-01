@@ -34,6 +34,37 @@ Run only one real-robot action publisher on `6558`.
 | `./run_hei_robot_vr_real.sh --enable-real-publish` | `model/HEI_robot_urdf/` | Robot-only viewer and real command bridge; requires robot feedback and grip-release arming |
 | `./run_mujoco_ik.sh` | `model/reBot_description/` | Legacy dual-arm realtime controller; not the complete robot entry |
 
+## IK Smoothing and Continuous Tracking
+
+Pure and physical complete-model simulation use this control path:
+
+```text
+VR/keyboard TCP target -> adaptive pose filter (VR) -> one IK solve
+                       -> cached full joint target -> real-dt tracking
+```
+
+The VR filter automatically shortens its time constant during fast motion and
+increases it during slow or stationary motion; the mapping scale remains 1:1.
+Each TCP target that passes the simulation deadband is solved once. Later render
+loops continue tracking the cached joint target without rerunning IPOPT for a
+stationary target. Keyboard mode skips VR pose filtering but shares the joint
+target cache and `dt`-based tracking.
+
+All settings are in `hei_robot_vr_mujoco_sim.py`:
+
+| Setting | Default | Purpose |
+| --- | --- | --- |
+| `TARGET_POS_EPS_M` / `TARGET_ROT_EPS_RAD` | `0.0003 m` / `0.10 deg` | Simulation TCP target deadband |
+| `ARM_TARGET_FILTER_FAST_TAU_S` / `SLOW_TAU_S` | `0.018 s` / `0.055 s` | Fast/slow VR filter time constants |
+| `ARM_TRACK_TIME_CONSTANT_S` | `0.045 s` | Cached joint-target tracking time constant |
+| `ARM_MAX_JOINT_SPEED_RAD_S` | `[3,3,3,4,4,4]` | Maximum simulated tracking speed for six joints |
+| `REAL_TARGET_POS_EPS_M` / `REAL_TARGET_ROT_EPS_RAD` | `0.0012 m` / `0.35 deg` | Original real-bridge target deadband |
+
+A shorter `ARM_TRACK_TIME_CONSTANT_S` feels more responsive but exposes more
+noise; a longer value is smoother but adds lag. Change one parameter group at a
+time, then run pure simulation and the offline checks below. Real mode bypasses
+the adaptive filter and `dt` tracking and retains its original fixed-step logic.
+
 In keyboard simulation, press `5` to reset the left arm gradually or `6` to
 reset the right arm. Press once; moving that arm again or pressing `Space`
 cancels the reset and holds its current pose. See the [parent guide](../README.md)

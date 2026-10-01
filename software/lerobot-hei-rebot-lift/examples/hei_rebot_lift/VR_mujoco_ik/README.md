@@ -11,6 +11,7 @@ This directory contains the complete VR teleoperation pipeline:
 - `mujoco_ik/hei_robot_vr_mujoco_physics.py`: independently validates contact-rich grasps without attaching objects to a TCP.
 - `mujoco_ik/hei_robot_keyboard_mujoco_sim.py`: controls the complete model by keyboard without VR or real-robot commands.
 - `mujoco_ik/hei_robot_keyboard_mujoco_physics.py`: uses keyboard control to validate free objects, collisions, friction, and physical finger contacts.
+- Complete-model simulation uses adaptive TCP filtering, one-shot IK target caching, and real-`dt` joint tracking to reduce stalls and stair-step motion in the normal workspace.
 - `examples/hei_rebot_lift/record.py`: subscribes to `tcp://localhost:6558` and saves robot actions/observations into a LeRobotDataset.
 
 ## Layout
@@ -24,9 +25,15 @@ VR_mujoco_ik/
   run_hei_robot_keyboard_physics.sh # Complete robot, keyboard physical grasp validation
   run_hei_robot_vr_sim.sh  # Complete robot, VR-controlled pure simulation
   run_hei_robot_vr_physics.sh # VR physical grasp validation
+  run_hei_robot_keyboard_dataset_sim.sh # Keyboard demonstration simulator
+  run_hei_robot_keyboard_record.sh # Keyboard LeRobotDataset recorder
+  run_hei_robot_vr_dataset_sim.sh # VR demonstration simulator
+  run_hei_robot_mujoco_record.sh # VR LeRobotDataset recorder
+  run_hei_robot_policy_sim.sh # Policy rollout simulator
+  run_hei_robot_mujoco_rollout.sh # LeRobot policy inference client
   run_hei_robot_vr_real.sh # Complete model + real-robot command bridge
   telegrip/                # WebXR/HTTPS/WebSocket/ZMQ VR bridge
-  mujoco_ik/               # MuJoCo model, IK main program, Pinocchio tools
+  mujoco_ik/               # Models, IK, physics scene, and dataset workflow docs
 ```
 
 ## Environment Setup
@@ -150,6 +157,24 @@ gripper near an object attaches the nearest object to that TCP while preserving
 its relative pose. The object remains attached after releasing the grip button.
 Opening the gripper releases it and places it on the table when it is above the
 table footprint, or on the floor otherwise. Each arm can hold one object.
+
+#### Arm IK Smoothing
+
+Complete-model VR simulation first applies an adaptive filter to TCP translation
+and rotation. It uses a shorter time constant during fast motion for low latency
+and stronger damping during slow or stationary motion. Each new TCP target that
+passes the deadband is solved once and cached as a complete joint target. MuJoCo
+then follows that target continuously using the measured loop `dt`, instead of
+moving by a fixed joint increment per loop. Keyboard simulation uses the same
+joint-target cache and time-based tracking.
+
+Simulation defaults to a `0.3 mm / 0.1 deg` target deadband, `3 rad/s` tracking
+for joints 1-3, and `4 rad/s` for joints 4-6. These smoothing settings affect
+only pure and physical simulation. The real bridge retains its original
+`1.2 mm / 0.35 deg` deadband and fixed-step tracking so this simulation update
+does not change hardware feel. See the
+[MuJoCo IK technical guide](mujoco_ik/README.md#ik-smoothing-and-continuous-tracking)
+for parameter locations and tuning guidance.
 
 #### Optional Contact-Physics Grasp Validation
 
@@ -414,7 +439,10 @@ feedback checks to solve a connection problem.
 Run these from `VR_mujoco_ik/`; they do not publish real commands:
 
 ```bash
+./run_hei_robot_keyboard_sim.sh --headless-check
+./run_hei_robot_keyboard_physics.sh --headless-check
 ./run_hei_robot_vr_sim.sh --headless-check
+./run_hei_robot_vr_physics.sh --headless-check
 ./run_hei_robot_vr_real.sh --headless-check
 conda run --no-capture-output -n hei-rebot-vr python -m unittest discover -s mujoco_ik/tests -p 'test_*.py' -v
 ```
@@ -422,9 +450,17 @@ conda run --no-capture-output -n hei-rebot-vr python -m unittest discover -s muj
 | Setting | Location | Scope |
 | --- | --- | --- |
 | Motor gains, velocity limits, lift lead and acceleration, cameras | `src/lerobot/robots/hei_rebot_lift/config_hei_rebot_lift.py` (software root) | Robot host; restart host after changes |
-| Shared complete-model IK guard and workspace projection | `mujoco_ik/hei_robot_vr_mujoco_sim.py` | Complete-model simulation and real bridge |
+| IK branch guard, workspace projection, and solution-error threshold | `mujoco_ik/hei_robot_vr_mujoco_sim.py` | Shared by complete-model simulation and the real bridge |
+| Adaptive TCP filter, simulation deadband, joint tracking speeds, and time constant | `mujoco_ik/hei_robot_vr_mujoco_sim.py` | Pure and physical simulation only; bypassed automatically in real mode |
 | Real feedback/VR timeout and lift viewer speed | `mujoco_ik/hei_robot_vr_mujoco_real.py` / its CLI options | Computer-side real bridge |
 | VR camera endpoint and image streaming | `telegrip/config.yaml` | Telegrip; separate from host camera capture settings |
+
+The main simulation-smoothing settings are `ARM_TARGET_FILTER_*`,
+`ARM_TRACK_TIME_CONSTANT_S`, and `ARM_MAX_JOINT_SPEED_RAD_S`. A shorter tracking
+time constant feels more responsive but exposes more noise; a longer value is
+smoother but adds lag. Change one parameter group at a time and validate it in
+pure simulation first. Real mode uses separate `REAL_TARGET_POS_EPS_M` and
+`REAL_TARGET_ROT_EPS_RAD` values plus its original fixed-step logic.
 
 `IK_TARGET_MAX_POSITION_ERROR_M` currently allows `0.100 m` position error.
 This is a solution-acceptance tolerance, not a TCP accuracy guarantee. Raising
