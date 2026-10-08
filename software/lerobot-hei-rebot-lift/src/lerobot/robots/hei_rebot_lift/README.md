@@ -35,7 +35,8 @@ __init__.py                # Public exports
 
 ## Default Device Mapping
 
-Stable udev device names are used by default instead of unstable `/dev/ttyACM*` names:
+Stable udev device names are used by default instead of unstable `/dev/ttyACM*`,
+`/dev/ttyUSB*`, or `/dev/ttyCH341USB*` names:
 
 ```text
 /dev/hei_right_arm   Right arm U2CAN

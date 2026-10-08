@@ -113,6 +113,7 @@ right_wrist /dev/hei_right_wrist_camera
 ```bash
 sudo chmod 666 /dev/ttyACM*
 sudo chmod 666 /dev/ttyUSB*
+sudo chmod 666 /dev/ttyCH341USB*
 ```
 
 ```bash
@@ -120,7 +121,8 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 \
   python -u examples/hei_rebot_lift/debug/Port_Binding_Wizard.py
 ```
 
-向导根据电机响应 ID 和有效限位 IO 帧识别串口，然后逐台显示 MJPG 相机画面；
+向导扫描 `/dev/ttyACM*`、`/dev/ttyUSB*` 和 `/dev/ttyCH341USB*`，根据电机响应 ID
+和有效限位 IO 帧识别串口，然后逐台显示 MJPG 相机画面；
 在预览窗口按 `F/L/R/S` 选择前置、左腕、右腕或跳过。缺少某路相机不会阻止已有
 相机和串口完成绑定。没有图形桌面时，截图保存到
 `outputs/camera_binding_previews/`，再在终端按编号选择。确认后写入

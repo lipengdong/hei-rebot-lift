@@ -117,6 +117,7 @@ Set serial-port read/write permissions before starting the wizard:
 ```bash
 sudo chmod 666 /dev/ttyACM*
 sudo chmod 666 /dev/ttyUSB*
+sudo chmod 666 /dev/ttyCH341USB*
 ```
 
 ```bash
@@ -124,7 +125,8 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 \
   python -u examples/hei_rebot_lift/debug/Port_Binding_Wizard.py
 ```
 
-The wizard identifies serial devices, then previews each camera with MJPG. Press
+The wizard scans `/dev/ttyACM*`, `/dev/ttyUSB*`, and `/dev/ttyCH341USB*`, identifies
+serial devices, then previews each camera with MJPG. Press
 `F/L/R/S` in the preview window to assign front, left wrist, right wrist, or skip.
 Missing cameras do not block the available cameras and serial devices from being
 bound. Without a graphical desktop, snapshots are saved under

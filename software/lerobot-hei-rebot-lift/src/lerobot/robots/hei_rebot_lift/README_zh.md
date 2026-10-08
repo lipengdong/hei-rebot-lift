@@ -35,7 +35,8 @@ __init__.py                # 对外导出类
 
 ## 默认端口映射
 
-默认使用 udev 绑定后的稳定名字，不直接依赖易变化的 `/dev/ttyACM*`：
+默认使用 udev 绑定后的稳定名字，不直接依赖易变化的 `/dev/ttyACM*`、
+`/dev/ttyUSB*` 或 `/dev/ttyCH341USB*`：
 
 ```text
 /dev/hei_right_arm   右臂 U2CAN

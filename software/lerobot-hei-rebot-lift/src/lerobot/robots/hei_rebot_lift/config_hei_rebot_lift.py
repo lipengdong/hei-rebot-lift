@@ -25,7 +25,7 @@ def hei_rebot_lift_cameras_config() -> dict[str, CameraConfig]:
 @RobotConfig.register_subclass("hei_rebot_lift")
 @dataclass
 class HeiRebotLiftConfig(RobotConfig):
-    # Udev-stable names. Bind these to the physical ttyACM*/ttyUSB* ports later.
+    # Udev-stable names. Bind physical ttyACM*/ttyUSB*/ttyCH341USB* ports to these names.
     right_arm_port: str = "/dev/hei_right_arm"
     left_arm_port: str = "/dev/hei_left_arm"
     chassis_port: str = "/dev/hei_chassis"

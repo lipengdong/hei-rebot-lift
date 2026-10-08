@@ -24,6 +24,7 @@ from lerobot.robots.hei_rebot_lift.hei_rebot_lift import _LimitSwitchReader
 
 U2CAN_USB_ID = ("2e88", "4603")
 LIFT_IO_USB_ID = ("1a86", "7523")
+SERIAL_DEVICE_GLOBS = ("ttyACM*", "ttyUSB*", "ttyCH341USB*")
 MOTOR_BAUD = 921600
 IO_BAUD = 115200
 MAX_MOTOR_ID = 7
@@ -204,8 +205,18 @@ def usb_kernel_from_devpath(devpath: str) -> str:
     return matches[-1] if matches else ""
 
 
+def discover_serial_devices(device_root: Path = Path("/dev")) -> list[Path]:
+    """Find serial nodes used by U2CAN and CH341 drivers on supported kernels."""
+    devices = {
+        device
+        for pattern in SERIAL_DEVICE_GLOBS
+        for device in device_root.glob(pattern)
+    }
+    return sorted(devices, key=lambda device: device.name)
+
+
 def discover_serial_ports() -> list[PortInfo]:
-    devices = sorted({*Path("/dev").glob("ttyACM*"), *Path("/dev").glob("ttyUSB*")}, key=str)
+    devices = discover_serial_devices()
     ports: list[PortInfo] = []
     for device in devices:
         try:
@@ -858,7 +869,8 @@ def main() -> None:
     ports = discover_serial_ports()
     if not ports:
         raise RuntimeError(
-            "没有发现 /dev/ttyACM* 或 /dev/ttyUSB* 串口。请检查 USB 连接和系统驱动。"
+            "没有发现 /dev/ttyACM*、/dev/ttyUSB* 或 /dev/ttyCH341USB* 串口。"
+            "请检查 USB 连接和系统驱动。"
         )
 
     for port in ports:

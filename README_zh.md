@@ -262,7 +262,7 @@ env -u LD_LIBRARY_PATH python -c "import pinocchio as pin; from pinocchio import
 
 在**机器人端 Jetson**运行
 [Port_Binding_Wizard.py](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/debug/Port_Binding_Wizard.py)，
-它会扫描 `ttyACM*` / `ttyUSB*`，根据响应的电机 ID 和有效限位 IO 帧识别设备；
+它会扫描 `ttyACM*`、`ttyUSB*` 和 `ttyCH341USB*`，根据响应的电机 ID 和有效限位 IO 帧识别设备；
 随后逐台显示相机画面，由用户选择前置、左腕、右腕或跳过。确认后统一生成稳定
 设备映射。缺少某路相机不会中止绑定；程序不会使能电机、写零位或发送运动命令。
 
@@ -278,6 +278,7 @@ env -u LD_LIBRARY_PATH python -c "import pinocchio as pin; from pinocchio import
 ```bash
 sudo chmod 666 /dev/ttyACM*
 sudo chmod 666 /dev/ttyUSB*
+sudo chmod 666 /dev/ttyCH341USB*
 ```
 
 从项目根目录执行交互向导：

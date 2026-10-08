@@ -215,6 +215,7 @@ ejecutar el asistente Python:
 ```bash
 sudo chmod 666 /dev/ttyACM*
 sudo chmod 666 /dev/ttyUSB*
+sudo chmod 666 /dev/ttyCH341USB*
 ```
 
 ```bash

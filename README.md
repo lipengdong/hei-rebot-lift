@@ -271,8 +271,8 @@ Stable udev device names are used by default:
 ### 1. Serial and Camera Discovery and Binding Wizard
 
 Run [Port_Binding_Wizard.py](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/debug/Port_Binding_Wizard.py)
-on the **robot-side Jetson**. It identifies serial adapters from responding motor
-IDs and limit-switch IO frames, then previews each camera so the user can assign
+on the **robot-side Jetson**. It scans `ttyACM*`, `ttyUSB*`, and `ttyCH341USB*`,
+identifies serial adapters from responding motor IDs and limit-switch IO frames, then previews each camera so the user can assign
 front, left-wrist, right-wrist, or skip it. Missing cameras do not stop available
 devices from being bound. It does not enable motors, write zeros, or command motion.
 
@@ -288,6 +288,7 @@ Set serial-port read/write permissions before running the Python wizard:
 ```bash
 sudo chmod 666 /dev/ttyACM*
 sudo chmod 666 /dev/ttyUSB*
+sudo chmod 666 /dev/ttyCH341USB*
 ```
 
 Start the interactive wizard from the repository root:
