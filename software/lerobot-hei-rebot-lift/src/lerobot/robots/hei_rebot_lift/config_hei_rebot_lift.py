@@ -62,7 +62,7 @@ class HeiRebotLiftConfig(RobotConfig):
     chassis_y_sign: float = -1.0
     chassis_theta_sign: float = 1.0
     chassis_linear_speed_scale: float = 9.0
-    chassis_yaw_speed_scale: float = 2.0
+    chassis_yaw_speed_scale: float = 3.0
     chassis_max_wheel_speed_rad_s: float = 9.0
     chassis_max_wheel_accel_rad_s2: float = 8.0
     chassis_wheel_sign: tuple[float, float, float, float] = (1.0, 1.0, 1.0, 1.0)
