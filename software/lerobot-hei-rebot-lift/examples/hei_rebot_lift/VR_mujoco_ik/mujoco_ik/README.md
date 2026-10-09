@@ -22,11 +22,11 @@ Run only one real-robot action publisher on `6558`.
 | Entry | Model | Purpose |
 | --- | --- | --- |
 | `./run_hei_robot_keyboard_sim.sh` | `model/HEI_robot_urdf/` | Complete keyboard-only simulation; no VR or real commands |
-| `./run_hei_robot_keyboard_physics.sh` | `model/HEI_robot_urdf/` | Keyboard physical grasp validation with free objects, contacts, friction, and force-limited actuators |
+| `./run_hei_robot_keyboard_physics.sh` | `model/HEI_robot_urdf/` | Keyboard physics with free objects and bilateral-contact-triggered soft grasp assistance |
 | `./run_hei_robot_keyboard_dataset_sim.sh` | `model/HEI_robot_urdf/` | Keyboard demonstration simulation server (`hei-rebot-vr`) |
 | `./run_hei_robot_keyboard_record.sh` | - | Keyboard demonstration recorder (`lerobot5`) |
 | `./run_hei_robot_vr_sim.sh` | `model/HEI_robot_urdf/` | Complete robot, scene, VR, stable-grasp demonstration; no real commands |
-| `./run_hei_robot_vr_physics.sh` | `model/HEI_robot_urdf/` | Independent physical grasp validation with gravity, contacts, friction, and force-limited fingers |
+| `./run_hei_robot_vr_physics.sh` | `model/HEI_robot_urdf/` | VR physics with gravity, contacts, and bilateral-contact-triggered soft grasp assistance |
 | `./run_hei_robot_vr_dataset_sim.sh` | `model/HEI_robot_urdf/` | VR dataset simulation server (`hei-rebot-vr`) |
 | `./run_hei_robot_mujoco_record.sh` | - | Independent LeRobotDataset recorder (`lerobot5`) |
 | `./run_hei_robot_policy_sim.sh` | `model/HEI_robot_urdf/` | Policy simulation server (`hei-rebot-vr`) |

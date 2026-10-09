@@ -8,7 +8,7 @@
 - `mujoco_ik/`：接收 Telegrip 的 VR 数据，用 MuJoCo 显示完整机器人模型（或旧双臂模型），用 Pinocchio + CasADi 做正逆解，并通过 ZMQ 发布 LeRobot 可用的动作命令到 `tcp://*:6558`。
 - `examples/hei_rebot_lift/vr_control.py`：接收动作，同时在 `tcp://*:6559` 发布轻量实机关节/升降反馈，用于真机启动前安全同步。
 - `mujoco_ik/hei_robot_vr_mujoco_sim.py`：使用完整机器人模型进行纯仿真 VR 控制，不会向真实机器人发送命令。
-- `mujoco_ik/hei_robot_vr_mujoco_physics.py`：独立的物理抓取验证模式，物体不会绑定到 TCP。
+- `mujoco_ik/hei_robot_vr_mujoco_physics.py`：独立的物理抓取验证模式，支持双指碰撞确认后的软吸附。
 - `mujoco_ik/hei_robot_keyboard_mujoco_sim.py`：使用键盘控制完整机器人仿真，不需要 VR，也不会连接实机。
 - `mujoco_ik/hei_robot_keyboard_mujoco_physics.py`：使用键盘验证自由物体、碰撞、摩擦和真实夹爪接触。
 - 完整模型仿真采用自适应 TCP 滤波、单次 IK 目标缓存和基于真实 `dt` 的关节追踪，减少正常工作空间内的停顿和阶梯式跳动。
@@ -181,9 +181,11 @@ IK 求解并缓存完整关节目标，MuJoCo 再依据真实循环 `dt` 连续�
 ./run_hei_robot_vr_physics.sh
 ```
 
-键盘键位保持不变。物理场景使用边长 `50 mm` 的方块、平面高摩擦夹持垫、双指
-接触后的 `5 mm` 预紧，以及最大 `6 N` 的限力切向辅助。辅助不会瞬移或焊接物体，
-张开夹爪后立即取消。完整说明见
+键盘键位保持不变。物理场景使用边长 `50 mm` 的方块和平面高摩擦夹持垫。默认
+模式必须先形成双指碰撞，才会启用最大 `12 N` 的弹簧阻尼吸附和最大 `0.10 N·m`
+的姿态保持；吸附时夹爪停止继续预紧，偏差超过 `30 mm` 或张开夹爪后立即释放。物体始终保留重力和碰撞，
+有限吸附力不会像硬约束一样强行穿过几何体。需要纯接触验证时使用
+`./run_hei_robot_keyboard_physics.sh --no-grasp-assist`。完整说明见
 [物理抓取仿真教程](mujoco_ik/PHYSICS_GRASP_SIMULATION_zh.md)。
 
 #### VR 手柄使用教程

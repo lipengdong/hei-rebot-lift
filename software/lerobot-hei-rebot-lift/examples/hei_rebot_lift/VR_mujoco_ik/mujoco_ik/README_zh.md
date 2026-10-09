@@ -20,11 +20,11 @@
 | 入口 | 模型 | 用途 |
 | --- | --- | --- |
 | `./run_hei_robot_keyboard_sim.sh` | `model/HEI_robot_urdf/` | 完整机器人键盘纯仿真；不需要 VR，不发布真机命令 |
-| `./run_hei_robot_keyboard_physics.sh` | `model/HEI_robot_urdf/` | 键盘物理抓取验证；自由物体、碰撞、摩擦和限力执行器 |
+| `./run_hei_robot_keyboard_physics.sh` | `model/HEI_robot_urdf/` | 键盘物理抓取验证；自由物体、碰撞及双指接触触发软吸附 |
 | `./run_hei_robot_keyboard_dataset_sim.sh` | `model/HEI_robot_urdf/` | 键盘示教数据采集用仿真服务端（`hei-rebot-vr`） |
 | `./run_hei_robot_keyboard_record.sh` | - | 键盘示教数据采集客户端（`lerobot5`） |
 | `./run_hei_robot_vr_sim.sh` | `model/HEI_robot_urdf/` | 完整机器人、场景、VR、稳定抓取演示；不发布真机命令 |
-| `./run_hei_robot_vr_physics.sh` | `model/HEI_robot_urdf/` | 独立物理抓取验证；启用重力、碰撞、摩擦和受力夹爪 |
+| `./run_hei_robot_vr_physics.sh` | `model/HEI_robot_urdf/` | VR 物理抓取验证；启用重力、碰撞及双指接触触发软吸附 |
 | `./run_hei_robot_vr_dataset_sim.sh` | `model/HEI_robot_urdf/` | VR 数据采集用仿真服务端（`hei-rebot-vr`） |
 | `./run_hei_robot_mujoco_record.sh` | - | 独立 LeRobotDataset 采集客户端（`lerobot5`） |
 | `./run_hei_robot_policy_sim.sh` | `model/HEI_robot_urdf/` | 策略推理用仿真服务端（`hei-rebot-vr`） |

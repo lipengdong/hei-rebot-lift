@@ -240,6 +240,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--physics-timestep-s", type=float, default=0.002)
     parser.add_argument("--object-friction", type=float, default=1.0)
     parser.add_argument("--gripper-force-n", type=float, default=18.0)
+    parser.add_argument(
+        "--grasp-assist",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Enable contact-triggered force-limited adsorption; use --no-grasp-assist for pure contacts.",
+    )
     parser.add_argument("--robot-gravity-scale", type=float, default=0.0)
     parser.add_argument("--headless-check", action="store_true")
     parser.add_argument("--verbose", action="store_true")

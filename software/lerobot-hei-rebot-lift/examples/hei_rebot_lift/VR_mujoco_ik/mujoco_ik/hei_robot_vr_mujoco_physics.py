@@ -1,9 +1,5 @@
 #!/usr/bin/env python
-"""VR-controlled HEI simulation with physical contacts and free objects.
-
-This is intentionally separate from the stable demonstration simulator. Objects
-are never attached to a TCP: grasping depends on finger contact and friction.
-"""
+"""VR-controlled HEI simulation with contacts and contact-triggered grasp assist."""
 
 from __future__ import annotations
 
@@ -22,9 +18,13 @@ GRIPPER_CLOSE_SPEED_M_S = 0.04
 GRIPPER_CLOSE_MAX_DT_S = 0.05
 GRIPPER_CONTACT_PRELOAD_M = 0.005
 GRIPPER_CONTACT_LOSS_STEPS = 6
-GRASP_ASSIST_KP_N_M = 400.0
-GRASP_ASSIST_KD_N_S_M = 8.0
-GRASP_ASSIST_MAX_FORCE_N = 6.0
+GRASP_ASSIST_KP_N_M = 600.0
+GRASP_ASSIST_KD_N_S_M = 12.0
+GRASP_ASSIST_MAX_FORCE_N = 12.0
+GRASP_ASSIST_BREAK_DISTANCE_M = 0.03
+GRASP_ASSIST_ROT_KP_NM_RAD = 0.12
+GRASP_ASSIST_ROT_KD_NM_S_RAD = 0.01
+GRASP_ASSIST_MAX_TORQUE_NM = 0.01
 
 
 class HEIRobotVRPhysicsSimulator(stable_sim.HEIRobotVRSimulator):
@@ -48,7 +48,10 @@ class HEIRobotVRPhysicsSimulator(stable_sim.HEIRobotVRSimulator):
             "left": stable_sim.GRIPPER_CLOSED_M,
         }
         self._gripper_last_command_sim_s = {"right": 0.0, "left": 0.0}
-        self._grasp_assist_anchor: dict[str, tuple[str, np.ndarray] | None] = {
+        self._grasp_assist_anchor: dict[
+            str,
+            tuple[str, np.ndarray, np.ndarray] | None,
+        ] = {
             "right": None,
             "left": None,
         }
@@ -106,7 +109,6 @@ class HEIRobotVRPhysicsSimulator(stable_sim.HEIRobotVRSimulator):
             "right": float(self.data.time),
             "left": float(self.data.time),
         }
-        self._grasp_assist_anchor = {"right": None, "left": None}
         self._physics_ready = True
         self._arm_command_q = {
             "right": self._get_joint_q(stable_sim.RIGHT_ARM_JOINTS),
@@ -118,7 +120,8 @@ class HEIRobotVRPhysicsSimulator(stable_sim.HEIRobotVRSimulator):
         print(
             f"[HEI Physics] contact mode ready: timestep={self.model.opt.timestep:g}s, "
             f"gripper_force={args.gripper_force_n:g}N, friction={args.object_friction:g}",
-            f"robot_gravity_scale={args.robot_gravity_scale:g}, arm_control=kinematic",
+            f"robot_gravity_scale={args.robot_gravity_scale:g}, arm_control=kinematic, "
+            f"grasp_assist={'force-limited' if args.grasp_assist else 'off'}",
             flush=True,
         )
 
@@ -211,50 +214,123 @@ class HEIRobotVRPhysicsSimulator(stable_sim.HEIRobotVRSimulator):
             )
         )
 
-    def _capture_grasp_assist_anchor(self, side: str, object_name: str) -> None:
+    @staticmethod
+    def _quat_conjugate(quat: np.ndarray) -> np.ndarray:
+        result = np.asarray(quat, dtype=float).copy()
+        result[1:] *= -1.0
+        return result
+
+    @staticmethod
+    def _quat_multiply(left: np.ndarray, right: np.ndarray) -> np.ndarray:
+        lw, lx, ly, lz = left
+        rw, rx, ry, rz = right
+        result = np.array(
+            [
+                lw * rw - lx * rx - ly * ry - lz * rz,
+                lw * rx + lx * rw + ly * rz - lz * ry,
+                lw * ry - lx * rz + ly * rw + lz * rx,
+                lw * rz + lx * ry - ly * rx + lz * rw,
+            ],
+            dtype=float,
+        )
+        norm = float(np.linalg.norm(result))
+        return result / norm if norm > 1e-12 else np.array([1.0, 0.0, 0.0, 0.0])
+
+    @classmethod
+    def _quat_error_rotvec(cls, target: np.ndarray, current: np.ndarray) -> np.ndarray:
+        error = cls._quat_multiply(target, cls._quat_conjugate(current))
+        if error[0] < 0.0:
+            error *= -1.0
+        vector_norm = float(np.linalg.norm(error[1:]))
+        if vector_norm < 1e-9:
+            return np.zeros(3, dtype=float)
+        angle = 2.0 * np.arctan2(vector_norm, float(np.clip(error[0], -1.0, 1.0)))
+        return error[1:] * (angle / vector_norm)
+
+    def _activate_grasp_assist(self, side: str, object_name: str) -> bool:
+        if not self.args.grasp_assist:
+            return False
+        for other_side, anchor in self._grasp_assist_anchor.items():
+            if other_side != side and anchor is not None and anchor[0] == object_name:
+                return False
+
         runtime = self.graspable_objects[object_name]
         tcp_id = self._mujoco_body_id(stable_sim.TCP_FRAMES[side])
         tcp_rotation = self.data.xmat[tcp_id].reshape(3, 3)
         relative_pos = tcp_rotation.T @ (
             self.data.xpos[runtime.body_id] - self.data.xpos[tcp_id]
         )
-        self._grasp_assist_anchor[side] = (object_name, relative_pos.copy())
+        relative_quat = self._quat_multiply(
+            self._quat_conjugate(self.data.xquat[tcp_id]),
+            self.data.xquat[runtime.body_id],
+        )
+        self._grasp_assist_anchor[side] = (
+            object_name,
+            relative_pos.copy(),
+            relative_quat,
+        )
+        print(f"[HEI Physics] {side} grasp assist attached: {object_name}", flush=True)
+        return True
+
+    def _release_grasp_assist(self, side: str, reason: str) -> None:
+        anchor = self._grasp_assist_anchor.get(side)
+        if anchor is None:
+            return
+        object_name, _, _ = anchor
+        self._grasp_assist_anchor[side] = None
+        self.data.xfrc_applied[self.graspable_objects[object_name].body_id] = 0.0
+        print(
+            f"[HEI Physics] {side} grasp assist released: {object_name} ({reason})",
+            flush=True,
+        )
 
     def _apply_grasp_assist_forces(self) -> None:
-        # 只补偿已经形成双指接触的物体，不直接修改物体位姿。
+        """Apply bounded spring forces so contacts can still block the object."""
         for runtime in self.graspable_objects.values():
             self.data.xfrc_applied[runtime.body_id] = 0.0
 
-        for side, anchor in self._grasp_assist_anchor.items():
+        for side, anchor in tuple(self._grasp_assist_anchor.items()):
             if anchor is None:
                 continue
-            object_name, relative_pos = anchor
-            contact_hold = self._gripper_contact_hold[side]
-            if contact_hold is None or contact_hold[0] != object_name:
-                continue
-
+            object_name, relative_pos, relative_quat = anchor
             runtime = self.graspable_objects[object_name]
             tcp_id = self._mujoco_body_id(stable_sim.TCP_FRAMES[side])
             tcp_rotation = self.data.xmat[tcp_id].reshape(3, 3)
             target_pos = self.data.xpos[tcp_id] + tcp_rotation @ relative_pos
+            target_quat = self._quat_multiply(self.data.xquat[tcp_id], relative_quat)
+            position_error = target_pos - self.data.xpos[runtime.body_id]
+            error_norm = float(np.linalg.norm(position_error))
+            if error_norm > GRASP_ASSIST_BREAK_DISTANCE_M:
+                self._release_grasp_assist(side, f"distance {error_norm:.3f}m")
+                self._gripper_contact_hold[side] = None
+                continue
+
             _, dof_address = self._free_joint_addresses(runtime.body_id)
             linear_velocity = self.data.qvel[dof_address : dof_address + 3]
             force = (
-                GRASP_ASSIST_KP_N_M * (target_pos - self.data.xpos[runtime.body_id])
+                GRASP_ASSIST_KP_N_M * position_error
                 - GRASP_ASSIST_KD_N_S_M * linear_velocity
                 - self.model.body_mass[runtime.body_id] * self.model.opt.gravity
             )
-            left_finger = self._finger_bodies[side]["left"]
-            right_finger = self._finger_bodies[side]["right"]
-            closing_axis = self.data.xpos[right_finger] - self.data.xpos[left_finger]
-            closing_axis_norm = float(np.linalg.norm(closing_axis))
-            if closing_axis_norm > 1e-9:
-                closing_axis /= closing_axis_norm
-                force -= float(np.dot(force, closing_axis)) * closing_axis
             force_norm = float(np.linalg.norm(force))
             if force_norm > GRASP_ASSIST_MAX_FORCE_N:
                 force *= GRASP_ASSIST_MAX_FORCE_N / force_norm
             self.data.xfrc_applied[runtime.body_id, :3] += force
+
+            # 仅使用有限恢复力矩保持接触瞬间姿态；碰撞产生的更大力矩仍可推动物体。
+            angular_velocity = self.data.qvel[dof_address + 3 : dof_address + 6]
+            rotation_error = self._quat_error_rotvec(
+                target_quat,
+                self.data.xquat[runtime.body_id],
+            )
+            torque = (
+                GRASP_ASSIST_ROT_KP_NM_RAD * rotation_error
+                - GRASP_ASSIST_ROT_KD_NM_S_RAD * angular_velocity
+            )
+            torque_norm = float(np.linalg.norm(torque))
+            if torque_norm > GRASP_ASSIST_MAX_TORQUE_NM:
+                torque *= GRASP_ASSIST_MAX_TORQUE_NM / torque_norm
+            self.data.xfrc_applied[runtime.body_id, 3:6] += torque
 
     def _set_gripper(self, side: str, opening_m: float) -> None:
         opening_m = float(
@@ -266,9 +342,9 @@ class HEIRobotVRPhysicsSimulator(stable_sim.HEIRobotVRSimulator):
         primary, follower = stable_sim.GRIPPER_JOINTS[side]
         command_sim_s = float(self.data.time)
         if opening_m > stable_sim.GRIPPER_CLOSED_M:
+            self._release_grasp_assist(side, "gripper opened")
             self._gripper_contact_hold[side] = None
             self._gripper_contact_loss_steps[side] = 0
-            self._grasp_assist_anchor[side] = None
             actuator_target_m = opening_m
             self._gripper_command_opening_m[side] = actuator_target_m
             self._gripper_last_command_sim_s[side] = command_sim_s
@@ -277,13 +353,14 @@ class HEIRobotVRPhysicsSimulator(stable_sim.HEIRobotVRSimulator):
             contact_hold = self._gripper_contact_hold[side]
             if contact_hold is not None:
                 object_name, actuator_target_m = contact_hold
-                if contacts.get((side, object_name)):
+                anchor = self._grasp_assist_anchor[side]
+                assist_active = anchor is not None and anchor[0] == object_name
+                if assist_active or contacts.get((side, object_name)):
                     self._gripper_contact_loss_steps[side] = 0
                 else:
                     self._gripper_contact_loss_steps[side] += 1
                     if self._gripper_contact_loss_steps[side] >= GRIPPER_CONTACT_LOSS_STEPS:
                         self._gripper_contact_hold[side] = None
-                        self._grasp_assist_anchor[side] = None
                         contact_hold = None
 
             if contact_hold is None:
@@ -297,16 +374,20 @@ class HEIRobotVRPhysicsSimulator(stable_sim.HEIRobotVRSimulator):
                 )
                 measured_opening_m = self._measured_gripper_opening(side)
                 if bilateral_object is not None:
-                    actuator_target_m = max(
-                        stable_sim.GRIPPER_CLOSED_M,
-                        measured_opening_m - GRIPPER_CONTACT_PRELOAD_M,
+                    actuator_target_m = (
+                        measured_opening_m
+                        if self.args.grasp_assist
+                        else max(
+                            stable_sim.GRIPPER_CLOSED_M,
+                            measured_opening_m - GRIPPER_CONTACT_PRELOAD_M,
+                        )
                     )
                     self._gripper_contact_hold[side] = (
                         bilateral_object,
                         actuator_target_m,
                     )
                     self._gripper_contact_loss_steps[side] = 0
-                    self._capture_grasp_assist_anchor(side, bilateral_object)
+                    self._activate_grasp_assist(side, bilateral_object)
                     print(
                         f"[HEI Physics] {side} contact hold: {bilateral_object}, "
                         f"opening={actuator_target_m:.4f}m",
@@ -376,6 +457,7 @@ class HEIRobotVRPhysicsSimulator(stable_sim.HEIRobotVRSimulator):
         self._physics_accumulator_s += float(np.clip(dt, 0.0, 0.05))
         while self._physics_accumulator_s >= timestep_s:
             self._apply_kinematic_robot_pose()
+            mujoco.mj_forward(self.model, self.data)
             self._apply_grasp_assist_forces()
             mujoco.mj_step(self.model, self.data)
             self._physics_accumulator_s -= timestep_s
@@ -450,15 +532,25 @@ class HEIRobotVRPhysicsSimulator(stable_sim.HEIRobotVRSimulator):
     def _update_physical_grasp_events(self) -> None:
         contacts = self._finger_contacts()
         current_grasps: set[tuple[str, str]] = set()
-        for key, fingers in contacts.items():
+        candidates = set(contacts)
+        candidates.update(
+            (side, object_name)
+            for side, anchor in self._grasp_assist_anchor.items()
+            if anchor is not None
+            for object_name in (anchor[0],)
+        )
+        for key in candidates:
             side, object_name = key
+            fingers = contacts.get(key, set())
             runtime = self.graspable_objects[object_name]
             support_height_m = self._object_support_height(runtime)
             lifted = (
                 float(self.data.xpos[runtime.body_id, 2])
                 > stable_sim.TABLE_TOP_Z_M + support_height_m + 0.025
             )
-            if fingers == {"left", "right"} and lifted:
+            anchor = self._grasp_assist_anchor[side]
+            assisted = anchor is not None and anchor[0] == object_name
+            if (assisted or fingers == {"left", "right"}) and lifted:
                 current_grasps.add(key)
                 if key not in self._physical_grasps:
                     print(
@@ -494,9 +586,15 @@ class HEIRobotVRPhysicsSimulator(stable_sim.HEIRobotVRSimulator):
             f"{runtime.spec.body_name.removeprefix('hei_object_')}={self.data.xpos[runtime.body_id, 2]:.3f}m"
             for runtime in self.graspable_objects.values()
         )
+        assisted = ",".join(
+            f"{side}:{name.removeprefix('hei_object_')}"
+            for side, anchor in self._grasp_assist_anchor.items()
+            if anchor is not None
+            for name in (anchor[0],)
+        ) or "none"
         print(
             f"[HEI Physics] contacts={contact_text} object_z=({heights}) "
-            f"confirmed_grasps={len(self._physical_grasps)}",
+            f"assisted={assisted} confirmed_grasps={len(self._physical_grasps)}",
             flush=True,
         )
 
@@ -504,7 +602,7 @@ class HEIRobotVRPhysicsSimulator(stable_sim.HEIRobotVRSimulator):
         if self.model.nu != 17:
             raise RuntimeError(f"Expected 17 physical position actuators, got {self.model.nu}")
         if any(runtime.held_by is not None for runtime in self.graspable_objects.values()):
-            raise RuntimeError("Physical mode must never attach an object to a TCP")
+            raise RuntimeError("Physics mode must not use stable-mode kinematic attachment")
 
         arm_joint_id = self._mujoco_joint_id(stable_sim.RIGHT_ARM_JOINTS[0])
         arm_body_id = int(self.model.jnt_bodyid[arm_joint_id])
@@ -596,6 +694,11 @@ class HEIRobotVRPhysicsSimulator(stable_sim.HEIRobotVRSimulator):
             self._advance_physics(0.02)
         if self._gripper_contact_hold["right"] is None:
             raise RuntimeError("Physical gripper failed to establish bilateral contact hold")
+        right_anchor = self._grasp_assist_anchor["right"]
+        if self.args.grasp_assist and (
+            right_anchor is None or right_anchor[0] != runtime.spec.body_name
+        ):
+            raise RuntimeError("Physical gripper failed to activate contact-triggered assist")
 
         held_start_z = float(self.data.xpos[runtime.body_id, 2])
         self.model.opt.gravity[:] = saved_gravity
@@ -603,20 +706,46 @@ class HEIRobotVRPhysicsSimulator(stable_sim.HEIRobotVRSimulator):
             self._set_gripper("right", stable_sim.GRIPPER_CLOSED_M)
             self._advance_physics(0.02)
         held_end_z = float(self.data.xpos[runtime.body_id, 2])
-        if self._gripper_contact_hold["right"] is None or held_start_z - held_end_z > 0.02:
+        if self.args.grasp_assist and (
+            self._gripper_contact_hold["right"] is None
+            or held_start_z - held_end_z > 0.02
+        ):
             raise RuntimeError(
                 "Physical gripper failed to support the cube: "
                 f"z={held_start_z:.3f}m -> {held_end_z:.3f}m"
             )
 
+        if self.args.grasp_assist:
+            reference_quat = self.data.xquat[runtime.body_id].copy()
+            self.data.qvel[dof_address + 3 : dof_address + 6] = [0.0, 0.0, 3.0]
+            for _ in range(50):
+                self._set_gripper("right", stable_sim.GRIPPER_CLOSED_M)
+                self._advance_physics(0.02)
+            orientation_error = float(
+                np.linalg.norm(
+                    self._quat_error_rotvec(
+                        reference_quat,
+                        self.data.xquat[runtime.body_id],
+                    )
+                )
+            )
+            if orientation_error > 0.15:
+                raise RuntimeError(
+                    "Grasp orientation assist failed to reject rotation: "
+                    f"error={np.degrees(orientation_error):.1f}deg"
+                )
+
         self._set_gripper("right", stable_sim.GRIPPER_OPEN_M)
         for _ in range(50):
             self._advance_physics(0.02)
         released_z = float(self.data.xpos[runtime.body_id, 2])
-        if released_z >= held_end_z - 0.10:
+        if self._grasp_assist_anchor["right"] is not None:
+            raise RuntimeError("Opening the gripper did not release grasp assistance")
+        if self.args.grasp_assist and released_z >= held_end_z - 0.10:
             raise RuntimeError("Released cube did not fall after opening the gripper")
         print(
-            f"[HEI Physics] grasp support/release self-check passed: "
+            f"[HEI Physics] grasp {'support/release' if self.args.grasp_assist else 'contact-only'} "
+            f"self-check passed: "
             f"held_drop={held_start_z - held_end_z:.4f}m",
             flush=True,
         )
@@ -662,6 +791,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--physics-timestep-s", type=float, default=0.002)
     parser.add_argument("--object-friction", type=float, default=1.0)
     parser.add_argument("--gripper-force-n", type=float, default=18.0)
+    parser.add_argument(
+        "--grasp-assist",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Enable contact-triggered force-limited adsorption; use --no-grasp-assist for pure contacts.",
+    )
     parser.add_argument(
         "--robot-gravity-scale",
         type=float,

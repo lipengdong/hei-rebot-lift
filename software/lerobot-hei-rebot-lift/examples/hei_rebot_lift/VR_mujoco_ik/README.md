@@ -8,7 +8,7 @@ This directory contains the complete VR teleoperation pipeline:
 - `mujoco_ik/`: receives Telegrip VR data, visualizes the complete robot model (or the legacy dual-arm model) in MuJoCo, solves FK/IK with Pinocchio + CasADi, and publishes LeRobot-compatible actions to `tcp://*:6558`.
 - `examples/hei_rebot_lift/vr_control.py`: receives those actions and publishes lightweight real-robot joint/lift feedback on `tcp://*:6559` for safe startup synchronization.
 - `mujoco_ik/hei_robot_vr_mujoco_sim.py`: controls the complete robot model in pure simulation. It never publishes commands to the real robot.
-- `mujoco_ik/hei_robot_vr_mujoco_physics.py`: independently validates contact-rich grasps without attaching objects to a TCP.
+- `mujoco_ik/hei_robot_vr_mujoco_physics.py`: validates physical contacts with optional bilateral-contact-triggered soft grasp assistance.
 - `mujoco_ik/hei_robot_keyboard_mujoco_sim.py`: controls the complete model by keyboard without VR or real-robot commands.
 - `mujoco_ik/hei_robot_keyboard_mujoco_physics.py`: uses keyboard control to validate free objects, collisions, friction, and physical finger contacts.
 - Complete-model simulation uses adaptive TCP filtering, one-shot IK target caching, and real-`dt` joint tracking to reduce stalls and stair-step motion in the normal workspace.
@@ -188,10 +188,12 @@ gravity, bilateral finger contact, slip, and release:
 ./run_hei_robot_vr_physics.sh
 ```
 
-Keyboard controls are unchanged. The physics-only scene uses `50 mm` cubes,
-flat high-friction contact pads, `5 mm` preload after bilateral contact, and a
-force-limited tangential assist capped at `6 N`. The assist never teleports or
-welds an object and is removed immediately when the gripper opens. See
+Keyboard controls are unchanged. The physics-only scene uses `50 mm` cubes and
+flat high-friction contact pads. By default, bilateral collision activates a
+spring-damper attraction capped at `12 N` plus orientation hold capped at `0.10 N·m`; the fingers stop adding preload, and
+the assist releases after `30 mm` of error or when the gripper opens. The object
+remains a free colliding body instead of being driven by a hard constraint. Use
+`./run_hei_robot_keyboard_physics.sh --no-grasp-assist` for strict contact-only validation. See
 [the complete physics grasp guide](mujoco_ik/PHYSICS_GRASP_SIMULATION.md).
 
 #### VR Controller Tutorial
