@@ -191,7 +191,7 @@ PYTHONPATH=src python -u examples/hei_rebot_lift/debug/Lift_Status_Test.py \
 (the program default is also 2 mm). Use `--height-step-mm 1` for finer steps.
 `Space` stops and holds the reported height,
 `H` homes again, and `X` or `Ctrl+C` exits and disables.
-Check height `-800..0 mm`, IO freshness, both limits, and motor state.
+Check height `-700..0 mm`, IO freshness, both limits, and motor state.
 Stop for offline IO or inconsistent limits; software stop keys are not an
 emergency stop.
 

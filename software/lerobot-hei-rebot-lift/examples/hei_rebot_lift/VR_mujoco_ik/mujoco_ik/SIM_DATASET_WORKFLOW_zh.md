@@ -148,7 +148,7 @@ PYTHONPATH=src conda run --no-capture-output -n lerobot5 \
 - `observation.state` 和 `action` 都是 18 维；
 - 图像键为 `front`、`left_wrist`、`right_wrist`；
 - 夹爪闭合为 `0 rad`，打开为 `-4.5 rad`；
-- `height.pos` 范围为 `-800~0 mm`；
+- `height.pos` 范围为 `-700~0 mm`；
 - `theta.vel` 为 `[-1, 1]` 归一化值。
 
 检查程序还会输出 `moving action fields` 和 `constant action fields`。开始训练前，

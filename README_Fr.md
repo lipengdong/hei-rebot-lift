@@ -248,7 +248,7 @@ terminal interactif (SSH avec TTY). Les détails sont dans le
   <em>Référence du zéro mécanique de conception. Vérifier chaque articulation selon le plan d'assemblage avant d'écrire les zéros; ce n'est pas la posture de travail VR.</em>
 </p>
 
-- **Élévateur :** `debug/Lift_Status_Test.py --height-step-mm 2` effectue un homing automatique vers le haut. Vérifier les deux fins de course. `I/K` modifie la cible de 2 mm par événement, `Space` maintient la hauteur mesurée, `H` refait le homing, `X` quitte. Plage `-800..0 mm`.
+- **Élévateur :** `debug/Lift_Status_Test.py --height-step-mm 2` effectue un homing automatique vers le haut. Vérifier les deux fins de course. `I/K` modifie la cible de 2 mm par événement, `Space` maintient la hauteur mesurée, `H` refait le homing, `X` quitte. Plage `-700..0 mm`.
 - **Châssis :** `debug/Chassis_Status_Test.py`, roues solidement suspendues. `W/S/A/D` translation, `Q/E` rotation, `1/2/3` vitesses, `Space` vitesse nulle, `X` quitte. Commencer à 1. Les quatre roues bougent ensemble; pas de mode roue individuelle. IDs 1 avant droit, 2 arrière droit, 3 arrière gauche, 4 avant gauche; timeout clavier 0.65 s.
 
 ### 3. Caméras
@@ -346,6 +346,7 @@ Il ne calibre pas les zéros moteurs et ne remplace pas le homing de l'élévate
 | Stick gauche vertical | Grip gauche maintenu | Avancer pour monter, reculer pour descendre |
 | Stick droit | Grip droit maintenu | Avancer/reculer et translation latérale |
 | B droit / Y gauche | Grip droit maintenu | Rotation horaire / antihoraire |
+| B droit / Y gauche | Les deux grips relâchés | B droit simule Flèche droite pour terminer/enregistrer l'épisode; Y gauche simule Flèche gauche pour abandonner/réenregistrer |
 | A droit / X gauche | Grip correspondant relâché | Retour progressif du bras à sa pose par défaut |
 | F / R dans MuJoCo | Fenêtre active | Repères / réinitialisation de la simulation; R est désactivé en mode réel |
 

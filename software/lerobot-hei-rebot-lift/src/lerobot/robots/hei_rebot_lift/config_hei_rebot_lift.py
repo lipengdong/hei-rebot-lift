@@ -81,7 +81,7 @@ class HeiRebotLiftConfig(RobotConfig):
     lift_max_accel_rad_s2: float = 30.0
     lift_position_kp_rad_s_per_mm: float = 0.45
     lift_position_tolerance_mm: float = 1.0
-    lift_min_height_mm: float = -800.0
+    lift_min_height_mm: float = -700.0
     lift_max_height_mm: float = 0.0
     lift_default_height_mm: float = 0.0
     lift_home_on_connect: bool = True

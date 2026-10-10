@@ -122,7 +122,7 @@ artifact and may need mesh-path adjustment if moved to another directory.
 - Joint 2 uses the new SW link frame's local axis `0 -1 0`, physically matching the old model's rotated `0 0 -1` axis.
 - `base_footprint` follows the standard `+X` forward, `+Y` left, `+Z` up convention.
 - `base_footprint` is centered between the four wheel contact points at ground height.
-- Lift and gripper prismatic joint positions are measured in meters. The lift range is `-0.8` to `0` m, matching the real `-800` to `0` mm convention.
+- Lift and gripper prismatic joint positions are measured in meters. The lift range is `-0.7` to `0` m, matching the real `-700` to `0` mm convention.
 - The viewer performs kinematic inspection only and does not call `mj_step`.
 - Wheel motor IDs are 1 right front, 2 right rear, 3 left rear, 4 left front.
 - Simulation grippers start closed. Hold grip and press trigger to open; release trigger to close. Releasing grip retains the last state. Real startup instead synchronizes measured gripper state.

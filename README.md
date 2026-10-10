@@ -445,7 +445,7 @@ PYTHONPATH=src python -u examples/hei_rebot_lift/debug/Lift_Status_Test.py \
 | `X` or `Ctrl+C` | Exit, stop, and disable |
 
 Upper-limit homing defines `0 mm`; downward heights are negative, within
-`-800..0 mm`. Move down and up in small steps while checking current/target
+`-700..0 mm`. Move down and up in small steps while checking current/target
 height, error, measured speed, motor command speed, IO freshness, and limits.
 Confirm the relevant IO state at a known limit. Stop for offline IO, both limits
 active, or incorrect states; investigate before retrying rather than repeatedly
@@ -595,6 +595,7 @@ procedure for both simulated and real VR control.
 | Gripper pick and place | Simulation grippers start closed; real startup restores measured state. While holding `grip`, press `trigger` to open and release it to close; close near an object for stable-grasp practice, then open to place it |
 | Lift | Left `grip` + left stick vertical; releasing left `grip` stops the lift request |
 | Chassis | Right `grip` + right stick for forward/backward and strafing; right `B` rotates clockwise, left `Y` counterclockwise; releasing right `grip` stops the request |
+| Recording shortcuts | Release both `grip` buttons; right `B` emulates Right Arrow to finish/save the episode, and left `Y` emulates Left Arrow to discard/re-record it |
 | Reset | With the corresponding `grip` released, right `A` / left `X` gradually resets that arm. Focus the computer's MuJoCo window and press `R` to reset the robot and objects, in pure simulation only |
 
 Keep sticks centered when practicing arm motion to avoid unintended chassis or

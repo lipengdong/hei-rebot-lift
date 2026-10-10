@@ -149,7 +149,7 @@ The lift performs homing on startup by default:
 Default range:
 
 ```text
-lift_min_height_mm = -800.0
+lift_min_height_mm = -700.0
 lift_max_height_mm = 0.0
 ```
 

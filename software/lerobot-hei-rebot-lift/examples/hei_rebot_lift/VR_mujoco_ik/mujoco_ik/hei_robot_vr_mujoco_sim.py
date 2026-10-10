@@ -227,7 +227,13 @@ class HEIRobotVRSimulator:
         self.vr_data = {"left": empty_controller("left"), "right": empty_controller("right")}
         self.last_vr_packet_s = 0.0
         self.received_packet_count = 0
-        self.previous_buttons = {"right_a": False, "left_x": False}
+        self.previous_buttons = {
+            "right_a": False,
+            "right_b": False,
+            "left_x": False,
+            "left_y": False,
+        }
+        self.keyboard_controller = None
         self.gripper_target = {"right": GRIPPER_CLOSED_M, "left": GRIPPER_CLOSED_M}
         self.sim_chassis_velocity = np.zeros(3, dtype=float)
         self.base_pose = np.zeros(3, dtype=float)
@@ -1088,17 +1094,48 @@ class HEIRobotVRSimulator:
                 controller["gripActive"] = False
         return controllers, fresh, packet_count
 
+    def _tap_recording_key(self, direction: str) -> None:
+        """Inject one arrow-key event for the separate LeRobot recorder."""
+        try:
+            from pynput import keyboard
+
+            if self.keyboard_controller is None:
+                self.keyboard_controller = keyboard.Controller()
+            key = keyboard.Key.right if direction == "right" else keyboard.Key.left
+            self.keyboard_controller.press(key)
+            self.keyboard_controller.release(key)
+            action = "finish episode" if direction == "right" else "discard/re-record episode"
+            print(f"[HEI VR Sim] VR button -> keyboard {direction} arrow ({action})", flush=True)
+        except (ImportError, RuntimeError) as exc:
+            print(
+                f"[HEI VR Sim] cannot inject keyboard {direction} arrow: {exc}",
+                flush=True,
+            )
+
     def _handle_buttons(self, controllers: dict[str, dict]) -> None:
         right_a = bool(controllers["right"]["aButton"])
+        right_b = bool(controllers["right"]["bButton"])
         left_x = bool(controllers["left"]["xButton"])
+        left_y = bool(controllers["left"]["yButton"])
         if not controllers["right"]["gripActive"] and right_a and not self.previous_buttons["right_a"]:
             self.arms["right"].reset_requested = True
             self._release_controller_origin(self.arms["right"])
         if not controllers["left"]["gripActive"] and left_x and not self.previous_buttons["left_x"]:
             self.arms["left"].reset_requested = True
             self._release_controller_origin(self.arms["left"])
+
+        # 录制程序在独立的 lerobot5 进程中监听方向键。两侧 grip 都松开时，
+        # B/Y 不再是底盘旋转命令，而是分别注入右/左方向键，并且只在按下沿触发一次。
+        no_grip_pressed = not controllers["right"]["gripActive"] and not controllers["left"]["gripActive"]
+        if no_grip_pressed and right_b and not self.previous_buttons["right_b"]:
+            self._tap_recording_key("right")
+        if no_grip_pressed and left_y and not self.previous_buttons["left_y"]:
+            self._tap_recording_key("left")
+
         self.previous_buttons["right_a"] = right_a
+        self.previous_buttons["right_b"] = right_b
         self.previous_buttons["left_x"] = left_x
+        self.previous_buttons["left_y"] = left_y
 
     def _step_control(self, dt: float) -> tuple[bool, int]:
         controllers, fresh, packet_count = self._snapshot_vr()

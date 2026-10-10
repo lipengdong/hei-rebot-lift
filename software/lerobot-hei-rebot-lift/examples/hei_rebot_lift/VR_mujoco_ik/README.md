@@ -234,6 +234,8 @@ origin, so the controller never needs to return to a fixed absolute pose.
 | Right stick horizontal | Right `grip` held | Strafe the O-layout omnidirectional chassis left or right |
 | Right `B` | Right `grip` held | Rotate the chassis clockwise |
 | Left `Y` | Right `grip` held | Rotate the chassis counterclockwise |
+| Right `B` | Both `grip` buttons released | Emulate Right Arrow to finish and save the current episode early |
+| Left `Y` | Both `grip` buttons released | Emulate Left Arrow to discard and re-record the current episode |
 | Right `A` | Right `grip` released | Return the right arm gradually to its default pose |
 | Left `X` | Left `grip` released | Return the left arm gradually to its default pose |
 

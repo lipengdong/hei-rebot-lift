@@ -102,7 +102,7 @@ The lift platform expands the working height of the dual arms. In the software s
 | --- | --- | --- |
 | Mechanism | Lead-screw lift platform | Related files are included in printed and metal parts |
 | Motor | DM4310 series | Lift motor, controlled through U2CAN |
-| Position range | -800 mm to 0 mm | Upper limit is 0; downward motion is negative |
+| Position range | -700 mm to 0 mm | Upper limit is 0; downward motion is negative |
 | Control interface | Position target | LeRobot action key: `height.pos` |
 | Homing | Upper limit switch | Required before reliable height control |
 

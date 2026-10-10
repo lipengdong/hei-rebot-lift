@@ -669,7 +669,12 @@ AFRAME.registerComponent('telegrip-vr-bridge', {
     }
   },
 
-  updateThumbsticks: function () {
+  gamepadButtonPressed: function (button) {
+    if (!button) return false;
+    return Boolean(button.pressed) || Number(button.value || 0) >= 0.5;
+  },
+
+  updateGamepads: function () {
     if (!state.xrSession) return;
     const deadzone = 0.05;
 
@@ -679,11 +684,28 @@ AFRAME.registerComponent('telegrip-vr-bridge', {
       const buttons = source.gamepad.buttons || [];
       const x = Math.abs(axes[2] || 0) < deadzone ? 0 : axes[2] || 0;
       const y = Math.abs(axes[3] || 0) < deadzone ? 0 : axes[3] || 0;
+      // WebXR's xr-standard mapping is trigger=0, squeeze/grip=1,
+      // thumbstick=3, primary face button=4, secondary face button=5.
+      // Polling these values also covers Meta Browser versions where the
+      // corresponding A-Frame button events are not emitted reliably.
+      const trigger = this.gamepadButtonPressed(buttons[0]);
+      const grip = this.gamepadButtonPressed(buttons[1]);
+      const thumbstickPressed = this.gamepadButtonPressed(buttons[3] || buttons[2]);
+      const primaryButton = this.gamepadButtonPressed(buttons[4]);
+      const secondaryButton = this.gamepadButtonPressed(buttons[5]);
       if (source.handedness === 'left') {
-        this.leftButtons.thumbstick = { x, y, pressed: buttons[2]?.pressed ? 1 : 0 };
+        this.leftButtons.grip = grip;
+        this.leftButtons.trigger = trigger;
+        this.leftButtons.x = primaryButton;
+        this.leftButtons.y = secondaryButton;
+        this.leftButtons.thumbstick = { x, y, pressed: thumbstickPressed ? 1 : 0 };
       }
       if (source.handedness === 'right') {
-        this.rightButtons.thumbstick = { x, y, pressed: buttons[3]?.pressed ? 1 : 0 };
+        this.rightButtons.grip = grip;
+        this.rightButtons.trigger = trigger;
+        this.rightButtons.a = primaryButton;
+        this.rightButtons.b = secondaryButton;
+        this.rightButtons.thumbstick = { x, y, pressed: thumbstickPressed ? 1 : 0 };
       }
     }
   },
@@ -718,7 +740,7 @@ AFRAME.registerComponent('telegrip-vr-bridge', {
   tick: function () {
     if (!state.xrSession || !state.websocket || state.websocket.readyState !== WebSocket.OPEN) return;
 
-    this.updateThumbsticks();
+    this.updateGamepads();
     state.websocket.send(JSON.stringify({
       timestamp: Date.now(),
       head: this.headData(),
