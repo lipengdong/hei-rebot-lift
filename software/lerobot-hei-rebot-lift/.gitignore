@@ -76,6 +76,7 @@ nosetests.xml
 coverage.xml
 *.cover
 *.py,cover
+!tests/artifacts
 
 ### Logs & Temporary Files ###
 logs/
@@ -164,6 +165,9 @@ wandb/
 # Data folders
 data/
 outputs/
+datasets/
+**/MUJOCO_LOG.TXT
+examples/hei_rebot_lift/VR_mujoco_ik/telegrip/*.pem
 
 # Translations
 *.mo
@@ -175,22 +179,3 @@ outputs/
 *.urdf
 *.xml
 *.part
-
-### HEI ReBot Lift ###
-# MuJoCo / URDF model assets are required by the VR IK demo.
-!examples/hei_rebot_lift/VR_mujoco_ik/mujoco_ik/model/**/*.stl
-!examples/hei_rebot_lift/VR_mujoco_ik/mujoco_ik/model/**/*.STL
-!examples/hei_rebot_lift/VR_mujoco_ik/mujoco_ik/model/**/*.urdf
-!examples/hei_rebot_lift/VR_mujoco_ik/mujoco_ik/model/**/*.xml
-
-# Local HTTPS certificate/private key for Telegrip. Regenerate locally when deploying.
-examples/hei_rebot_lift/VR_mujoco_ik/telegrip/key.pem
-examples/hei_rebot_lift/VR_mujoco_ik/telegrip/cert.pem
-
-
-### Test artifacts ###
-# Original LeRobot test artifacts are large/LFS-backed and not needed for this HEI ReBot Lift deployment repo.
-tests/artifacts/
-# Original LeRobot GitHub Actions are not needed in this deployment fork.
-.github/workflows/
-

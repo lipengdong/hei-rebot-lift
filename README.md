@@ -12,6 +12,9 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/lipengdong/hei-rebot-lift/tree/v0.2.0">
+    <img src="https://img.shields.io/badge/project-v0.2.0-blue" alt="HEI ReBot Lift v0.2.0">
+  </a>
   <a href="https://github.com/lipengdong/hei-rebot-lift/stargazers">
     <img src="https://img.shields.io/github/stars/lipengdong/hei-rebot-lift?style=social" alt="GitHub stars">
   </a>
@@ -134,7 +137,7 @@ We will continue improving HEI ReBot Lift across hardware materials, software in
 | Omnidirectional base | ✅ First version completed | Supports `x.vel`, `y.vel`, and `theta.vel` commands with basic acceleration smoothing | [Robot Driver](software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/README.md) · [Independent Chassis Control](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README.md#independent-chassis-test) |
 | Three-camera vision | ✅ First version completed | Supports `front`, `left_wrist`, and `right_wrist` OpenCV cameras with MJPG by default | [Robot Driver](software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/README.md) |
 | VR + MuJoCo IK | ✅ First version completed | Telegrip + MuJoCo + Pinocchio/CasADi is connected to the real-robot control pipeline | [VR MuJoCo IK](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/README.md) |
-| LeRobot integration | ✅ First version completed | `hei_rebot_lift` robot/client/host is implemented with teleoperate, record, replay, evaluate, and rollout scripts | [Examples](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README.md) |
+| LeRobot 0.6.2 integration | ✅ Updated | `hei_rebot_lift` robot/client/host is adapted to the latest upstream interfaces, with teleoperate, record, replay, evaluate, and rollout scripts | [Examples](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README.md) |
 | Real-robot data collection | ✅ First version completed | Supports LeRobotDataset recording, resume recording, visualization, and bad-episode cleanup | [Record Guide](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README.md) |
 | ACT training and rollout | ✅ Verified | Supports ACT training and real-robot rollout | [Examples](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README.md) |
 | SmolVLA / VLA | ✅ Initial support | Supports SmolVLA training and real-robot rollout entry points | [Examples](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README.md) |
@@ -206,7 +209,7 @@ base dependencies; it is not a standalone driver package without PyTorch.
 cd software/lerobot-hei-rebot-lift
 conda create -n lerobot5 python=3.12 -y
 conda activate lerobot5
-python -m pip install -e ".[hardware,pyzmq-dep]"
+python -m pip install -e ".[hardware,hei_rebot_lift]"
 python -c "import serial, zmq, cv2; print('robot dependencies ok')"
 ```
 
@@ -229,7 +232,7 @@ the robot's motor serial ports.
 cd software/lerobot-hei-rebot-lift
 conda create -n lerobot5 python=3.12 -y
 conda activate lerobot5
-python -m pip install -e ".[core_scripts,training,pyzmq-dep]"
+python -m pip install -e ".[core_scripts,training,hei_rebot_lift]"
 python -m pip show pyzmq rerun-sdk pynput datasets accelerate
 ```
 

@@ -16,10 +16,18 @@ from lerobot.utils.action_interpolator import ActionInterpolator as ActionInterp
 
 from .act.configuration_act import ACTConfig as ACTConfig
 from .diffusion.configuration_diffusion import DiffusionConfig as DiffusionConfig
+from .dm05.configuration_dm05 import DM05Config as DM05Config
 from .eo1.configuration_eo1 import EO1Config as EO1Config
+from .evo1.configuration_evo1 import Evo1Config as Evo1Config
 from .factory import get_policy_class, make_policy, make_policy_config, make_pre_post_processors
+from .fastwam.configuration_fastwam import FastWAMConfig as FastWAMConfig
+from .fineart_vla.configuration_fineart_vla import FineARTVLAConfig as FineARTVLAConfig
+from .flux3.configuration_flux3 import Flux3Config as Flux3Config
 from .gaussian_actor.configuration_gaussian_actor import GaussianActorConfig as GaussianActorConfig
 from .groot.configuration_groot import GrootConfig as GrootConfig
+from .lawam.configuration_lawam import LaWAMConfig as LaWAMConfig
+from .lingbot_va.configuration_lingbot_va import LingBotVAConfig as LingBotVAConfig
+from .molmoact2.configuration_molmoact2 import MolmoAct2Config as MolmoAct2Config
 from .multi_task_dit.configuration_multi_task_dit import MultiTaskDiTConfig as MultiTaskDiTConfig
 from .pi0.configuration_pi0 import PI0Config as PI0Config
 from .pi0_fast.configuration_pi0_fast import PI0FastConfig as PI0FastConfig
@@ -28,6 +36,7 @@ from .pretrained import PreTrainedPolicy as PreTrainedPolicy
 from .smolvla.configuration_smolvla import SmolVLAConfig as SmolVLAConfig
 from .tdmpc.configuration_tdmpc import TDMPCConfig as TDMPCConfig
 from .utils import make_robot_action, prepare_observation_for_inference
+from .vla_jepa.configuration_vla_jepa import VLAJEPAConfig as VLAJEPAConfig
 from .vqbet.configuration_vqbet import VQBeTConfig as VQBeTConfig
 from .wall_x.configuration_wall_x import WallXConfig as WallXConfig
 from .xvla.configuration_xvla import XVLAConfig as XVLAConfig
@@ -40,15 +49,24 @@ __all__ = [
     # Configuration classes
     "ACTConfig",
     "DiffusionConfig",
+    "DM05Config",
     "EO1Config",
+    "FastWAMConfig",
+    "FineARTVLAConfig",
+    "Flux3Config",
     "GaussianActorConfig",
+    "Evo1Config",
     "GrootConfig",
+    "LaWAMConfig",
+    "LingBotVAConfig",
+    "MolmoAct2Config",
     "MultiTaskDiTConfig",
     "PI0Config",
     "PI0FastConfig",
     "PI05Config",
     "SmolVLAConfig",
     "TDMPCConfig",
+    "VLAJEPAConfig",
     "VQBeTConfig",
     "WallXConfig",
     "XVLAConfig",

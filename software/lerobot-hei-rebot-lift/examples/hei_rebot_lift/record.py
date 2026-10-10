@@ -3,12 +3,13 @@
 import argparse
 import time
 
-from lerobot.common.control_utils import init_keyboard_listener, sanity_check_dataset_robot_compatibility
+from lerobot.common.control_utils import sanity_check_dataset_robot_compatibility
 from lerobot.datasets import LeRobotDataset
 from lerobot.processor import make_default_processors
 from lerobot.robots.hei_rebot_lift import HeiRebotLiftClient, HeiRebotLiftClientConfig
 from lerobot.utils.constants import ACTION, OBS_STR
 from lerobot.utils.feature_utils import build_dataset_frame, hw_to_dataset_features
+from lerobot.utils.keyboard_input import init_keyboard_listener
 from lerobot.utils.robot_utils import precise_sleep
 from lerobot.utils.utils import log_say
 from lerobot.utils.visualization_utils import init_rerun, log_rerun_data

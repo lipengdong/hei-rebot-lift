@@ -12,6 +12,9 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/lipengdong/hei-rebot-lift/tree/v0.2.0">
+    <img src="https://img.shields.io/badge/project-v0.2.0-blue" alt="HEI ReBot Lift v0.2.0">
+  </a>
   <a href="https://github.com/lipengdong/hei-rebot-lift/stargazers">
     <img src="https://img.shields.io/github/stars/lipengdong/hei-rebot-lift?style=social" alt="GitHub stars">
   </a>
@@ -132,7 +135,7 @@ cd software/lerobot-hei-rebot-lift
 | 全向底盘 | ✅ 已完成首版 | 支持 `x.vel`、`y.vel`、`theta.vel` 控制，并加入基础加减速平滑 | [Robot Driver](software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/README.md) · [底盘独立控制](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README_zh.md#单独调试底盘) |
 | 三相机视觉 | ✅ 已完成首版 | 支持 `front`、`left_wrist`、`right_wrist` 三路 OpenCV 相机，默认 MJPG | [Robot Driver](software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/README.md) |
 | VR + MuJoCo IK | ✅ 已完成首版 | Telegrip + MuJoCo + Pinocchio/CasADi 已接入真实机器人控制链路 | [VR MuJoCo IK](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/README.md) |
-| LeRobot 集成 | ✅ 已完成首版 | 已实现 `hei_rebot_lift` robot/client/host，支持 teleoperate、record、replay、evaluate、rollout | [Examples](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README.md) |
+| LeRobot 0.6.2 集成 | ✅ 已更新 | `hei_rebot_lift` robot/client/host 已适配最新上游接口，支持 teleoperate、record、replay、evaluate、rollout | [Examples](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README_zh.md) |
 | 真机数据采集 | ✅ 已完成首版 | 支持 LeRobotDataset 录制、继续录制、可视化和坏 episode 清理 | [Record Guide](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README_zh.md) |
 | ACT 训练与推理 | ✅ 已跑通 | 支持 ACT 训练和真实机器人 rollout | [Examples](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README.md) |
 | SmolVLA / VLA | ✅ 初步跑通 | 支持 SmolVLA 训练和真实机器人推理入口 | [Examples](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README.md) |
@@ -202,7 +205,7 @@ software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/     VR + M
 cd software/lerobot-hei-rebot-lift
 conda create -n lerobot5 python=3.12 -y
 conda activate lerobot5
-python -m pip install -e ".[hardware,pyzmq-dep]"
+python -m pip install -e ".[hardware,hei_rebot_lift]"
 python -c "import serial, zmq, cv2; print('robot dependencies ok')"
 ```
 
@@ -222,7 +225,7 @@ PyTorch/torchvision 如遇平台或版本不兼容，需要根据实际 JetPack 
 cd software/lerobot-hei-rebot-lift
 conda create -n lerobot5 python=3.12 -y
 conda activate lerobot5
-python -m pip install -e ".[core_scripts,training,pyzmq-dep]"
+python -m pip install -e ".[core_scripts,training,hei_rebot_lift]"
 python -m pip show pyzmq rerun-sdk pynput datasets accelerate
 ```
 

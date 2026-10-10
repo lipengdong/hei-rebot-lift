@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from lerobot.cameras import CameraConfig, Cv2Rotation
 from lerobot.cameras.opencv import OpenCVCameraConfig
@@ -23,10 +24,20 @@ from ..config import RobotConfig
 def lekiwi_cameras_config() -> dict[str, CameraConfig]:
     return {
         "front": OpenCVCameraConfig(
-            index_or_path="/dev/video0", fps=30, width=640, height=480, rotation=Cv2Rotation.NO_ROTATION
+            index_or_path=Path("/dev/video0"),
+            fps=30,
+            width=640,
+            height=480,
+            fourcc="MJPG",
+            rotation=Cv2Rotation.ROTATE_180,
         ),
         "wrist": OpenCVCameraConfig(
-            index_or_path="/dev/video2", fps=30, width=640, height=480, rotation=Cv2Rotation.NO_ROTATION
+            index_or_path=Path("/dev/video2"),
+            fps=30,
+            width=480,
+            height=640,
+            fourcc="MJPG",
+            rotation=Cv2Rotation.ROTATE_90,
         ),
     }
 
@@ -34,8 +45,7 @@ def lekiwi_cameras_config() -> dict[str, CameraConfig]:
 @RobotConfig.register_subclass("lekiwi")
 @dataclass
 class LeKiwiConfig(RobotConfig):
-    left_port: str = "/dev/ttyACM1"  # port to connect to the left arm and base bus
-    right_port: str = "/dev/ttyACM0"  # port to connect to the right arm bus
+    port: str = "/dev/ttyACM0"  # port to connect to the bus
 
     disable_torque_on_disconnect: bool = True
 
@@ -47,17 +57,23 @@ class LeKiwiConfig(RobotConfig):
     cameras: dict[str, CameraConfig] = field(default_factory=lekiwi_cameras_config)
 
     # Set to `True` for backward compatibility with previous policies/dataset
-    use_degrees: bool = False
+    use_degrees: bool = True
+
+    # Number of extra attempts when a `sync_read` of the motors fails. Feetech buses can occasionally
+    # return a corrupted status packet ("Incorrect status packet!"), especially when several joints move
+    # at once, which otherwise aborts the control loop. Retries are immediate (no sleep) and only happen on
+    # failure, so the steady-state read cost is unchanged.
+    num_read_retries: int = 2
 
 
 @dataclass
 class LeKiwiHostConfig:
     # Network Configuration
-    port_zmq_cmd: int = 6555
-    port_zmq_observations: int = 6556
+    port_zmq_cmd: int = 5555
+    port_zmq_observations: int = 5556
 
     # Duration of the application
-    connection_time_s: int = 30000
+    connection_time_s: int = 30
 
     # Watchdog: stop the robot if no command is received for over 0.5 seconds.
     watchdog_timeout_ms: int = 500
@@ -71,8 +87,8 @@ class LeKiwiHostConfig:
 class LeKiwiClientConfig(RobotConfig):
     # Network Configuration
     remote_ip: str
-    port_zmq_cmd: int = 6555
-    port_zmq_observations: int = 6556
+    port_zmq_cmd: int = 5555
+    port_zmq_observations: int = 5556
 
     teleop_keys: dict[str, str] = field(
         default_factory=lambda: {
@@ -88,10 +104,6 @@ class LeKiwiClientConfig(RobotConfig):
             "speed_down": "f",
             # quit teleop
             "quit": "q",
-            "height_up": "i",
-            "height_down": "k",
-            "yao_up": "j",
-            "yao_down": "u",
         }
     )
 

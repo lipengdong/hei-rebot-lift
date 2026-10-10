@@ -4,79 +4,62 @@
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-import argparse
 import time
 
 from lerobot.datasets import LeRobotDataset
-from lerobot.processor import make_default_processors
 from lerobot.robots.lekiwi import LeKiwiClient, LeKiwiClientConfig
 from lerobot.utils.constants import ACTION
 from lerobot.utils.robot_utils import precise_sleep
 from lerobot.utils.utils import log_say
-from lerobot.utils.visualization_utils import init_rerun, log_rerun_data
 
 EPISODE_IDX = 0
-HF_REPO_ID = "HGM/act_lekiwi"
-REMOTE_IP = "192.168.31.28"
-ROBOT_ID = "my_lekiwi"
-
-
-def parse_args():
-    parser = argparse.ArgumentParser(description="Replay one recorded LeKiwi dataset episode on the robot.")
-    parser.add_argument("--repo-id", type=str, default=HF_REPO_ID, help="Hugging Face dataset repo id.")
-    parser.add_argument("--episode-index", type=int, default=EPISODE_IDX, help="Episode index to replay.")
-    parser.add_argument("--root", type=str, default=None, help="Local dataset root.")
-    parser.add_argument("--remote-ip", type=str, default=REMOTE_IP, help="LeKiwi host IP address.")
-    parser.add_argument("--robot-id", type=str, default=ROBOT_ID, help="LeKiwi robot id.")
-    parser.add_argument("--fps", type=float, default=None, help="Replay FPS. Defaults to dataset FPS.")
-    parser.add_argument("--display-data", action="store_true", help="Visualize with Rerun while replaying.")
-    return parser.parse_args()
 
 
 def main():
-    args = parse_args()
+    # Initialize the robot config
+    robot_config = LeKiwiClientConfig(remote_ip="172.18.134.136", id="lekiwi")
 
-    robot_config = LeKiwiClientConfig(remote_ip=args.remote_ip, id=args.robot_id)
+    # Initialize the robot
     robot = LeKiwiClient(robot_config)
-    _, robot_action_processor, robot_observation_processor = make_default_processors()
 
-    dataset = LeRobotDataset(args.repo_id, root=args.root, episodes=[args.episode_index])
-    episode_frames = dataset.hf_dataset.filter(lambda x: x["episode_index"] == args.episode_index)
-    actions = episode_frames.select_columns(ACTION)
-    replay_fps = args.fps if args.fps is not None else dataset.fps
+    # Fetch the dataset to replay
+    dataset = LeRobotDataset("<hf_username>/<dataset_repo_id>", episodes=[EPISODE_IDX])
+    actions = dataset.select_columns(ACTION)
 
+    # Connect to the robot
     robot.connect()
-    if args.display_data:
-        init_rerun(session_name="lekiwi_replay")
 
     try:
         if not robot.is_connected:
             raise ValueError("Robot is not connected!")
 
         print("Starting replay loop...")
-        log_say(f"Replaying episode {args.episode_index}")
-        for idx in range(len(episode_frames)):
+        log_say(f"Replaying episode {EPISODE_IDX}")
+        for idx in range(dataset.num_frames):
             t0 = time.perf_counter()
 
+            # Get recorded action from dataset
             action = {
                 name: float(actions[idx][ACTION][i])
                 for i, name in enumerate(dataset.features[ACTION]["names"])
             }
 
-            observation = robot.get_observation()
-            observation = robot_observation_processor(observation)
-            action = robot_action_processor((action, observation))
-
+            # Send action to robot
             _ = robot.send_action(action)
 
-            if args.display_data:
-                log_rerun_data(observation=observation, action=action)
-
-            precise_sleep(max(1.0 / replay_fps - (time.perf_counter() - t0), 0.0))
+            precise_sleep(max(1.0 / dataset.fps - (time.perf_counter() - t0), 0.0))
     finally:
-        if robot.is_connected:
-            robot.disconnect()
+        robot.disconnect()
 
 
 if __name__ == "__main__":

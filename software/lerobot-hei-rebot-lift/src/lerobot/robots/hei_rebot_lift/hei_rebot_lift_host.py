@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import base64
 import json
 import logging
 import time
@@ -28,7 +27,9 @@ class HeiRebotLiftHost:
         self.zmq_cmd_socket.bind(f"tcp://*:{config.port_zmq_cmd}")
 
         self.zmq_observation_socket = self.zmq_context.socket(zmq.PUSH)
-        self.zmq_observation_socket.setsockopt(zmq.CONFLATE, 1)
+        # ZMQ CONFLATE does not support multipart messages. Keep a short queue
+        # so slow clients drop stale observations instead of increasing latency.
+        self.zmq_observation_socket.setsockopt(zmq.SNDHWM, 2)
         self.zmq_observation_socket.bind(f"tcp://*:{config.port_zmq_observations}")
 
         self.connection_time_s = config.connection_time_s
@@ -84,14 +85,22 @@ def main(cfg: HeiRebotLiftServerConfig):
                 robot.stop_motion()
 
             last_observation = robot.get_observation()
-            for cam_key in robot.cameras:
-                ret, buffer = cv2.imencode(
-                    ".jpg", last_observation[cam_key], [int(cv2.IMWRITE_JPEG_QUALITY), 90]
+
+            # LeRobot 0.6 uses one compact JSON state header followed by raw
+            # JPEG frames. This avoids Base64's bandwidth and CPU overhead.
+            cam_keys = list(robot.cameras.keys())
+            jpeg_frames = []
+            for cam_key in cam_keys:
+                ret, jpeg = cv2.imencode(
+                    ".jpg", last_observation.pop(cam_key), [int(cv2.IMWRITE_JPEG_QUALITY), 90]
                 )
-                last_observation[cam_key] = base64.b64encode(buffer).decode("utf-8") if ret else ""
+                jpeg_frames.append(jpeg if ret else b"")
+            header = {"_cams": cam_keys, **last_observation}
 
             try:
-                host.zmq_observation_socket.send_string(json.dumps(last_observation), flags=zmq.NOBLOCK)
+                host.zmq_observation_socket.send_multipart(
+                    [json.dumps(header).encode()] + jpeg_frames, flags=zmq.NOBLOCK
+                )
             except zmq.Again:
                 logging.info("Dropping observation, no client connected")
 

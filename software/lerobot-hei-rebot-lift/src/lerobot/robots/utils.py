@@ -21,6 +21,8 @@ from lerobot.utils.import_utils import make_device_from_device_class
 from .config import RobotConfig
 from .robot import Robot
 
+logger = logging.getLogger(__name__)
+
 
 def make_robot_from_config(config: RobotConfig) -> Robot:
     # TODO(Steven): Consider just using the make_device_from_device_class for all types
@@ -44,14 +46,6 @@ def make_robot_from_config(config: RobotConfig) -> Robot:
         from .lekiwi import LeKiwi
 
         return LeKiwi(config)
-    elif config.type == "hei_rebot_lift":
-        from .hei_rebot_lift import HeiRebotLift
-
-        return HeiRebotLift(config)
-    elif config.type == "hei_rebot_lift_client":
-        from .hei_rebot_lift import HeiRebotLiftClient
-
-        return HeiRebotLiftClient(config)
     elif config.type == "hope_jr_hand":
         from .hope_jr import HopeJrHand
 
@@ -84,6 +78,14 @@ def make_robot_from_config(config: RobotConfig) -> Robot:
         from .bi_rebot_b601_follower import BiRebotB601Follower
 
         return BiRebotB601Follower(config)
+    elif config.type == "hei_rebot_lift":
+        from .hei_rebot_lift import HeiRebotLift
+
+        return HeiRebotLift(config)
+    elif config.type == "hei_rebot_lift_client":
+        from .hei_rebot_lift import HeiRebotLiftClient
+
+        return HeiRebotLiftClient(config)
     elif config.type == "mock_robot":
         from tests.mocks.mock_robot import MockRobot
 
@@ -126,7 +128,7 @@ def ensure_safe_goal_position(
             }
 
     if warnings_dict:
-        logging.warning(
+        logger.warning(
             "Relative goal position magnitude had to be clamped to be safe.\n"
             f"{pformat(warnings_dict, indent=4)}"
         )

@@ -39,6 +39,11 @@ This directory is the **software root**. Commands beginning with
 
 ## LeRobot Foundation
 
+This software tree is synchronized with **LeRobot 0.6.2**, upstream commit
+`b9cb121cb7d4e3e26ec5c906d08dda68d151ba52` (2026-10-08). HEI-specific code
+is kept in the robot, motor, and example modules listed above. See
+[UPSTREAM.md](UPSTREAM.md) for the synchronization boundary and migration notes.
+
 General LeRobot documentation remains under `docs/`, and policy-specific notes
 under `docs/source/policy_*_README.md`. Those explain the underlying framework;
 they do not replace the HEI hardware startup instructions. Respect the

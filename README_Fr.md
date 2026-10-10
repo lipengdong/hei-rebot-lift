@@ -12,6 +12,9 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/lipengdong/hei-rebot-lift/tree/v0.2.0">
+    <img src="https://img.shields.io/badge/project-v0.2.0-blue" alt="HEI ReBot Lift v0.2.0">
+  </a>
   <a href="https://github.com/lipengdong/hei-rebot-lift/stargazers">
     <img src="https://img.shields.io/github/stars/lipengdong/hei-rebot-lift?style=social" alt="GitHub stars">
   </a>
@@ -101,7 +104,7 @@ Le tableau présente l'état actuel du projet et les liens vers la documentation
 | Base omnidirectionnelle | Première version terminée | Commandes `x.vel`, `y.vel` et `theta.vel`, avec lissage de l'accélération et de la décélération | [Pilote du robot](software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/README.md) · [Contrôle indépendant du châssis](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README.md#independent-chassis-test) |
 | Vision à trois caméras | Première version terminée | Caméras OpenCV `front`, `left_wrist` et `right_wrist`, au format MJPG par défaut | [Pilote du robot](software/lerobot-hei-rebot-lift/src/lerobot/robots/hei_rebot_lift/README.md) |
 | VR et IK MuJoCo | Première version terminée | Telegrip, MuJoCo et Pinocchio/CasADi reliés à la chaîne de contrôle du robot réel | [VR MuJoCo IK](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/README.md) |
-| Intégration LeRobot | Première version terminée | Robot, client et host `hei_rebot_lift`, avec scripts de téléopération, enregistrement, replay, évaluation et rollout | [Exemples](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README.md) |
+| Intégration LeRobot 0.6.2 | Mise à jour terminée | Robot, client et host `hei_rebot_lift` adaptés aux dernières interfaces, avec scripts de téléopération, enregistrement, replay, évaluation et rollout | [Exemples](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README.md) |
 | Collecte de données | Première version terminée | Enregistrement LeRobotDataset, reprise, visualisation et suppression des épisodes de mauvaise qualité | [Guide d'enregistrement](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README.md) |
 | Entraînement et rollout ACT | Vérifiés | Entraînement ACT et rollout sur robot réel | [Exemples](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README.md) |
 | SmolVLA / VLA | Support initial | Points d'entrée pour l'entraînement SmolVLA et le rollout sur robot réel | [Exemples](software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README.md) |
@@ -151,7 +154,7 @@ dans `environment.yml`. Ce sont deux environnements aux rôles différents.
 cd software/lerobot-hei-rebot-lift
 conda create -n lerobot5 python=3.12 -y
 conda activate lerobot5
-python -m pip install -e ".[hardware,pyzmq-dep]"
+python -m pip install -e ".[hardware,hei_rebot_lift]"
 python -c "import serial, zmq, cv2; print('robot dependencies ok')"
 ```
 
@@ -167,7 +170,7 @@ Ne pas installer l'environnement VR/IK sur le robot.
 cd software/lerobot-hei-rebot-lift
 conda create -n lerobot5 python=3.12 -y
 conda activate lerobot5
-python -m pip install -e ".[core_scripts,training,pyzmq-dep]"
+python -m pip install -e ".[core_scripts,training,hei_rebot_lift]"
 python -m pip show pyzmq rerun-sdk pynput datasets accelerate
 ```
 

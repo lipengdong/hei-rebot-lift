@@ -16,6 +16,7 @@ data/
 datasets/
 tmp/
 *.log
+**/MUJOCO_LOG.TXT
 
 # Conda / virtualenv
 .venv/

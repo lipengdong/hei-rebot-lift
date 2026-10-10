@@ -14,10 +14,10 @@ from pathlib import Path
 
 import zmq
 
-from lerobot.common.control_utils import init_keyboard_listener
 from lerobot.datasets import LeRobotDataset
 from lerobot.utils.constants import ACTION, OBS_STR
 from lerobot.utils.feature_utils import build_dataset_frame, hw_to_dataset_features
+from lerobot.utils.keyboard_input import init_keyboard_listener
 from lerobot.utils.visualization_utils import init_rerun, log_rerun_data, shutdown_rerun
 
 from hei_robot_mujoco_zmq_protocol import (

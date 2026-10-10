@@ -38,6 +38,11 @@ VR 启动脚本在 `examples/hei_rebot_lift/VR_mujoco_ik/` 执行并自动激活
 
 ## 基于 LeRobot
 
+当前软件底座已同步至 **LeRobot 0.6.2**，对应上游提交
+`b9cb121cb7d4e3e26ec5c906d08dda68d151ba52`（2026-10-08）。HEI 自定义内容
+集中在上表列出的机器人、电机和示例模块；同步边界与迁移说明见
+[UPSTREAM.md](UPSTREAM.md)。
+
 通用 LeRobot 文档保留在 `docs/`，策略说明位于
 `docs/source/policy_*_README.md`；它们介绍底层框架，不替代 HEI 真机启动教程。
 请遵守 [仓库许可证](../../LICENSE) 及第三方资源许可证。
