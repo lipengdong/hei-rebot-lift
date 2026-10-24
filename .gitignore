@@ -15,6 +15,10 @@ outputs/
 data/
 datasets/
 tmp/
+# `datasets/` above is for generated recordings. Keep LeRobot's Python package
+# trackable when syncing upstream source files with the same directory name.
+!software/lerobot-hei-rebot-lift/src/lerobot/datasets/
+!software/lerobot-hei-rebot-lift/src/lerobot/datasets/*.py
 *.log
 **/MUJOCO_LOG.TXT
 
