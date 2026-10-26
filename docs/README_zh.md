@@ -16,7 +16,7 @@
 | 模型与控制入口 | [MuJoCo IK 说明](../software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/VR_mujoco_ik/mujoco_ik/README_zh.md) | 完整模型仿真/真机、旧双臂入口、自检 |
 | 调试与数据采集 | [示例使用教程](../software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README_zh.md) | 端口绑定、升降/底盘调试、录制、续录与清洗 |
 | 训练与推理 | [示例使用教程](../software/lerobot-hei-rebot-lift/examples/hei_rebot_lift/README_zh.md) | ACT/SmolVLA、模型路径、回放、评估与 rollout |
-| AutoDL 训练 Pi0.5 | [RTX PRO 6000 训练流程](pi05_autodl_training_zh.md) | 48 GB 专家微调、模型缓存、PaliGemma tokenizer、冒烟测试与排障 |
+| AutoDL 训练与部署 Pi0.5 | [RTX PRO 6000 完整流程](pi05_autodl_training_zh.md) | 48 GB 专家微调、检查点兼容、SSH 隧道与异步真机推理 |
 | 交流与合作 | [社区](../community/README_zh.md) | 微信群、联系方式与二维码 |
 | Jetson 系统图标排障 | [红叉图标修复记录](jetson_system_icons_zh.md) | SVG 解码、被中断的 dpkg 配置、修复流程与预防 |
 
